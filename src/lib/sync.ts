@@ -12,6 +12,7 @@ const MAPA: Record<ChaveEstado, { storage: string; evento: string }> = {
   revisao: { storage: "concurseiro:revisao", evento: "revisao:mudou" },
   leituras: { storage: "concurseiro:leituras", evento: "leituras:mudou" },
   trilha: { storage: "concurseiro:trilha", evento: "trilha:mudou" },
+  edital: { storage: "concurseiro:edital", evento: "edital:mudou" },
 };
 
 function vazio(json: string | null) {
