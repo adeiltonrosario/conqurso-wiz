@@ -157,6 +157,7 @@ function CartaoRevisao({
 function RevisaoPage() {
   const { acervo } = useAcervo();
   const { historico, limparHistorico } = useRevisao();
+  const { leituras } = useLeituras();
   const [indice, setIndice] = useState(0);
   const gerar = useServerFn(gerarQuestoes);
 
