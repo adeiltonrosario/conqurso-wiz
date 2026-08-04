@@ -330,6 +330,11 @@ function RevisaoPage() {
                   {l.materia}
                   {l.baseLegal ? ` · ${l.baseLegal}` : ""} · {l.questoesGeradas} questão(ões) na fila
                 </p>
+                {(l.focos ?? []).length > 0 && (
+                  <p className="mt-1 text-xs text-primary">
+                    Recorte: {l.focos.length} artigo(s)/tópico(s) selecionados na leitura
+                  </p>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
