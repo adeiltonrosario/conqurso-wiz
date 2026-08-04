@@ -359,6 +359,32 @@ function LeisPage() {
             </section>
           )}
 
+          <div className="grid gap-2 rounded-lg border border-border/70 p-3">
+            <p className="text-xs text-muted-foreground">
+              {leitura && leitura.questoesGeradas > 0
+                ? `${leitura.questoesGeradas} questão(ões) desta leitura já estão na revisão espaçada.`
+                : "Transforme esta leitura em questões e reforços agendados."}
+            </p>
+            <Button
+              disabled={!leitura || reforco.isPending}
+              onClick={() => leitura && reforco.mutate(leitura)}
+            >
+              {reforco.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Criando questões da leitura…
+                </>
+              ) : (
+                <>
+                  <Brain className="mr-2 size-4" /> Gerar questões deste capítulo para revisão
+                </>
+              )}
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/revisao">Ir para a revisão espaçada</Link>
+            </Button>
+          </div>
+
+
           <Button
             variant="outline"
             className="w-full"
