@@ -35,7 +35,9 @@ function salvar(leituras: Leitura[]) {
   window.dispatchEvent(new Event("leituras:mudou"));
 }
 
-export function registrarLeitura(leitura: Omit<Leitura, "id" | "lidoEm" | "questoesGeradas">) {
+export function registrarLeitura(
+  leitura: Omit<Leitura, "id" | "lidoEm" | "questoesGeradas" | "focos">,
+) {
   const leituras = lerLeituras();
   const id = `${leitura.materia}::${leitura.capitulo}`.toLowerCase();
   const anterior = leituras.find((l) => l.id === id);
