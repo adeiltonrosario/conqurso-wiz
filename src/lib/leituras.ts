@@ -13,6 +13,8 @@ export type Leitura = {
   lidoEm: number;
   /** Quantas questões de revisão já foram geradas a partir desta leitura. */
   questoesGeradas: number;
+  /** Artigos/tópicos selecionados dentro do capítulo: as questões saem só deles. */
+  focos: string[];
 };
 
 const KEY = "concurseiro:leituras";
@@ -42,6 +44,7 @@ export function registrarLeitura(leitura: Omit<Leitura, "id" | "lidoEm" | "quest
     id,
     lidoEm: Date.now(),
     questoesGeradas: anterior?.questoesGeradas ?? 0,
+    focos: anterior?.focos ?? [],
   };
   salvar([proximo, ...leituras.filter((l) => l.id !== id)]);
   return proximo;
@@ -55,16 +58,26 @@ export function somarQuestoesGeradas(id: string, quantidade: number) {
   );
 }
 
+export function definirFocos(id: string, focos: string[]) {
+  salvar(lerLeituras().map((l) => (l.id === id ? { ...l, focos } : l)));
+}
+
 export function removerLeitura(id: string) {
   salvar(lerLeituras().filter((l) => l.id !== id));
 }
 
 /** Contexto textual da leitura para a IA gerar questões fiéis ao capítulo lido. */
 export function contextoDaLeitura(leitura: Leitura) {
+  const focos = leitura.focos ?? [];
+  const recorte = focos.length
+    ? `\n\nRECORTE OBRIGATÓRIO — gere questões EXCLUSIVAMENTE sobre os artigos/tópicos abaixo, ignorando o resto do capítulo:\n${focos
+        .map((f, i) => `${i + 1}. ${f}`)
+        .join("\n")}`
+    : "";
   return `CAPÍTULO LIDO PELO CANDIDATO — ${leitura.materia}: ${leitura.capitulo}
 Base legal: ${leitura.baseLegal}
 Resumo estudado:
-${leitura.resumo}`.slice(0, 12000);
+${leitura.resumo}${recorte}`.slice(0, 12000);
 }
 
 export function useLeituras() {
