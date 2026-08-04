@@ -9,7 +9,13 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
-import { contextoDoEdital, ehDoEdital, materiasPorGrupo, useEdital } from "@/lib/edital";
+import {
+  contextoDoEdital,
+  ehDoEdital,
+  grupoDaMateria,
+  materiasPorGrupo,
+  useEdital,
+} from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
