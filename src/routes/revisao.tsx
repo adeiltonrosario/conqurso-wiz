@@ -309,6 +309,51 @@ function RevisaoPage() {
         <LegendaCores />
       </section>
 
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <BookOpen className="size-4 text-primary" /> Reforço das leis que você leu
+        </div>
+        {leituras.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhuma leitura ainda.{" "}
+            <Link to="/leis" className="font-semibold text-primary underline">
+              Leia um capítulo do edital
+            </Link>{" "}
+            e ele entra aqui para gerar questões automaticamente.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {leituras.slice(0, 6).map((l) => (
+              <li key={l.id} className="rounded-lg border border-border/70 p-3">
+                <p className="text-sm font-semibold">{l.capitulo}</p>
+                <p className="text-xs text-muted-foreground">
+                  {l.materia}
+                  {l.baseLegal ? ` · ${l.baseLegal}` : ""} · {l.questoesGeradas} questão(ões) na fila
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                  disabled={reforcoLeitura.isPending}
+                  onClick={() => reforcoLeitura.mutate(l)}
+                >
+                  {reforcoLeitura.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" /> Gerando…
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="mr-2 size-4" /> Reforçar esta leitura
+                    </>
+                  )}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+
       {atual ? (
         <CartaoRevisao key={atual.questao.id || indice} questao={atual.questao} onResponder={responder} />
       ) : (
