@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
+import { Relevancia, ResumoRelevancia } from "../components/Relevancia";
 import { Button } from "../components/ui/button";
 import {
   MATERIAS_ESPECIFICO,
