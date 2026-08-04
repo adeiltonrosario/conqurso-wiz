@@ -79,3 +79,25 @@ export function ResumoRelevancia({
     </section>
   );
 }
+
+export function agruparAssuntos(
+  questoes: {
+    assunto?: string | undefined;
+    materia?: string | undefined;
+    relevancia_assunto?: number | undefined;
+  }[],
+) {
+  const mapa = new Map<string, { assunto: string; relevancia: number; total: number }>();
+  for (const q of questoes) {
+    const assunto = q.assunto || q.materia;
+    if (!assunto || q.relevancia_assunto == null) continue;
+    const atual = mapa.get(assunto);
+    if (atual) {
+      atual.total += 1;
+      atual.relevancia = Math.max(atual.relevancia, q.relevancia_assunto);
+    } else {
+      mapa.set(assunto, { assunto, relevancia: q.relevancia_assunto, total: 1 });
+    }
+  }
+  return [...mapa.values()].sort((a, b) => b.relevancia - a.relevancia);
+}
