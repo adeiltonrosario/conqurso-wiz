@@ -144,3 +144,27 @@ export function contextoDoEdital(edital: EditalEstado, materia?: string) {
     .join("\n");
   return `CONTEÚDO PROGRAMÁTICO DO EDITAL:\n${lista}`;
 }
+
+/** Relevância do tópico dentro da matéria (%). */
+export function relevanciaNaDisciplina(materia: MateriaEdital, topico: string) {
+  return materia.relevanciaTopicos?.[topico];
+}
+
+/** Relevância geral do tópico na prova (%) = relevância da matéria × relevância na disciplina. */
+export function relevanciaGeral(materia: MateriaEdital, topico: string) {
+  const disciplina = materia.relevanciaTopicos?.[topico];
+  if (materia.relevancia == null || disciplina == null) return undefined;
+  return (materia.relevancia * disciplina) / 100;
+}
+
+/** Matérias do edital ordenadas da mais cobrada para a menos cobrada. */
+export function materiasPorRelevancia(edital: EditalEstado) {
+  return [...edital.materias].sort((a, b) => (b.relevancia ?? 0) - (a.relevancia ?? 0));
+}
+
+/** Tópicos de uma matéria ordenados por relevância na disciplina. */
+export function topicosPorRelevancia(materia: MateriaEdital) {
+  return [...materia.topicos].sort(
+    (a, b) => (materia.relevanciaTopicos?.[b] ?? 0) - (materia.relevanciaTopicos?.[a] ?? 0),
+  );
+}
