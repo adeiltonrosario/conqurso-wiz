@@ -24,6 +24,12 @@ export const Route = createFileRoute("/")({
 
 const CARDS = [
   {
+    to: "/leis",
+    icon: BookOpen,
+    titulo: "Leis resumidas do edital",
+    texto: "Só o capítulo cobrado: síntese em tópicos, artigos comentados e pegadinhas da banca.",
+  },
+  {
     to: "/questoes",
     icon: ListChecks,
     titulo: "Questões e explicações",
