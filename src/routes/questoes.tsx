@@ -50,11 +50,19 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
-      <header className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-        <span className="rounded bg-secondary px-2 py-0.5 text-primary">
-          Questão {numero} — {questao.banca}
-        </span>
-        <span>{questao.materia}</span>
+      <header className="mb-2 text-xs font-semibold text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-secondary px-2 py-0.5 text-primary">
+            Questão {numero} — {questao.banca}
+          </span>
+          <span>{questao.materia}</span>
+        </div>
+        <Relevancia
+          materia={questao.materia}
+          assunto={questao.assunto}
+          relevanciaMateria={questao.relevancia_materia}
+          relevanciaAssunto={questao.relevancia_assunto}
+        />
       </header>
 
       <p className="text-[15px] leading-relaxed">
