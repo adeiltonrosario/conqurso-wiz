@@ -15,9 +15,10 @@ import { registrarResposta } from "@/lib/revisao";
 
 export const Route = createFileRoute("/_authenticated/questoes")({
   validateSearch: (search: Record<string, unknown>) => ({
-    materia: typeof search.materia === "string" ? search.materia : undefined,
-    assunto: typeof search.assunto === "string" ? search.assunto : undefined,
+    materia: typeof search['materia'] === "string" ? search['materia'] : undefined,
+    assunto: typeof search['assunto'] === "string" ? search['assunto'] : undefined,
   }),
+
   head: () => ({
 
     meta: [
