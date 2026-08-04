@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, LogIn, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +14,7 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Entre com e-mail e senha ou com o Google para sincronizar seu acervo, revisão espaçada e trilha de estudo na nuvem.",
+          "Entre com e-mail e senha para sincronizar seu acervo, revisão espaçada e trilha de estudo na nuvem.",
       },
       { property: "og:title", content: "Entrar — Concurseiro Inteligente" },
       {
@@ -83,20 +82,6 @@ function Auth() {
     }
   }
 
-  async function google() {
-    setOcupado(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setOcupado(false);
-      toast.error("Não foi possível entrar com o Google.");
-      return;
-    }
-    if (result.redirected) return;
-    void navigate({ to: "/trilha", replace: true });
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
@@ -156,20 +141,6 @@ function Auth() {
             {ocupado ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
             {modo === "entrar" ? "Entrar" : modo === "criar" ? "Criar conta" : "Enviar link"}
           </Button>
-
-          {modo !== "recuperar" && (
-            <>
-              <div className="relative py-1 text-center">
-                <span className="relative z-10 bg-card px-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  ou
-                </span>
-                <span className="absolute inset-x-0 top-1/2 -z-0 border-t border-border" />
-              </div>
-              <Button type="button" variant="outline" className="w-full" onClick={google} disabled={ocupado}>
-                Continuar com o Google
-              </Button>
-            </>
-          )}
         </form>
 
         <div className="mt-4 space-y-2 text-center text-sm">
