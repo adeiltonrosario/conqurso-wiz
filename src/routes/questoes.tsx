@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
-import { Relevancia, ResumoRelevancia } from "../components/Relevancia";
+import { Relevancia, ResumoRelevancia, agruparAssuntos } from "../components/Relevancia";
 import { Button } from "../components/ui/button";
 import {
   MATERIAS_ESPECIFICO,
@@ -210,6 +210,8 @@ function QuestoesPage() {
         </Button>
         <LegendaCores />
       </section>
+
+      <ResumoRelevancia itens={assuntos} />
 
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
