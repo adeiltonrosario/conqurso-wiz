@@ -19,9 +19,10 @@ export function Marcado({ texto, className }: { texto: string; className?: strin
   while ((match = regex.exec(texto)) !== null) {
     if (match.index > ultimo) partes.push(texto.slice(ultimo, match.index));
     partes.push(
-      <mark key={`m-${i++}`} className={`bg-transparent ${CLASSES[match[1]]}`}>
+      <mark key={`m-${i++}`} className={`bg-transparent ${CLASSES[match[1] ?? ""] ?? ""}`}>
         {match[2]}
       </mark>,
+
     );
     ultimo = match.index + match[0].length;
   }
