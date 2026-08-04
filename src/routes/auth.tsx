@@ -141,8 +141,6 @@ function Auth() {
             {ocupado ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
             {modo === "entrar" ? "Entrar" : modo === "criar" ? "Criar conta" : "Enviar link"}
           </Button>
-
-          }
         </form>
 
         <div className="mt-4 space-y-2 text-center text-sm">
