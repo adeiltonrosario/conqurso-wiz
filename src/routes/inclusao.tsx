@@ -118,7 +118,11 @@ function InclusaoPage() {
   });
 
   const salvarQuestao = () => {
-    if (enunciado.trim().length < 10) return toast.error("Escreva o enunciado da questão.");
+    if (enunciado.trim().length < 10) {
+      toast.error("Escreva o enunciado da questão.");
+      return;
+    }
+
     const nova: QuestaoCadastrada = {
       id: crypto.randomUUID(),
       enunciado: enunciado.trim(),
