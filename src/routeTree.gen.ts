@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalisePadroesRouteImport } from './routes/analise-padroes'
 import { Route as InclusaoRouteImport } from './routes/inclusao'
+import { Route as LeisRouteImport } from './routes/leis'
 import { Route as ProvaInterativaRouteImport } from './routes/prova-interativa'
 import { Route as QuestoesRouteImport } from './routes/questoes'
 import { Route as RedacaoRouteImport } from './routes/redacao'
@@ -30,6 +31,11 @@ const AnalisePadroesRoute = AnalisePadroesRouteImport.update({
 const InclusaoRoute = InclusaoRouteImport.update({
   id: '/inclusao',
   path: '/inclusao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeisRoute = LeisRouteImport.update({
+  id: '/leis',
+  path: '/leis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProvaInterativaRoute = ProvaInterativaRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/leis': typeof LeisRoute
   '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/leis': typeof LeisRoute
   '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/leis': typeof LeisRoute
   '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analise-padroes'
     | '/inclusao'
+    | '/leis'
     | '/prova-interativa'
     | '/questoes'
     | '/redacao'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analise-padroes'
     | '/inclusao'
+    | '/leis'
     | '/prova-interativa'
     | '/questoes'
     | '/redacao'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analise-padroes'
     | '/inclusao'
+    | '/leis'
     | '/prova-interativa'
     | '/questoes'
     | '/redacao'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalisePadroesRoute: typeof AnalisePadroesRoute
   InclusaoRoute: typeof InclusaoRoute
+  LeisRoute: typeof LeisRoute
   ProvaInterativaRoute: typeof ProvaInterativaRoute
   QuestoesRoute: typeof QuestoesRoute
   RedacaoRoute: typeof RedacaoRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/inclusao'
       fullPath: '/inclusao'
       preLoaderRoute: typeof InclusaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leis': {
+      id: '/leis'
+      path: '/leis'
+      fullPath: '/leis'
+      preLoaderRoute: typeof LeisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prova-interativa': {
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalisePadroesRoute: AnalisePadroesRoute,
   InclusaoRoute: InclusaoRoute,
+  LeisRoute: LeisRoute,
   ProvaInterativaRoute: ProvaInterativaRoute,
   QuestoesRoute: QuestoesRoute,
   RedacaoRoute: RedacaoRoute,
@@ -187,13 +208,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
