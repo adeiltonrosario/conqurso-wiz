@@ -1,15 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Brain, CalendarClock, CheckCircle2, Loader2, RotateCcw, XCircle } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  CalendarClock,
+  CheckCircle2,
+  Loader2,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "../lib/acervo";
 import { gerarQuestoes, type Questao } from "../lib/ai.functions";
+import {
+  contextoDaLeitura,
+  somarQuestoesGeradas,
+  useLeituras,
+  type Leitura,
+} from "../lib/leituras";
 import {
   filaDeHoje,
   materiaMaisFraca,
