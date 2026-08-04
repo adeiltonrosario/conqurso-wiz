@@ -24,7 +24,7 @@ import {
   useTrilha,
 } from "@/lib/trilha";
 
-export const Route = createFileRoute("/trilha")({
+export const Route = createFileRoute("/_authenticated/_authenticated/trilha")({
   head: () => ({
     meta: [
       { title: "Trilha de estudo no calendário — Concurseiro Inteligente" },

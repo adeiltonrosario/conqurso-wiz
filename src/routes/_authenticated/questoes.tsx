@@ -17,7 +17,7 @@ import {
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
-export const Route = createFileRoute("/questoes")({
+export const Route = createFileRoute("/_authenticated/_authenticated/questoes")({
   head: () => ({
     meta: [
       { title: "Questões FCC comentadas pela IA | Concurseiro Inteligente" },

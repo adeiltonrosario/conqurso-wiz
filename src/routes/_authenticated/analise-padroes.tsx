@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { MATERIAS_ESPECIFICO, MATERIAS_GERAL } from "@/lib/acervo";
 import { analisarPadroes, conversarPadroes, type PadraoAnalise } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/analise-padroes")({
+export const Route = createFileRoute("/_authenticated/_authenticated/analise-padroes")({
   head: () => ({
     meta: [
       { title: "Análise de padrões de provas | Concurseiro Inteligente" },

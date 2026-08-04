@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { MODELOS_REDACAO } from "@/lib/acervo";
 import { gerarRedacao, type Redacao } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/redacao")({
+export const Route = createFileRoute("/_authenticated/_authenticated/redacao")({
   head: () => ({
     meta: [
       { title: "Criação de redação com IA | Concurseiro Inteligente" },

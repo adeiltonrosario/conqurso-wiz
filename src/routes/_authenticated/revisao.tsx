@@ -33,7 +33,7 @@ import {
   useRevisao,
 } from "@/lib/revisao";
 
-export const Route = createFileRoute("/revisao")({
+export const Route = createFileRoute("/_authenticated/_authenticated/revisao")({
   head: () => ({
     meta: [
       { title: "Revisão espaçada automática | Concurseiro Inteligente" },
