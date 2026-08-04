@@ -12,18 +12,18 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { Marcado, LegendaCores } from "../components/Marcado";
-import { Button } from "../components/ui/button";
-import { Progress } from "../components/ui/progress";
-import { contextoDoAcervo, useAcervo } from "../lib/acervo";
-import { gerarQuestoes, type Questao } from "../lib/ai.functions";
+import { AppShell } from "@/components/AppShell";
+import { Marcado, LegendaCores } from "@/components/Marcado";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
   contextoDaLeitura,
   somarQuestoesGeradas,
   useLeituras,
   type Leitura,
-} from "../lib/leituras";
+} from "@/lib/leituras";
 import {
   filaDeHoje,
   materiaMaisFraca,
@@ -31,9 +31,9 @@ import {
   registrarResposta,
   resumoPorMateria,
   useRevisao,
-} from "../lib/revisao";
+} from "@/lib/revisao";
 
-export const Route = createFileRoute("/revisao")({
+export const Route = createFileRoute("/_authenticated/revisao")({
   head: () => ({
     meta: [
       { title: "Revisão espaçada automática | Concurseiro Inteligente" },

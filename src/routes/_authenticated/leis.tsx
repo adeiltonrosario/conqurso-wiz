@@ -4,29 +4,29 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { Marcado, LegendaCores } from "../components/Marcado";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import { AppShell } from "@/components/AppShell";
+import { Marcado, LegendaCores } from "@/components/Marcado";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   BANCAS,
   MATERIAS_ESPECIFICO,
   MATERIAS_GERAL,
   contextoDoAcervo,
   useAcervo,
-} from "../lib/acervo";
+} from "@/lib/acervo";
 import {
   contextoDaLeitura,
   definirFocos,
   registrarLeitura,
   somarQuestoesGeradas,
   type Leitura,
-} from "../lib/leituras";
-import { registrarResposta } from "../lib/revisao";
-import { gerarQuestoes, resumirLei, type LeiResumida } from "../lib/ai.functions";
+} from "@/lib/leituras";
+import { registrarResposta } from "@/lib/revisao";
+import { gerarQuestoes, resumirLei, type LeiResumida } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/leis")({
+export const Route = createFileRoute("/_authenticated/leis")({
   head: () => ({
     meta: [
       { title: "Leitura resumida das leis do edital | Concurseiro Inteligente" },

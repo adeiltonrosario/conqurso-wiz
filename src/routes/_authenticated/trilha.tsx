@@ -10,8 +10,8 @@ import {
   PlayCircle,
   CheckCircle2,
 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { MATERIAS_ESPECIFICO, MATERIAS_GERAL, BANCAS } from "../lib/acervo";
+import { AppShell } from "@/components/AppShell";
+import { MATERIAS_ESPECIFICO, MATERIAS_GERAL, BANCAS } from "@/lib/acervo";
 import {
   DESTINOS,
   diasAte,
@@ -22,9 +22,9 @@ import {
   progressoGeral,
   tarefasDoDia,
   useTrilha,
-} from "../lib/trilha";
+} from "@/lib/trilha";
 
-export const Route = createFileRoute("/trilha")({
+export const Route = createFileRoute("/_authenticated/trilha")({
   head: () => ({
     meta: [
       { title: "Trilha de estudo no calendário — Concurseiro Inteligente" },

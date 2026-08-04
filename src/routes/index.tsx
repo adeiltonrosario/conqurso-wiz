@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, ArrowRight } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, ArrowRight, LogIn } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { useAuth } from "../hooks/useAuth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -74,12 +75,31 @@ const CARDS = [
 ] as const;
 
 function Index() {
+  const { user, carregando } = useAuth();
+
   return (
     <AppShell
       titulo="Seu agente de estudo vertical"
       descricao="Tudo em um fluxo único, pensado para celular e tablet: da leitura da lei até a prova respondida."
     >
+      {!carregando && !user && (
+        <div className="rounded-xl border border-primary/30 bg-secondary p-4">
+          <p className="font-display text-base font-bold">Entre para salvar seu estudo na nuvem</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Com login, seu acervo, revisão espaçada e trilha ficam guardados na sua conta e abrem igual no
+            celular e no tablet.
+          </p>
+          <Link
+            to="/auth"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            <LogIn className="size-4" />
+            Entrar ou criar conta
+          </Link>
+        </div>
+      )}
       <div className="grid gap-3">
+
         {CARDS.map(({ to, icon: Icon, titulo, texto }) => (
           <Link
             key={to}

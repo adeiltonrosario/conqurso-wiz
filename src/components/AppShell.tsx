@@ -1,6 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, LogIn, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { limparEstadoLocal } from "@/lib/sync";
 
 const NAV = [
   { to: "/trilha", label: "Trilha", icon: CalendarDays },
@@ -23,6 +27,18 @@ export function AppShell({
   descricao: string;
   children: ReactNode;
 }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function sair() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    limparEstadoLocal();
+    void navigate({ to: "/auth", replace: true });
+  }
+
   return (
     <div className="min-h-screen pb-24">
       <header className="no-print sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur">
@@ -30,11 +46,27 @@ export function AppShell({
           <Link to="/" className="font-display text-sm font-bold tracking-tight">
             Concurseiro <span className="text-accent">Inteligente</span>
           </Link>
-          <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
-            estudo vertical
-          </span>
+          {user ? (
+            <button
+              type="button"
+              onClick={sair}
+              className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
+            >
+              <LogOut className="size-3.5" />
+              <span className="max-w-[130px] truncate">{user.email ?? "sair"}</span>
+            </button>
+          ) : (
+            <Link
+              to="/auth"
+              className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
+            >
+              <LogIn className="size-3.5" />
+              entrar
+            </Link>
+          )}
         </div>
       </header>
+
 
       <main className="mx-auto max-w-3xl px-4 pt-5">
         <h1 className="text-2xl font-bold sm:text-3xl">{titulo}</h1>

@@ -4,16 +4,16 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { Marcado, LegendaCores } from "../components/Marcado";
-import { Relevancia, ResumoRelevancia, agruparAssuntos } from "../components/Relevancia";
-import { Button } from "../components/ui/button";
-import { Progress } from "../components/ui/progress";
-import { contextoDoAcervo, useAcervo } from "../lib/acervo";
-import { gerarQuestoes, type Questao } from "../lib/ai.functions";
-import { registrarResposta } from "../lib/revisao";
+import { AppShell } from "@/components/AppShell";
+import { Marcado, LegendaCores } from "@/components/Marcado";
+import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
+import { registrarResposta } from "@/lib/revisao";
 
-export const Route = createFileRoute("/prova-interativa")({
+export const Route = createFileRoute("/_authenticated/prova-interativa")({
   head: () => ({
     meta: [
       { title: "Prova interativa em PDF | Concurseiro Inteligente" },

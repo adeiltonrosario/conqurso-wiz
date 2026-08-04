@@ -10,99 +10,127 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AnalisePadroesRouteImport } from './routes/analise-padroes'
-import { Route as InclusaoRouteImport } from './routes/inclusao'
-import { Route as LeisRouteImport } from './routes/leis'
-import { Route as ProvaInterativaRouteImport } from './routes/prova-interativa'
-import { Route as QuestoesRouteImport } from './routes/questoes'
-import { Route as RedacaoRouteImport } from './routes/redacao'
-import { Route as RevisaoRouteImport } from './routes/revisao'
-import { Route as TrilhaRouteImport } from './routes/trilha'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as AuthenticatedAnalisePadroesRouteImport } from './routes/_authenticated/analise-padroes'
+import { Route as AuthenticatedInclusaoRouteImport } from './routes/_authenticated/inclusao'
+import { Route as AuthenticatedLeisRouteImport } from './routes/_authenticated/leis'
+import { Route as AuthenticatedProvaInterativaRouteImport } from './routes/_authenticated/prova-interativa'
+import { Route as AuthenticatedQuestoesRouteImport } from './routes/_authenticated/questoes'
+import { Route as AuthenticatedRedacaoRouteImport } from './routes/_authenticated/redacao'
+import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
+import { Route as AuthenticatedTrilhaRouteImport } from './routes/_authenticated/trilha'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalisePadroesRoute = AnalisePadroesRouteImport.update({
-  id: '/analise-padroes',
-  path: '/analise-padroes',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InclusaoRoute = InclusaoRouteImport.update({
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAnalisePadroesRoute =
+  AuthenticatedAnalisePadroesRouteImport.update({
+    id: '/analise-padroes',
+    path: '/analise-padroes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInclusaoRoute = AuthenticatedInclusaoRouteImport.update({
   id: '/inclusao',
   path: '/inclusao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const LeisRoute = LeisRouteImport.update({
+const AuthenticatedLeisRoute = AuthenticatedLeisRouteImport.update({
   id: '/leis',
   path: '/leis',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ProvaInterativaRoute = ProvaInterativaRouteImport.update({
-  id: '/prova-interativa',
-  path: '/prova-interativa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QuestoesRoute = QuestoesRouteImport.update({
+const AuthenticatedProvaInterativaRoute =
+  AuthenticatedProvaInterativaRouteImport.update({
+    id: '/prova-interativa',
+    path: '/prova-interativa',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedQuestoesRoute = AuthenticatedQuestoesRouteImport.update({
   id: '/questoes',
   path: '/questoes',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const RedacaoRoute = RedacaoRouteImport.update({
+const AuthenticatedRedacaoRoute = AuthenticatedRedacaoRouteImport.update({
   id: '/redacao',
   path: '/redacao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const RevisaoRoute = RevisaoRouteImport.update({
+const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   id: '/revisao',
   path: '/revisao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const TrilhaRoute = TrilhaRouteImport.update({
+const AuthenticatedTrilhaRoute = AuthenticatedTrilhaRouteImport.update({
   id: '/trilha',
   path: '/trilha',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analise-padroes': typeof AnalisePadroesRoute
-  '/inclusao': typeof InclusaoRoute
-  '/leis': typeof LeisRoute
-  '/prova-interativa': typeof ProvaInterativaRoute
-  '/questoes': typeof QuestoesRoute
-  '/redacao': typeof RedacaoRoute
-  '/revisao': typeof RevisaoRoute
-  '/trilha': typeof TrilhaRoute
+  '/auth': typeof AuthRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/inclusao': typeof AuthenticatedInclusaoRoute
+  '/leis': typeof AuthenticatedLeisRoute
+  '/prova-interativa': typeof AuthenticatedProvaInterativaRoute
+  '/questoes': typeof AuthenticatedQuestoesRoute
+  '/redacao': typeof AuthenticatedRedacaoRoute
+  '/revisao': typeof AuthenticatedRevisaoRoute
+  '/trilha': typeof AuthenticatedTrilhaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analise-padroes': typeof AnalisePadroesRoute
-  '/inclusao': typeof InclusaoRoute
-  '/leis': typeof LeisRoute
-  '/prova-interativa': typeof ProvaInterativaRoute
-  '/questoes': typeof QuestoesRoute
-  '/redacao': typeof RedacaoRoute
-  '/revisao': typeof RevisaoRoute
-  '/trilha': typeof TrilhaRoute
+  '/auth': typeof AuthRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/inclusao': typeof AuthenticatedInclusaoRoute
+  '/leis': typeof AuthenticatedLeisRoute
+  '/prova-interativa': typeof AuthenticatedProvaInterativaRoute
+  '/questoes': typeof AuthenticatedQuestoesRoute
+  '/redacao': typeof AuthenticatedRedacaoRoute
+  '/revisao': typeof AuthenticatedRevisaoRoute
+  '/trilha': typeof AuthenticatedTrilhaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analise-padroes': typeof AnalisePadroesRoute
-  '/inclusao': typeof InclusaoRoute
-  '/leis': typeof LeisRoute
-  '/prova-interativa': typeof ProvaInterativaRoute
-  '/questoes': typeof QuestoesRoute
-  '/redacao': typeof RedacaoRoute
-  '/revisao': typeof RevisaoRoute
-  '/trilha': typeof TrilhaRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/_authenticated/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/_authenticated/inclusao': typeof AuthenticatedInclusaoRoute
+  '/_authenticated/leis': typeof AuthenticatedLeisRoute
+  '/_authenticated/prova-interativa': typeof AuthenticatedProvaInterativaRoute
+  '/_authenticated/questoes': typeof AuthenticatedQuestoesRoute
+  '/_authenticated/redacao': typeof AuthenticatedRedacaoRoute
+  '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
+  '/_authenticated/trilha': typeof AuthenticatedTrilhaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
+    | '/redefinir-senha'
     | '/analise-padroes'
     | '/inclusao'
     | '/leis'
@@ -114,6 +142,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
+    | '/redefinir-senha'
     | '/analise-padroes'
     | '/inclusao'
     | '/leis'
@@ -125,26 +155,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/analise-padroes'
-    | '/inclusao'
-    | '/leis'
-    | '/prova-interativa'
-    | '/questoes'
-    | '/redacao'
-    | '/revisao'
-    | '/trilha'
+    | '/_authenticated'
+    | '/auth'
+    | '/redefinir-senha'
+    | '/_authenticated/analise-padroes'
+    | '/_authenticated/inclusao'
+    | '/_authenticated/leis'
+    | '/_authenticated/prova-interativa'
+    | '/_authenticated/questoes'
+    | '/_authenticated/redacao'
+    | '/_authenticated/revisao'
+    | '/_authenticated/trilha'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalisePadroesRoute: typeof AnalisePadroesRoute
-  InclusaoRoute: typeof InclusaoRoute
-  LeisRoute: typeof LeisRoute
-  ProvaInterativaRoute: typeof ProvaInterativaRoute
-  QuestoesRoute: typeof QuestoesRoute
-  RedacaoRoute: typeof RedacaoRoute
-  RevisaoRoute: typeof RevisaoRoute
-  TrilhaRoute: typeof TrilhaRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -156,86 +184,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analise-padroes': {
-      id: '/analise-padroes'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/analise-padroes': {
+      id: '/_authenticated/analise-padroes'
       path: '/analise-padroes'
       fullPath: '/analise-padroes'
-      preLoaderRoute: typeof AnalisePadroesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedAnalisePadroesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/inclusao': {
-      id: '/inclusao'
+    '/_authenticated/inclusao': {
+      id: '/_authenticated/inclusao'
       path: '/inclusao'
       fullPath: '/inclusao'
-      preLoaderRoute: typeof InclusaoRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedInclusaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/leis': {
-      id: '/leis'
+    '/_authenticated/leis': {
+      id: '/_authenticated/leis'
       path: '/leis'
       fullPath: '/leis'
-      preLoaderRoute: typeof LeisRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedLeisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/prova-interativa': {
-      id: '/prova-interativa'
+    '/_authenticated/prova-interativa': {
+      id: '/_authenticated/prova-interativa'
       path: '/prova-interativa'
       fullPath: '/prova-interativa'
-      preLoaderRoute: typeof ProvaInterativaRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedProvaInterativaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/questoes': {
-      id: '/questoes'
+    '/_authenticated/questoes': {
+      id: '/_authenticated/questoes'
       path: '/questoes'
       fullPath: '/questoes'
-      preLoaderRoute: typeof QuestoesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedQuestoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/redacao': {
-      id: '/redacao'
+    '/_authenticated/redacao': {
+      id: '/_authenticated/redacao'
       path: '/redacao'
       fullPath: '/redacao'
-      preLoaderRoute: typeof RedacaoRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedRedacaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/revisao': {
-      id: '/revisao'
+    '/_authenticated/revisao': {
+      id: '/_authenticated/revisao'
       path: '/revisao'
       fullPath: '/revisao'
-      preLoaderRoute: typeof RevisaoRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/trilha': {
-      id: '/trilha'
+    '/_authenticated/trilha': {
+      id: '/_authenticated/trilha'
       path: '/trilha'
       fullPath: '/trilha'
-      preLoaderRoute: typeof TrilhaRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedTrilhaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalisePadroesRoute: typeof AuthenticatedAnalisePadroesRoute
+  AuthenticatedInclusaoRoute: typeof AuthenticatedInclusaoRoute
+  AuthenticatedLeisRoute: typeof AuthenticatedLeisRoute
+  AuthenticatedProvaInterativaRoute: typeof AuthenticatedProvaInterativaRoute
+  AuthenticatedQuestoesRoute: typeof AuthenticatedQuestoesRoute
+  AuthenticatedRedacaoRoute: typeof AuthenticatedRedacaoRoute
+  AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
+  AuthenticatedTrilhaRoute: typeof AuthenticatedTrilhaRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAnalisePadroesRoute: AuthenticatedAnalisePadroesRoute,
+  AuthenticatedInclusaoRoute: AuthenticatedInclusaoRoute,
+  AuthenticatedLeisRoute: AuthenticatedLeisRoute,
+  AuthenticatedProvaInterativaRoute: AuthenticatedProvaInterativaRoute,
+  AuthenticatedQuestoesRoute: AuthenticatedQuestoesRoute,
+  AuthenticatedRedacaoRoute: AuthenticatedRedacaoRoute,
+  AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
+  AuthenticatedTrilhaRoute: AuthenticatedTrilhaRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalisePadroesRoute: AnalisePadroesRoute,
-  InclusaoRoute: InclusaoRoute,
-  LeisRoute: LeisRoute,
-  ProvaInterativaRoute: ProvaInterativaRoute,
-  QuestoesRoute: QuestoesRoute,
-  RedacaoRoute: RedacaoRoute,
-  RevisaoRoute: RevisaoRoute,
-  TrilhaRoute: TrilhaRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
