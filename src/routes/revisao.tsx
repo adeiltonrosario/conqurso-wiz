@@ -1,15 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Brain, CalendarClock, CheckCircle2, Loader2, RotateCcw, XCircle } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  CalendarClock,
+  CheckCircle2,
+  Loader2,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "../lib/acervo";
 import { gerarQuestoes, type Questao } from "../lib/ai.functions";
+import {
+  contextoDaLeitura,
+  somarQuestoesGeradas,
+  useLeituras,
+  type Leitura,
+} from "../lib/leituras";
 import {
   filaDeHoje,
   materiaMaisFraca,
@@ -143,6 +157,7 @@ function CartaoRevisao({
 function RevisaoPage() {
   const { acervo } = useAcervo();
   const { historico, limparHistorico } = useRevisao();
+  const { leituras } = useLeituras();
   const [indice, setIndice] = useState(0);
   const gerar = useServerFn(gerarQuestoes);
 
@@ -185,6 +200,45 @@ function RevisaoPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar o reforço."),
   });
+
+  const reforcoLeitura = useMutation({
+    mutationFn: async (l: Leitura) => {
+      const questoes = await gerar({
+        data: {
+          materia: l.materia,
+          grupo: "Conhecimento Específico",
+          banca: "FCC",
+          quantidade: 5,
+          formato: "multipla",
+          contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
+        },
+      });
+      return { l, questoes };
+    },
+    onSuccess: ({ l, questoes }) => {
+      if (!questoes.length) {
+        toast.error("A IA não retornou questões deste capítulo.");
+        return;
+      }
+      questoes.forEach((q, i) =>
+        registrarResposta(
+          {
+            ...q,
+            id: q.id || `lei-${l.id}-${Date.now()}-${i}`,
+            materia: `${l.materia} — ${l.capitulo}`,
+          },
+          false,
+          0,
+        ),
+      );
+      somarQuestoesGeradas(l.id, questoes.length);
+      toast.success(`Reforço da leitura “${l.capitulo}” adicionado à fila.`);
+      setIndice(0);
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao gerar o reforço da leitura."),
+  });
+
+
 
   function responder(acertou: boolean, comSeguranca: boolean) {
     if (!atual) return;
@@ -254,6 +308,51 @@ function RevisaoPage() {
         </div>
         <LegendaCores />
       </section>
+
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <BookOpen className="size-4 text-primary" /> Reforço das leis que você leu
+        </div>
+        {leituras.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhuma leitura ainda.{" "}
+            <Link to="/leis" className="font-semibold text-primary underline">
+              Leia um capítulo do edital
+            </Link>{" "}
+            e ele entra aqui para gerar questões automaticamente.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {leituras.slice(0, 6).map((l) => (
+              <li key={l.id} className="rounded-lg border border-border/70 p-3">
+                <p className="text-sm font-semibold">{l.capitulo}</p>
+                <p className="text-xs text-muted-foreground">
+                  {l.materia}
+                  {l.baseLegal ? ` · ${l.baseLegal}` : ""} · {l.questoesGeradas} questão(ões) na fila
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                  disabled={reforcoLeitura.isPending}
+                  onClick={() => reforcoLeitura.mutate(l)}
+                >
+                  {reforcoLeitura.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" /> Gerando…
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="mr-2 size-4" /> Reforçar esta leitura
+                    </>
+                  )}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
 
       {atual ? (
         <CartaoRevisao key={atual.questao.id || indice} questao={atual.questao} onResponder={responder} />

@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, Loader2, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
 import { Button } from "../components/ui/button";
@@ -16,7 +16,14 @@ import {
   contextoDoAcervo,
   useAcervo,
 } from "../lib/acervo";
-import { resumirLei, type LeiResumida } from "../lib/ai.functions";
+import {
+  contextoDaLeitura,
+  registrarLeitura,
+  somarQuestoesGeradas,
+  type Leitura,
+} from "../lib/leituras";
+import { registrarResposta } from "../lib/revisao";
+import { gerarQuestoes, resumirLei, type LeiResumida } from "../lib/ai.functions";
 
 export const Route = createFileRoute("/leis")({
   head: () => ({
@@ -62,12 +69,52 @@ const SUGESTOES: Record<string, string[]> = {
 function LeisPage() {
   const { acervo, atualizar } = useAcervo();
   const gerar = useServerFn(resumirLei);
+  const gerarQ = useServerFn(gerarQuestoes);
 
   const [materia, setMateria] = useState(MATERIAS[0]!);
   const [banca, setBanca] = useState(BANCAS[0]!);
   const [capitulo, setCapitulo] = useState("");
   const [topicos, setTopicos] = useState<string[]>([]);
   const [resumo, setResumo] = useState<LeiResumida | null>(null);
+  const [leitura, setLeitura] = useState<Leitura | null>(null);
+  const [auto, setAuto] = useState(true);
+
+  const reforco = useMutation({
+    mutationFn: async (l: Leitura) => {
+      const questoes = await gerarQ({
+        data: {
+          materia: l.materia,
+          grupo: "Conhecimento Específico",
+          banca,
+          quantidade: 5,
+          formato: "multipla",
+          contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
+        },
+      });
+      return { l, questoes };
+    },
+    onSuccess: ({ l, questoes }) => {
+      if (!questoes.length) {
+        toast.error("A IA não retornou questões deste capítulo.");
+        return;
+      }
+      // Entram na fila da revisão já vencidas, para estudo imediato.
+      questoes.forEach((q, i) =>
+        registrarResposta(
+          {
+            ...q,
+            id: q.id || `lei-${l.id}-${Date.now()}-${i}`,
+            materia: `${l.materia} — ${l.capitulo}`,
+          },
+          false,
+          0,
+        ),
+      );
+      somarQuestoesGeradas(l.id, questoes.length);
+      toast.success(`${questoes.length} questões da leitura enviadas para a revisão espaçada.`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões da leitura."),
+  });
 
   const mut = useMutation({
     mutationFn: (cap: string) =>
@@ -79,7 +126,21 @@ function LeisPage() {
           contexto: contextoDoAcervo(acervo) || null,
         },
       }),
-    onSuccess: (r) => setResumo(r),
+    onSuccess: (r, cap) => {
+      setResumo(r);
+      const nova = registrarLeitura({
+        materia: r.materia || materia,
+        capitulo: r.capitulo || cap,
+        baseLegal: r.base_legal ?? "",
+        resumo: [
+          ...(r.sintese ?? []),
+          ...(r.artigos ?? []).map((a) => `${a.referencia}: ${a.texto} — ${a.comentario}`),
+          ...(r.pegadinhas ?? []),
+        ].join("\n"),
+      });
+      setLeitura(nova);
+      if (auto) reforco.mutate(nova);
+    },
     onError: (e: Error) => toast.error(e.message || "Não foi possível resumir a lei."),
   });
 
@@ -91,6 +152,7 @@ function LeisPage() {
     setCapitulo(cap);
     mut.mutate(cap.trim());
   };
+
 
   const adicionarTopico = () => {
     const cap = capitulo.trim();
@@ -172,6 +234,22 @@ function LeisPage() {
             Edital anexado: {acervo.edital.join(", ")} — o resumo usa esse conteúdo como referência.
           </p>
         )}
+
+        <label className="flex items-start gap-2 rounded-lg bg-secondary p-3 text-xs">
+          <input
+            type="checkbox"
+            checked={auto}
+            onChange={(e) => setAuto(e.target.checked)}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="font-semibold">Enviar automaticamente para a revisão espaçada</span>
+            <span className="block text-muted-foreground">
+              Ao terminar a leitura, a IA cria 5 questões só desse capítulo e coloca na fila de hoje.
+            </span>
+          </span>
+        </label>
+
 
         <Button className="w-full" disabled={mut.isPending} onClick={() => ler(capitulo)}>
           {mut.isPending ? (
@@ -280,6 +358,32 @@ function LeisPage() {
               </ul>
             </section>
           )}
+
+          <div className="grid gap-2 rounded-lg border border-border/70 p-3">
+            <p className="text-xs text-muted-foreground">
+              {leitura && leitura.questoesGeradas > 0
+                ? `${leitura.questoesGeradas} questão(ões) desta leitura já estão na revisão espaçada.`
+                : "Transforme esta leitura em questões e reforços agendados."}
+            </p>
+            <Button
+              disabled={!leitura || reforco.isPending}
+              onClick={() => leitura && reforco.mutate(leitura)}
+            >
+              {reforco.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Criando questões da leitura…
+                </>
+              ) : (
+                <>
+                  <Brain className="mr-2 size-4" /> Gerar questões deste capítulo para revisão
+                </>
+              )}
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/revisao">Ir para a revisão espaçada</Link>
+            </Button>
+          </div>
+
 
           <Button
             variant="outline"
