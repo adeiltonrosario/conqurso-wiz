@@ -142,19 +142,7 @@ function Auth() {
             {modo === "entrar" ? "Entrar" : modo === "criar" ? "Criar conta" : "Enviar link"}
           </Button>
 
-          {modo !== "recuperar" && (
-            <>
-              <div className="relative py-1 text-center">
-                <span className="relative z-10 bg-card px-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  ou
-                </span>
-                <span className="absolute inset-x-0 top-1/2 -z-0 border-t border-border" />
-              </div>
-              <Button type="button" variant="outline" className="w-full" onClick={google} disabled={ocupado}>
-                Continuar com o Google
-              </Button>
-            </>
-          )}
+          }
         </form>
 
         <div className="mt-4 space-y-2 text-center text-sm">
