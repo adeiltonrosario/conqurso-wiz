@@ -41,6 +41,12 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
 
+  function escolher(letra: string) {
+    setEscolha(letra);
+    registrarResposta(questao, letra === correta?.letra);
+  }
+
+
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
