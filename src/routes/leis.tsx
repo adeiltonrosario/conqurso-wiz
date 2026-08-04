@@ -235,6 +235,22 @@ function LeisPage() {
           </p>
         )}
 
+        <label className="flex items-start gap-2 rounded-lg bg-secondary p-3 text-xs">
+          <input
+            type="checkbox"
+            checked={auto}
+            onChange={(e) => setAuto(e.target.checked)}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="font-semibold">Enviar automaticamente para a revisão espaçada</span>
+            <span className="block text-muted-foreground">
+              Ao terminar a leitura, a IA cria 5 questões só desse capítulo e coloca na fila de hoje.
+            </span>
+          </span>
+        </label>
+
+
         <Button className="w-full" disabled={mut.isPending} onClick={() => ler(capitulo)}>
           {mut.isPending ? (
             <>
