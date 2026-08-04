@@ -24,6 +24,12 @@ export const Route = createFileRoute("/")({
 
 const CARDS = [
   {
+    to: "/trilha",
+    icon: CalendarDays,
+    titulo: "Trilha de estudo",
+    texto: "Calendário com cargo, data prevista da prova e link para retomar de onde você parou.",
+  },
+  {
     to: "/leis",
     icon: BookOpen,
     titulo: "Leis resumidas do edital",
