@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, ArrowRight } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, ArrowRight } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 
 export const Route = createFileRoute("/")({
@@ -23,6 +23,12 @@ export const Route = createFileRoute("/")({
 });
 
 const CARDS = [
+  {
+    to: "/trilha",
+    icon: CalendarDays,
+    titulo: "Trilha de estudo",
+    texto: "Calendário com cargo, data prevista da prova e link para retomar de onde você parou.",
+  },
   {
     to: "/leis",
     icon: BookOpen,

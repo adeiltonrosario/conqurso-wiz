@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays } from "lucide-react";
 
 const NAV = [
+  { to: "/trilha", label: "Trilha", icon: CalendarDays },
   { to: "/leis", label: "Leis", icon: BookOpen },
   { to: "/redacao", label: "Redação", icon: PenLine },
   { to: "/inclusao", label: "Incluir", icon: FilePlus2 },
