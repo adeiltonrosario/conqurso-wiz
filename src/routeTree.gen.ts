@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InclusaoRouteImport } from './routes/inclusao'
 import { Route as RedacaoRouteImport } from './routes/redacao'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InclusaoRoute = InclusaoRouteImport.update({
+  id: '/inclusao',
+  path: '/inclusao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RedacaoRoute = RedacaoRouteImport.update({
@@ -25,27 +31,31 @@ const RedacaoRoute = RedacaoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/redacao'
+  fullPaths: '/' | '/inclusao' | '/redacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/redacao'
-  id: '__root__' | '/' | '/redacao'
+  to: '/' | '/inclusao' | '/redacao'
+  id: '__root__' | '/' | '/inclusao' | '/redacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InclusaoRoute: typeof InclusaoRoute
   RedacaoRoute: typeof RedacaoRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inclusao': {
+      id: '/inclusao'
+      path: '/inclusao'
+      fullPath: '/inclusao'
+      preLoaderRoute: typeof InclusaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/redacao': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InclusaoRoute: InclusaoRoute,
   RedacaoRoute: RedacaoRoute,
 }
 export const routeTree = rootRouteImport
