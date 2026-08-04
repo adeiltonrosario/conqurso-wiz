@@ -4,13 +4,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { Marcado, LegendaCores } from "../components/Marcado";
-import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
-import { MODELOS_REDACAO } from "../lib/acervo";
-import { gerarRedacao, type Redacao } from "../lib/ai.functions";
+import { AppShell } from "@/components/AppShell";
+import { Marcado, LegendaCores } from "@/components/Marcado";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { MODELOS_REDACAO } from "@/lib/acervo";
+import { gerarRedacao, type Redacao } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/redacao")({
   head: () => ({

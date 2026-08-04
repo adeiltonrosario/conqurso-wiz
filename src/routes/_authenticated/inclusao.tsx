@@ -4,13 +4,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
-import { BANCAS, contextoDoAcervo, useAcervo, type QuestaoCadastrada } from "../lib/acervo";
-import { gerarQuestoes } from "../lib/ai.functions";
+import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { BANCAS, contextoDoAcervo, useAcervo, type QuestaoCadastrada } from "@/lib/acervo";
+import { gerarQuestoes } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/inclusao")({
   head: () => ({
