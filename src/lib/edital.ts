@@ -12,7 +12,12 @@ export type MateriaEdital = {
   nome: string;
   grupo: GrupoEdital;
   topicos: string[];
+  /** Relevância da matéria na prova, em % do total de questões. */
+  relevancia?: number;
+  /** Relevância de cada tópico DENTRO da matéria, em %. */
+  relevanciaTopicos?: Record<string, number>;
 };
+
 
 export type EditalEstado = {
   texto: string;
