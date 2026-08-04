@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
+import { Relevancia, ResumoRelevancia, agruparAssuntos } from "../components/Relevancia";
 import { Button } from "../components/ui/button";
 import {
   MATERIAS_ESPECIFICO,
@@ -50,11 +51,19 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
-      <header className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-        <span className="rounded bg-secondary px-2 py-0.5 text-primary">
-          Questão {numero} — {questao.banca}
-        </span>
-        <span>{questao.materia}</span>
+      <header className="mb-2 text-xs font-semibold text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-secondary px-2 py-0.5 text-primary">
+            Questão {numero} — {questao.banca}
+          </span>
+          <span>{questao.materia}</span>
+        </div>
+        <Relevancia
+          materia={questao.materia}
+          assunto={questao.assunto}
+          relevanciaMateria={questao.relevancia_materia}
+          relevanciaAssunto={questao.relevancia_assunto}
+        />
       </header>
 
       <p className="text-[15px] leading-relaxed">
@@ -143,6 +152,7 @@ function QuestoesPage() {
     (q) => !q.materia || q.materia.toLowerCase().includes(materia.toLowerCase()),
   );
   const lista = visiveis.length ? visiveis : acervo.simulado;
+  const assuntos = agruparAssuntos(lista);
 
   return (
     <AppShell
@@ -200,6 +210,8 @@ function QuestoesPage() {
         </Button>
         <LegendaCores />
       </section>
+
+      <ResumoRelevancia itens={assuntos} />
 
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
