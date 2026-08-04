@@ -8,12 +8,8 @@ import { AppShell } from "@/components/AppShell";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
-import {
-  MATERIAS_ESPECIFICO,
-  MATERIAS_GERAL,
-  contextoDoAcervo,
-  useAcervo,
-} from "@/lib/acervo";
+import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { contextoDoEdital, ehDoEdital, materiasPorGrupo, useEdital } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
@@ -126,22 +122,27 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
 
 function QuestoesPage() {
   const { acervo, atualizar } = useAcervo();
+  const { edital } = useEdital();
   const [grupo, setGrupo] = useState<(typeof GRUPOS)[number]>("Conhecimento Geral");
-  const [materia, setMateria] = useState(MATERIAS_GERAL[0]!);
+  const [materia, setMateria] = useState("");
   const gerar = useServerFn(gerarQuestoes);
 
-  const materias = grupo === "Conhecimento Geral" ? MATERIAS_GERAL : MATERIAS_ESPECIFICO;
+  const materias = materiasPorGrupo(edital, grupo);
+  const materiaAtiva = materias.includes(materia) ? materia : materias[0]!;
 
   const mutation = useMutation({
     mutationFn: () =>
       gerar({
         data: {
-          materia,
+          materia: materiaAtiva,
           grupo,
           banca: "FCC",
           quantidade: 5,
           formato: "multipla",
-          contexto: contextoDoAcervo(acervo) || null,
+          contexto:
+            [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
+              .filter(Boolean)
+              .join("\n\n") || null,
         },
       }),
     onSuccess: (questoes) => atualizar({ simulado: questoes }),
@@ -149,7 +150,7 @@ function QuestoesPage() {
   });
 
   const visiveis = acervo.simulado.filter(
-    (q) => !q.materia || q.materia.toLowerCase().includes(materia.toLowerCase()),
+    (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
   const lista = visiveis.length ? visiveis : acervo.simulado;
   const assuntos = agruparAssuntos(lista);
@@ -167,9 +168,7 @@ function QuestoesPage() {
               type="button"
               onClick={() => {
                 setGrupo(g);
-                setMateria(
-                  (g === "Conhecimento Geral" ? MATERIAS_GERAL[0] : MATERIAS_ESPECIFICO[0])!,
-                );
+                setMateria(materiasPorGrupo(edital, g)[0] ?? "");
               }}
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                 grupo === g
@@ -189,12 +188,17 @@ function QuestoesPage() {
               type="button"
               onClick={() => setMateria(m)}
               className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                materia === m
+                materiaAtiva === m
                   ? "border-accent bg-accent text-accent-foreground font-semibold"
                   : "border-border text-muted-foreground"
               }`}
             >
               {m}
+              {ehDoEdital(edital, m) && (
+                <span className="ml-1.5 rounded bg-secondary px-1 text-[10px] font-semibold text-primary">
+                  Edital
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -205,7 +209,7 @@ function QuestoesPage() {
               <Loader2 className="mr-2 size-4 animate-spin" /> Montando questões…
             </>
           ) : (
-            `Gerar questões de ${materia}`
+            `Gerar questões de ${materiaAtiva}`
           )}
         </Button>
         <LegendaCores />

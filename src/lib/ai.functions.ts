@@ -176,3 +176,31 @@ Formato JSON: {"materia":string,"capitulo":string,"base_legal":string,"sintese":
 ${data.contexto ? `Conteúdo cadastrado pelo candidato (edital/leis):\n${data.contexto.slice(0, 12000)}` : ""}`,
     );
   });
+
+export type MateriaExtraida = {
+  nome: string;
+  grupo: "Conhecimento Geral" | "Conhecimento Específico";
+  topicos: string[];
+};
+
+export const extrairMateriasEdital = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        texto: z.string().trim().min(20).max(40000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const result = await runAIJson<{ materias: MateriaExtraida[] }>(
+      `Você organiza o conteúdo programático de editais de concursos públicos brasileiros.
+Leia o texto e liste as MATÉRIAS cobradas, classificando cada uma como "Conhecimento Geral"
+(português, matemática/raciocínio lógico, informática, atualidades, legislação básica de cidadania)
+ou "Conhecimento Específico" (matérias técnicas do cargo).
+Para cada matéria, liste os tópicos/capítulos exatamente como cobrados no edital, em itens curtos.
+Não invente matérias que não estejam no texto.
+Formato JSON: {"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecimento Específico","topicos":string[]}]}`,
+      `Texto do edital:\n${data.texto.slice(0, 30000)}`,
+    );
+    return result.materias ?? [];
+  });
