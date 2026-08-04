@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MATERIAS_ESPECIFICO, MATERIAS_GERAL } from "@/lib/acervo";
+import { ehDoEdital, todasAsMaterias, useEdital } from "@/lib/edital";
 import { analisarPadroes, conversarPadroes, type PadraoAnalise } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/analise-padroes")({
@@ -41,9 +41,10 @@ export const Route = createFileRoute("/_authenticated/analise-padroes")({
   component: AnalisePage,
 });
 
-const MATERIAS = ["Todas", ...MATERIAS_GERAL, ...MATERIAS_ESPECIFICO];
 
 function AnalisePage() {
+  const { edital } = useEdital();
+  const MATERIAS = ["Todas", ...todasAsMaterias(edital)];
   const inputRef = useRef<HTMLInputElement>(null);
   const [arquivos, setArquivos] = useState<string[]>([]);
   const [conteudo, setConteudo] = useState("");
@@ -140,6 +141,7 @@ function AnalisePage() {
             {MATERIAS.map((m) => (
               <option key={m} value={m}>
                 {m}
+                {ehDoEdital(edital, m) ? " (edital)" : ""}
               </option>
             ))}
           </select>

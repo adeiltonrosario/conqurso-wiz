@@ -10,6 +10,7 @@ import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Rele
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { contextoDoEdital, ehDoEdital, grupoDaMateria, todasAsMaterias, useEdital } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
@@ -32,13 +33,16 @@ export const Route = createFileRoute("/_authenticated/prova-interativa")({
   component: ProvaPage,
 });
 
-const MATERIAS = ["Português", "Direito Penal"] as const;
 const MINIMO = 35;
 const LOTE = 10;
 
 function ProvaPage() {
   const { acervo } = useAcervo();
-  const [materia, setMateria] = useState<(typeof MATERIAS)[number]>("Português");
+  const { edital } = useEdital();
+  const MATERIAS = todasAsMaterias(edital);
+  const [materiaSel, setMateriaSel] = useState("");
+  const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
+  const setMateria = setMateriaSel;
   const [provas, setProvas] = useState<Record<string, Questao[]>>({});
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [corrigida, setCorrigida] = useState<Record<string, boolean>>({});
@@ -56,11 +60,14 @@ function ProvaPage() {
         const lote = await gerar({
           data: {
             materia,
-            grupo: materia === "Português" ? "Conhecimento Geral" : "Conhecimento Específico",
+            grupo: grupoDaMateria(edital, materia),
             banca: "FCC",
             quantidade: Math.min(LOTE, alvo - acumulado.length),
             formato: "multipla",
-            contexto: contextoDoAcervo(acervo) || null,
+            contexto:
+              [contextoDoEdital(edital, materia), contextoDoAcervo(acervo)]
+                .filter(Boolean)
+                .join("\n\n") || null,
           },
         });
         if (!lote.length) break;
@@ -80,19 +87,24 @@ function ProvaPage() {
       descricao="Formato idêntico ao da banca FCC, em scroll vertical contínuo como uma prova impressa."
     >
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {MATERIAS.map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setMateria(m)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              className={`min-w-28 flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
                 materia === m
                   ? "border-primary bg-primary text-primary-foreground font-semibold"
                   : "border-border text-muted-foreground"
               }`}
             >
               {m}
+              {ehDoEdital(edital, m) && (
+                <span className="ml-1.5 rounded bg-secondary/70 px-1 text-[10px] font-semibold">
+                  Edital
+                </span>
+              )}
             </button>
           ))}
         </div>

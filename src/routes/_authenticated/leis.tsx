@@ -9,13 +9,15 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BANCAS, contextoDoAcervo, useAcervo } from "@/lib/acervo";
 import {
-  BANCAS,
-  MATERIAS_ESPECIFICO,
-  MATERIAS_GERAL,
-  contextoDoAcervo,
-  useAcervo,
-} from "@/lib/acervo";
+  contextoDoEdital,
+  ehDoEdital,
+  grupoDaMateria,
+  todasAsMaterias,
+  topicosDaMateria,
+  useEdital,
+} from "@/lib/edital";
 import {
   contextoDaLeitura,
   definirFocos,
@@ -46,8 +48,6 @@ export const Route = createFileRoute("/_authenticated/leis")({
   component: LeisPage,
 });
 
-const MATERIAS = [...MATERIAS_ESPECIFICO, ...MATERIAS_GERAL];
-
 const SUGESTOES: Record<string, string[]> = {
   "Direito Penal": [
     "Crimes contra a Administração Pública",
@@ -69,10 +69,11 @@ const SUGESTOES: Record<string, string[]> = {
 
 function LeisPage() {
   const { acervo, atualizar } = useAcervo();
+  const { edital } = useEdital();
   const gerar = useServerFn(resumirLei);
   const gerarQ = useServerFn(gerarQuestoes);
 
-  const [materia, setMateria] = useState(MATERIAS[0]!);
+  const [materia, setMateria] = useState("");
   const [banca, setBanca] = useState(BANCAS[0]!);
   const [capitulo, setCapitulo] = useState("");
   const [topicos, setTopicos] = useState<string[]>([]);
@@ -80,6 +81,11 @@ function LeisPage() {
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [auto, setAuto] = useState(true);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  const MATERIAS = todasAsMaterias(edital);
+  const materiaAtiva = MATERIAS.includes(materia) ? materia : MATERIAS[0]!;
+  const doEdital = topicosDaMateria(edital, materiaAtiva);
+  const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
 
   const alternarFoco = (trecho: string) =>
     setSelecionados((atual) =>
@@ -91,7 +97,7 @@ function LeisPage() {
       const questoes = await gerarQ({
         data: {
           materia: l.materia,
-          grupo: "Conhecimento Específico",
+          grupo: grupoDaMateria(edital, l.materia),
           banca,
           quantidade: 5,
           formato: "multipla",
@@ -131,16 +137,19 @@ function LeisPage() {
     mutationFn: (cap: string) =>
       gerar({
         data: {
-          materia,
+          materia: materiaAtiva,
           capitulo: cap,
           banca,
-          contexto: contextoDoAcervo(acervo) || null,
+          contexto:
+            [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
+              .filter(Boolean)
+              .join("\n\n") || null,
         },
       }),
     onSuccess: (r, cap) => {
       setResumo(r);
       const nova = registrarLeitura({
-        materia: r.materia || materia,
+        materia: r.materia || materiaAtiva,
         capitulo: r.capitulo || cap,
         baseLegal: r.base_legal ?? "",
         resumo: [
@@ -184,13 +193,14 @@ function LeisPage() {
             <Label htmlFor="materia">Matéria</Label>
             <select
               id="materia"
-              value={materia}
+              value={materiaAtiva}
               onChange={(e) => setMateria(e.target.value)}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               {MATERIAS.map((m) => (
                 <option key={m} value={m}>
                   {m}
+                  {ehDoEdital(edital, m) ? " (edital)" : ""}
                 </option>
               ))}
             </select>
@@ -225,9 +235,9 @@ function LeisPage() {
               <Plus className="size-4" />
             </Button>
           </div>
-          {(SUGESTOES[materia] ?? []).length > 0 && (
+          {sugestoes.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
-              {SUGESTOES[materia]!.map((s) => (
+              {sugestoes.map((s) => (
                 <button
                   key={s}
                   type="button"

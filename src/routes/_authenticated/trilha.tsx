@@ -11,7 +11,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { MATERIAS_ESPECIFICO, MATERIAS_GERAL, BANCAS } from "@/lib/acervo";
+import { BANCAS } from "@/lib/acervo";
+import { ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
@@ -45,7 +46,6 @@ export const Route = createFileRoute("/_authenticated/trilha")({
 });
 
 const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
-const MATERIAS = [...MATERIAS_GERAL, ...MATERIAS_ESPECIFICO];
 
 function Pagina() {
   const { trilha, aplicar, adicionarTarefa, alternarTarefa, removerTarefa, marcarPonto } = useTrilha();
@@ -54,7 +54,12 @@ function Pagina() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selecionado, setSelecionado] = useState(hojeIso());
-  const [materia, setMateria] = useState(MATERIAS[0]!);
+  const { edital } = useEdital();
+  const MATERIAS = todasAsMaterias(edital);
+  const [materiaSel, setMateriaSel] = useState("");
+  const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
+  const setMateria = setMateriaSel;
+  const topicosEdital = topicosDaMateria(edital, materia);
   const [topico, setTopico] = useState("");
   const [rota, setRota] = useState<string>(DESTINOS[0]!.rota);
   const [minutos, setMinutos] = useState(45);
@@ -305,6 +310,7 @@ function Pagina() {
               {MATERIAS.map((m) => (
                 <option key={m} value={m}>
                   {m}
+                  {ehDoEdital(edital, m) ? " (edital)" : ""}
                 </option>
               ))}
             </select>
@@ -317,6 +323,20 @@ function Pagina() {
               placeholder="Ex.: Crimes contra a Administração Pública"
               className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
             />
+            {topicosEdital.length > 0 && (
+              <span className="mt-1.5 flex flex-wrap gap-1.5">
+                {topicosEdital.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTopico(t)}
+                    className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </span>
+            )}
           </label>
           <label className="text-sm">
             <span className="text-muted-foreground">Onde estudar</span>
