@@ -201,6 +201,45 @@ function RevisaoPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar o reforço."),
   });
 
+  const reforcoLeitura = useMutation({
+    mutationFn: async (l: Leitura) => {
+      const questoes = await gerar({
+        data: {
+          materia: l.materia,
+          grupo: "Conhecimento Específico",
+          banca: "FCC",
+          quantidade: 5,
+          formato: "multipla",
+          contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
+        },
+      });
+      return { l, questoes };
+    },
+    onSuccess: ({ l, questoes }) => {
+      if (!questoes.length) {
+        toast.error("A IA não retornou questões deste capítulo.");
+        return;
+      }
+      questoes.forEach((q, i) =>
+        registrarResposta(
+          {
+            ...q,
+            id: q.id || `lei-${l.id}-${Date.now()}-${i}`,
+            materia: `${l.materia} — ${l.capitulo}`,
+          },
+          false,
+          0,
+        ),
+      );
+      somarQuestoesGeradas(l.id, questoes.length);
+      toast.success(`Reforço da leitura “${l.capitulo}” adicionado à fila.`);
+      setIndice(0);
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao gerar o reforço da leitura."),
+  });
+
+
+
   function responder(acertou: boolean, comSeguranca: boolean) {
     if (!atual) return;
     registrarResposta(atual.questao, acertou, acertou ? (comSeguranca ? 2 : 1) : 0);
