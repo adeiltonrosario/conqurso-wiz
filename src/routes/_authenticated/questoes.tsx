@@ -14,7 +14,12 @@ import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
 export const Route = createFileRoute("/_authenticated/questoes")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    materia: typeof search.materia === "string" ? search.materia : undefined,
+    assunto: typeof search.assunto === "string" ? search.assunto : undefined,
+  }),
   head: () => ({
+
     meta: [
       { title: "Questões FCC comentadas pela IA | Concurseiro Inteligente" },
       {
