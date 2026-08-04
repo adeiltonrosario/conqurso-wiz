@@ -14,7 +14,7 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Entre com e-mail e senha ou com o Google para sincronizar seu acervo, revisão espaçada e trilha de estudo na nuvem.",
+          "Entre com e-mail e senha para sincronizar seu acervo, revisão espaçada e trilha de estudo na nuvem.",
       },
       { property: "og:title", content: "Entrar — Concurseiro Inteligente" },
       {
