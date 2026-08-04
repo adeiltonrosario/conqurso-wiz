@@ -13,7 +13,7 @@ import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 
-export const Route = createFileRoute("/_authenticated/_authenticated/prova-interativa")({
+export const Route = createFileRoute("/_authenticated/prova-interativa")({
   head: () => ({
     meta: [
       { title: "Prova interativa em PDF | Concurseiro Inteligente" },

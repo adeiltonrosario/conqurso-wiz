@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { BANCAS, contextoDoAcervo, useAcervo, type QuestaoCadastrada } from "@/lib/acervo";
 import { gerarQuestoes } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/_authenticated/_authenticated/inclusao")({
+export const Route = createFileRoute("/_authenticated/inclusao")({
   head: () => ({
     meta: [
       { title: "Inclusão de conteúdo e simulados | Concurseiro Inteligente" },

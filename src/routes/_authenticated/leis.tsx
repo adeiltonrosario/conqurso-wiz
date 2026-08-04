@@ -26,7 +26,7 @@ import {
 import { registrarResposta } from "@/lib/revisao";
 import { gerarQuestoes, resumirLei, type LeiResumida } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/_authenticated/_authenticated/leis")({
+export const Route = createFileRoute("/_authenticated/leis")({
   head: () => ({
     meta: [
       { title: "Leitura resumida das leis do edital | Concurseiro Inteligente" },
