@@ -50,6 +50,9 @@ export type Questao = {
   banca: string;
   grupo: "Conhecimento Geral" | "Conhecimento Específico";
   materia: string;
+  assunto?: string;
+  relevancia_materia?: number;
+  relevancia_assunto?: number;
   enunciado: string;
   alternativas: Alternativa[];
   explicacao: string;
