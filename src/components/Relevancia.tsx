@@ -16,10 +16,10 @@ export function Relevancia({
   relevanciaMateria,
   relevanciaAssunto,
 }: {
-  materia?: string;
-  assunto?: string;
-  relevanciaMateria?: number;
-  relevanciaAssunto?: number;
+  materia?: string | undefined;
+  assunto?: string | undefined;
+  relevanciaMateria?: number | undefined;
+  relevanciaAssunto?: number | undefined;
 }) {
   if (relevanciaMateria == null && relevanciaAssunto == null) return null;
 
