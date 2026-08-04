@@ -1,6 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, LogIn, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { limparEstadoLocal } from "@/lib/sync";
 
 const NAV = [
   { to: "/trilha", label: "Trilha", icon: CalendarDays },
