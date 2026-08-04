@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalisePadroesRouteImport } from './routes/analise-padroes'
 import { Route as InclusaoRouteImport } from './routes/inclusao'
+import { Route as QuestoesRouteImport } from './routes/questoes'
 import { Route as RedacaoRouteImport } from './routes/redacao'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const InclusaoRoute = InclusaoRouteImport.update({
   path: '/inclusao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QuestoesRoute = QuestoesRouteImport.update({
+  id: '/questoes',
+  path: '/questoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedacaoRoute = RedacaoRouteImport.update({
   id: '/redacao',
   path: '/redacao',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,28 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analise-padroes' | '/inclusao' | '/redacao'
+  fullPaths: '/' | '/analise-padroes' | '/inclusao' | '/questoes' | '/redacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analise-padroes' | '/inclusao' | '/redacao'
-  id: '__root__' | '/' | '/analise-padroes' | '/inclusao' | '/redacao'
+  to: '/' | '/analise-padroes' | '/inclusao' | '/questoes' | '/redacao'
+  id:
+    | '__root__'
+    | '/'
+    | '/analise-padroes'
+    | '/inclusao'
+    | '/questoes'
+    | '/redacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalisePadroesRoute: typeof AnalisePadroesRoute
   InclusaoRoute: typeof InclusaoRoute
+  QuestoesRoute: typeof QuestoesRoute
   RedacaoRoute: typeof RedacaoRoute
 }
 
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InclusaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/questoes': {
+      id: '/questoes'
+      path: '/questoes'
+      fullPath: '/questoes'
+      preLoaderRoute: typeof QuestoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redacao': {
       id: '/redacao'
       path: '/redacao'
@@ -106,6 +129,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalisePadroesRoute: AnalisePadroesRoute,
   InclusaoRoute: InclusaoRoute,
+  QuestoesRoute: QuestoesRoute,
   RedacaoRoute: RedacaoRoute,
 }
 export const routeTree = rootRouteImport
