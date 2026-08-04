@@ -18,6 +18,7 @@ import {
 } from "../lib/acervo";
 import {
   contextoDaLeitura,
+  definirFocos,
   registrarLeitura,
   somarQuestoesGeradas,
   type Leitura,
@@ -78,6 +79,12 @@ function LeisPage() {
   const [resumo, setResumo] = useState<LeiResumida | null>(null);
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [auto, setAuto] = useState(true);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  const alternarFoco = (trecho: string) =>
+    setSelecionados((atual) =>
+      atual.includes(trecho) ? atual.filter((t) => t !== trecho) : [...atual, trecho],
+    );
 
   const reforco = useMutation({
     mutationFn: async (l: Leitura) => {
@@ -111,7 +118,11 @@ function LeisPage() {
         ),
       );
       somarQuestoesGeradas(l.id, questoes.length);
-      toast.success(`${questoes.length} questões da leitura enviadas para a revisão espaçada.`);
+      toast.success(
+        (l.focos ?? []).length
+          ? `${questoes.length} questões dos ${l.focos.length} tópico(s) selecionado(s) foram para a revisão.`
+          : `${questoes.length} questões da leitura enviadas para a revisão espaçada.`,
+      );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões da leitura."),
   });
@@ -139,6 +150,7 @@ function LeisPage() {
         ].join("\n"),
       });
       setLeitura(nova);
+      setSelecionados([]);
       if (auto) reforco.mutate(nova);
     },
     onError: (e: Error) => toast.error(e.message || "Não foi possível resumir a lei."),
@@ -301,13 +313,23 @@ function LeisPage() {
           {resumo.sintese?.length > 0 && (
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Síntese para leitura rápida</h3>
+              <p className="text-xs text-muted-foreground">
+                Marque os tópicos que você quer treinar: as questões e reforços sairão só deles.
+              </p>
               <ul className="space-y-1.5 text-sm leading-relaxed">
                 {resumo.sintese.map((s, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-accent">•</span>
-                    <span>
-                      <Marcado texto={s} />
-                    </span>
+                  <li key={i}>
+                    <label className="flex cursor-pointer gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(s)}
+                        onChange={() => alternarFoco(s)}
+                        className="mt-1 size-4 shrink-0 accent-primary"
+                      />
+                      <span>
+                        <Marcado texto={s} />
+                      </span>
+                    </label>
                   </li>
                 ))}
               </ul>
@@ -318,9 +340,26 @@ function LeisPage() {
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Artigos essenciais</h3>
               <div className="space-y-2">
-                {resumo.artigos.map((a, i) => (
-                  <div key={i} className="rounded-lg border border-border/70 p-3">
-                    <p className="text-xs font-bold text-primary">{a.referencia}</p>
+                {resumo.artigos.map((a, i) => {
+                  const trecho = `${a.referencia} — ${a.texto}`;
+                  return (
+                  <div
+                    key={i}
+                    className={`rounded-lg border p-3 ${
+                      selecionados.includes(trecho)
+                        ? "border-primary bg-primary/5"
+                        : "border-border/70"
+                    }`}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(trecho)}
+                        onChange={() => alternarFoco(trecho)}
+                        className="size-4 accent-primary"
+                      />
+                      <span className="text-xs font-bold text-primary">{a.referencia}</span>
+                    </label>
                     <p className="mt-1 text-sm leading-relaxed">
                       <Marcado texto={a.texto} />
                     </p>
@@ -328,7 +367,8 @@ function LeisPage() {
                       <Marcado texto={a.comentario} />
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -361,13 +401,21 @@ function LeisPage() {
 
           <div className="grid gap-2 rounded-lg border border-border/70 p-3">
             <p className="text-xs text-muted-foreground">
-              {leitura && leitura.questoesGeradas > 0
+              {selecionados.length > 0
+                ? `Recorte ativo: ${selecionados.length} artigo(s)/tópico(s) marcados — as questões sairão só deles.`
+                : leitura && leitura.questoesGeradas > 0
                 ? `${leitura.questoesGeradas} questão(ões) desta leitura já estão na revisão espaçada.`
                 : "Transforme esta leitura em questões e reforços agendados."}
             </p>
             <Button
               disabled={!leitura || reforco.isPending}
-              onClick={() => leitura && reforco.mutate(leitura)}
+              onClick={() => {
+                if (!leitura) return;
+                definirFocos(leitura.id, selecionados);
+                const alvo = { ...leitura, focos: selecionados };
+                setLeitura(alvo);
+                reforco.mutate(alvo);
+              }}
             >
               {reforco.isPending ? (
                 <>
@@ -375,7 +423,10 @@ function LeisPage() {
                 </>
               ) : (
                 <>
-                  <Brain className="mr-2 size-4" /> Gerar questões deste capítulo para revisão
+                  <Brain className="mr-2 size-4" />{" "}
+                  {selecionados.length
+                    ? `Gerar questões dos ${selecionados.length} tópico(s) marcados`
+                    : "Gerar questões deste capítulo para revisão"}
                 </>
               )}
             </Button>
