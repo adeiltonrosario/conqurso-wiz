@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, ArrowRight } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, ArrowRight } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 
 export const Route = createFileRoute("/")({
@@ -28,6 +28,12 @@ const CARDS = [
     icon: ListChecks,
     titulo: "Questões e explicações",
     texto: "Padrão FCC com 5 alternativas, filtro por matéria e gabarito comentado pela IA.",
+  },
+  {
+    to: "/revisao",
+    icon: Brain,
+    titulo: "Revisão espaçada",
+    texto: "Fila automática pelo seu histórico: o que você erra volta rápido, o que domina volta depois.",
   },
   {
     to: "/prova-interativa",
