@@ -230,7 +230,7 @@ function QuestoesPage() {
               <Loader2 className="mr-2 size-4 animate-spin" /> Montando questões…
             </>
           ) : (
-            `Gerar questões de ${materiaAtiva}`
+            foco ? `Gerar questões de ${foco}` : `Gerar questões de ${materiaAtiva}`
           )}
         </Button>
         <LegendaCores />
