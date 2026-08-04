@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalisePadroesRouteImport } from './routes/analise-padroes'
 import { Route as InclusaoRouteImport } from './routes/inclusao'
+import { Route as ProvaInterativaRouteImport } from './routes/prova-interativa'
 import { Route as QuestoesRouteImport } from './routes/questoes'
 import { Route as RedacaoRouteImport } from './routes/redacao'
 
@@ -30,6 +31,11 @@ const InclusaoRoute = InclusaoRouteImport.update({
   path: '/inclusao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProvaInterativaRoute = ProvaInterativaRouteImport.update({
+  id: '/prova-interativa',
+  path: '/prova-interativa',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestoesRoute = QuestoesRouteImport.update({
   id: '/questoes',
   path: '/questoes',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
@@ -60,19 +68,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
+  '/prova-interativa': typeof ProvaInterativaRoute
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analise-padroes' | '/inclusao' | '/questoes' | '/redacao'
+  fullPaths:
+    | '/'
+    | '/analise-padroes'
+    | '/inclusao'
+    | '/prova-interativa'
+    | '/questoes'
+    | '/redacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analise-padroes' | '/inclusao' | '/questoes' | '/redacao'
+  to:
+    | '/'
+    | '/analise-padroes'
+    | '/inclusao'
+    | '/prova-interativa'
+    | '/questoes'
+    | '/redacao'
   id:
     | '__root__'
     | '/'
     | '/analise-padroes'
     | '/inclusao'
+    | '/prova-interativa'
     | '/questoes'
     | '/redacao'
   fileRoutesById: FileRoutesById
@@ -81,6 +103,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalisePadroesRoute: typeof AnalisePadroesRoute
   InclusaoRoute: typeof InclusaoRoute
+  ProvaInterativaRoute: typeof ProvaInterativaRoute
   QuestoesRoute: typeof QuestoesRoute
   RedacaoRoute: typeof RedacaoRoute
 }
@@ -108,6 +131,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InclusaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prova-interativa': {
+      id: '/prova-interativa'
+      path: '/prova-interativa'
+      fullPath: '/prova-interativa'
+      preLoaderRoute: typeof ProvaInterativaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/questoes': {
       id: '/questoes'
       path: '/questoes'
@@ -129,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalisePadroesRoute: AnalisePadroesRoute,
   InclusaoRoute: InclusaoRoute,
+  ProvaInterativaRoute: ProvaInterativaRoute,
   QuestoesRoute: QuestoesRoute,
   RedacaoRoute: RedacaoRoute,
 }
