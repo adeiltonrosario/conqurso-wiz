@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
+import { Relevancia, ResumoRelevancia, agruparAssuntos } from "../components/Relevancia";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "../lib/acervo";
@@ -45,6 +46,7 @@ function ProvaPage() {
 
   const questoes = provas[materia] ?? [];
   const respondidas = questoes.filter((q) => respostas[q.id ?? ""]).length;
+  const assuntos = agruparAssuntos(questoes);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -136,6 +138,8 @@ function ProvaPage() {
         <LegendaCores />
       </section>
 
+      <ResumoRelevancia itens={assuntos} />
+
       {questoes.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           Gere a prova de {materia} para começar a rolagem vertical contínua.
@@ -148,6 +152,12 @@ function ProvaPage() {
               <article key={q.id || i} className="rounded-xl border border-border bg-paper p-4">
                 <header className="mb-2 text-xs font-semibold text-muted-foreground">
                   {String(i + 1).padStart(2, "0")} · {q.materia || materia} · FCC
+                  <Relevancia
+                    materia={q.materia || materia}
+                    assunto={q.assunto}
+                    relevanciaMateria={q.relevancia_materia}
+                    relevanciaAssunto={q.relevancia_assunto}
+                  />
                 </header>
                 <p className="text-[15px] leading-relaxed">
                   <Marcado texto={q.enunciado} />
