@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, ArrowRight } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, ArrowRight } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 
 export const Route = createFileRoute("/")({
@@ -23,6 +23,12 @@ export const Route = createFileRoute("/")({
 });
 
 const CARDS = [
+  {
+    to: "/leis",
+    icon: BookOpen,
+    titulo: "Leis resumidas do edital",
+    texto: "Só o capítulo cobrado: síntese em tópicos, artigos comentados e pegadinhas da banca.",
+  },
   {
     to: "/questoes",
     icon: ListChecks,

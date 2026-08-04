@@ -135,3 +135,37 @@ dizendo se a hipótese do candidato é válida, com que frequência o padrão ap
       `Contexto da análise:\n${data.contexto.slice(0, 15000)}\n\nHipótese/pergunta do candidato: ${data.pergunta}`,
     );
   });
+
+export type LeiResumida = {
+  materia: string;
+  capitulo: string;
+  base_legal: string;
+  sintese: string[];
+  artigos: { referencia: string; texto: string; comentario: string }[];
+  pegadinhas: string[];
+  memorizar: string[];
+};
+
+export const resumirLei = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        materia: z.string().trim().min(2).max(80),
+        capitulo: z.string().trim().min(2).max(200),
+        banca: z.string().trim().max(30),
+        contexto: z.string().trim().max(20000).nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return await runAIJson<LeiResumida>(
+      `Você é professor de legislação para concursos públicos brasileiros.
+Resuma APENAS o capítulo/tópico pedido do edital — não trate de outros capítulos da matéria.
+Traga a base legal exata (lei, artigos), uma síntese em tópicos curtos de leitura rápida,
+os artigos essenciais com texto enxuto e comentário do que a banca cobra, pegadinhas típicas e mnemônicos/pontos para memorizar.
+${COR_INSTRUCOES}
+Formato JSON: {"materia":string,"capitulo":string,"base_legal":string,"sintese":string[],"artigos":[{"referencia":string,"texto":string,"comentario":string}],"pegadinhas":string[],"memorizar":string[]}`,
+      `Matéria: ${data.materia}. Capítulo cobrado no edital: ${data.capitulo}. Banca: ${data.banca || "geral"}.
+${data.contexto ? `Conteúdo cadastrado pelo candidato (edital/leis):\n${data.contexto.slice(0, 12000)}` : ""}`,
+    );
+  });
