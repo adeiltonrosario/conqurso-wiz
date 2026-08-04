@@ -313,13 +313,23 @@ function LeisPage() {
           {resumo.sintese?.length > 0 && (
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Síntese para leitura rápida</h3>
+              <p className="text-xs text-muted-foreground">
+                Marque os tópicos que você quer treinar: as questões e reforços sairão só deles.
+              </p>
               <ul className="space-y-1.5 text-sm leading-relaxed">
                 {resumo.sintese.map((s, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-accent">•</span>
-                    <span>
-                      <Marcado texto={s} />
-                    </span>
+                  <li key={i}>
+                    <label className="flex cursor-pointer gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(s)}
+                        onChange={() => alternarFoco(s)}
+                        className="mt-1 size-4 shrink-0 accent-primary"
+                      />
+                      <span>
+                        <Marcado texto={s} />
+                      </span>
+                    </label>
                   </li>
                 ))}
               </ul>
@@ -330,9 +340,26 @@ function LeisPage() {
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Artigos essenciais</h3>
               <div className="space-y-2">
-                {resumo.artigos.map((a, i) => (
-                  <div key={i} className="rounded-lg border border-border/70 p-3">
-                    <p className="text-xs font-bold text-primary">{a.referencia}</p>
+                {resumo.artigos.map((a, i) => {
+                  const trecho = `${a.referencia} — ${a.texto}`;
+                  return (
+                  <div
+                    key={i}
+                    className={`rounded-lg border p-3 ${
+                      selecionados.includes(trecho)
+                        ? "border-primary bg-primary/5"
+                        : "border-border/70"
+                    }`}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(trecho)}
+                        onChange={() => alternarFoco(trecho)}
+                        className="size-4 accent-primary"
+                      />
+                      <span className="text-xs font-bold text-primary">{a.referencia}</span>
+                    </label>
                     <p className="mt-1 text-sm leading-relaxed">
                       <Marcado texto={a.texto} />
                     </p>
@@ -340,7 +367,8 @@ function LeisPage() {
                       <Marcado texto={a.comentario} />
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
