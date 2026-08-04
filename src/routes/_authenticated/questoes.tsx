@@ -129,28 +129,37 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
 function QuestoesPage() {
   const { acervo, atualizar } = useAcervo();
   const { edital } = useEdital();
-  const [grupo, setGrupo] = useState<(typeof GRUPOS)[number]>("Conhecimento Geral");
-  const [materia, setMateria] = useState("");
+  const busca = Route.useSearch();
+  const [grupo, setGrupo] = useState<(typeof GRUPOS)[number]>(
+    busca.materia ? grupoDaMateria(edital, busca.materia) : "Conhecimento Geral",
+  );
+  const [materia, setMateria] = useState(busca.materia ?? "");
   const gerar = useServerFn(gerarQuestoes);
 
   const materias = materiasPorGrupo(edital, grupo);
   const materiaAtiva = materias.includes(materia) ? materia : materias[0]!;
+  const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
 
   const mutation = useMutation({
     mutationFn: () =>
       gerar({
         data: {
-          materia: materiaAtiva,
+          materia: foco ? `${materiaAtiva} — ${foco}` : materiaAtiva,
           grupo,
           banca: "FCC",
           quantidade: 5,
           formato: "multipla",
           contexto:
-            [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
+            [
+              foco ? `Gere questões APENAS sobre o assunto do edital: ${foco}.` : "",
+              contextoDoEdital(edital, materiaAtiva),
+              contextoDoAcervo(acervo),
+            ]
               .filter(Boolean)
               .join("\n\n") || null,
         },
       }),
+
     onSuccess: (questoes) => atualizar({ simulado: questoes }),
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões."),
   });
