@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain } from "lucide-react";
 
 const NAV = [
   { to: "/redacao", label: "Redação", icon: PenLine },
   { to: "/inclusao", label: "Incluir", icon: FilePlus2 },
   { to: "/analise-padroes", label: "Padrões", icon: ScanSearch },
   { to: "/questoes", label: "Questões", icon: ListChecks },
+  { to: "/revisao", label: "Revisão", icon: Brain },
   { to: "/prova-interativa", label: "Prova", icon: FileText },
 ] as const;
 

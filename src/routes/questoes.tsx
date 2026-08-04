@@ -14,6 +14,7 @@ import {
   useAcervo,
 } from "../lib/acervo";
 import { gerarQuestoes, type Questao } from "../lib/ai.functions";
+import { registrarResposta } from "../lib/revisao";
 
 export const Route = createFileRoute("/questoes")({
   head: () => ({
@@ -40,6 +41,12 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
   const [escolha, setEscolha] = useState<string | null>(null);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
+
+  function escolher(letra: string) {
+    setEscolha(letra);
+    registrarResposta(questao, letra === correta?.letra);
+  }
+
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
@@ -69,7 +76,7 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
               <button
                 type="button"
                 disabled={respondida}
-                onClick={() => setEscolha(a.letra)}
+                onClick={() => escolher(a.letra)}
                 className={`w-full rounded-lg border p-3 text-left text-sm transition-colors ${estado}`}
               >
                 <span className="font-bold">{a.letra})</span> <Marcado texto={a.texto} />

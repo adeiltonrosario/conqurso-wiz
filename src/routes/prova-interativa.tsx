@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "../lib/acervo";
 import { gerarQuestoes, type Questao } from "../lib/ai.functions";
+import { registrarResposta } from "../lib/revisao";
 
 export const Route = createFileRoute("/prova-interativa")({
   head: () => ({
@@ -158,7 +159,10 @@ function ProvaPage() {
                       <li key={a.letra}>
                         <button
                           type="button"
-                          onClick={() => setRespostas((r) => ({ ...r, [q.id]: a.letra }))}
+                          onClick={() => {
+                            setRespostas((r) => ({ ...r, [q.id]: a.letra }));
+                            registrarResposta({ ...q, materia: q.materia || materia }, a.correta);
+                          }}
                           className={`w-full rounded-lg border p-3 text-left text-sm transition-colors ${
                             mostrar
                               ? a.correta
