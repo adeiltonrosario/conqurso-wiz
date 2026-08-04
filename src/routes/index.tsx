@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, ArrowRight } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, ArrowRight, LogIn } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { useAuth } from "../hooks/useAuth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
