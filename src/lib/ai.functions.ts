@@ -204,3 +204,48 @@ Formato JSON: {"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecim
     );
     return result.materias ?? [];
   });
+
+export type RelevanciaMateriaEdital = {
+  nome: string;
+  relevancia: number;
+  topicos: { nome: string; relevancia_disciplina: number }[];
+};
+
+/** Estima, com base no histórico da banca/cargo, a relevância das matérias e tópicos do edital. */
+export const estimarRelevanciaEdital = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        banca: z.string().trim().max(120).optional(),
+        cargo: z.string().trim().max(160).optional(),
+        materias: z
+          .array(
+            z.object({
+              nome: z.string().trim().min(1).max(160),
+              topicos: z.array(z.string().trim().max(300)).max(120),
+            }),
+          )
+          .min(1)
+          .max(40),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const lista = data.materias
+      .map((m) => `- ${m.nome}: ${m.topicos.join("; ") || "sem tópicos informados"}`)
+      .join("\n");
+
+    const result = await runAIJson<{ materias: RelevanciaMateriaEdital[] }>(
+      `Você analisa a incidência histórica de assuntos em provas de concurso público no Brasil.
+Para cada matéria informada, estime "relevancia": o percentual do TOTAL de questões da prova
+que costuma cair naquela matéria (a soma das matérias deve ficar próxima de 100).
+Para cada tópico, estime "relevancia_disciplina": o percentual das questões DAQUELA matéria
+que costuma cair no tópico (a soma dos tópicos de uma matéria deve ficar próxima de 100).
+Use até duas casas decimais. Não crie matérias nem tópicos que não estejam na lista.
+Formato JSON: {"materias":[{"nome":string,"relevancia":number,"topicos":[{"nome":string,"relevancia_disciplina":number}]}]}`,
+      `Banca: ${data.banca || "não informada"}. Cargo: ${data.cargo || "não informado"}.
+Matérias e tópicos do edital:
+${lista}`,
+    );
+    return result.materias ?? [];
+  });

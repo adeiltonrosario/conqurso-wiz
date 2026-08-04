@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EditalMaterias } from "@/components/EditalMaterias";
+import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,6 +146,9 @@ function InclusaoPage() {
       descricao="Alimente o agente com questões, leis, gramática, provas anteriores e edital."
     >
       <EditalMaterias />
+
+      <EditalRelevancia />
+
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Nova questão</h2>
