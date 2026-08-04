@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, Loader2, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Marcado, LegendaCores } from "../components/Marcado";
 import { Button } from "../components/ui/button";
@@ -16,7 +16,14 @@ import {
   contextoDoAcervo,
   useAcervo,
 } from "../lib/acervo";
-import { resumirLei, type LeiResumida } from "../lib/ai.functions";
+import {
+  contextoDaLeitura,
+  registrarLeitura,
+  somarQuestoesGeradas,
+  type Leitura,
+} from "../lib/leituras";
+import { registrarResposta } from "../lib/revisao";
+import { gerarQuestoes, resumirLei, type LeiResumida } from "../lib/ai.functions";
 
 export const Route = createFileRoute("/leis")({
   head: () => ({
