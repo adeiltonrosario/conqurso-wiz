@@ -78,7 +78,11 @@ Gere questões inéditas no padrão visual e de linguagem da banca.
 ${data.formato === "multipla" ? "Cada questão tem 5 alternativas (A, B, C, D, E) e apenas uma correta." : "Cada questão tem 2 alternativas: Certo e Errado."}
 Cada alternativa recebe uma explicação passo a passo dizendo por que está correta ou errada, citando lei/artigo ou regra gramatical quando cabível.
 ${COR_INSTRUCOES}
-Formato JSON: {"questoes":[{"id":string,"banca":string,"grupo":string,"materia":string,"enunciado":string,"explicacao":string,"alternativas":[{"letra":string,"texto":string,"correta":boolean,"explicacao":string}]}]}`,
+Informe também, para cada questão: "assunto" (o tópico específico do edital, ex.: "Crimes contra a Administração Pública"),
+"relevancia_materia" (percentual estimado de incidência da MATÉRIA no total da prova da banca, número de 0 a 100)
+e "relevancia_assunto" (percentual estimado de incidência do ASSUNTO dentro da matéria, número de 0 a 100).
+Baseie os percentuais no histórico real de provas da banca; use uma casa decimal.
+Formato JSON: {"questoes":[{"id":string,"banca":string,"grupo":string,"materia":string,"assunto":string,"relevancia_materia":number,"relevancia_assunto":number,"enunciado":string,"explicacao":string,"alternativas":[{"letra":string,"texto":string,"correta":boolean,"explicacao":string}]}]}`,
       `Matéria: ${data.materia}. Grupo do edital: ${data.grupo}. Quantidade: ${data.quantidade} questões.
 ${data.contexto ? `Baseie-se também neste conteúdo cadastrado pelo candidato (leis, edital, provas anteriores, questões):\n${data.contexto.slice(0, 15000)}` : ""}`,
     );
