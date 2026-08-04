@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedAnalisePadroesRouteImport } from './routes/_authenticated/analise-padroes'
 import { Route as AuthenticatedInclusaoRouteImport } from './routes/_authenticated/inclusao'
 import { Route as AuthenticatedLeisRouteImport } from './routes/_authenticated/leis'
@@ -24,47 +25,51 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAnalisePadroesRoute =
-  AuthenticatedAnalisePadroesRouteImport.update({
-    id: '/_authenticated/analise-padroes',
-    path: '/analise-padroes',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedInclusaoRoute = AuthenticatedInclusaoRouteImport.update({
-  id: '/_authenticated/inclusao',
-  path: '/inclusao',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAnalisePadroesRoute =
+  AuthenticatedAnalisePadroesRouteImport.update({
+    id: '/analise-padroes',
+    path: '/analise-padroes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInclusaoRoute = AuthenticatedInclusaoRouteImport.update({
+  id: '/inclusao',
+  path: '/inclusao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLeisRoute = AuthenticatedLeisRouteImport.update({
-  id: '/_authenticated/leis',
+  id: '/leis',
   path: '/leis',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProvaInterativaRoute =
   AuthenticatedProvaInterativaRouteImport.update({
-    id: '/_authenticated/prova-interativa',
+    id: '/prova-interativa',
     path: '/prova-interativa',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedQuestoesRoute = AuthenticatedQuestoesRouteImport.update({
-  id: '/_authenticated/questoes',
+  id: '/questoes',
   path: '/questoes',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRedacaoRoute = AuthenticatedRedacaoRouteImport.update({
-  id: '/_authenticated/redacao',
+  id: '/redacao',
   path: '/redacao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
-  id: '/_authenticated/revisao',
+  id: '/revisao',
   path: '/revisao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTrilhaRoute = AuthenticatedTrilhaRouteImport.update({
-  id: '/_authenticated/trilha',
+  id: '/trilha',
   path: '/trilha',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -92,6 +97,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_authenticated/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
   '/_authenticated/inclusao': typeof AuthenticatedInclusaoRoute
   '/_authenticated/leis': typeof AuthenticatedLeisRoute
@@ -127,6 +133,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/_authenticated/analise-padroes'
     | '/_authenticated/inclusao'
     | '/_authenticated/leis'
@@ -139,14 +146,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedAnalisePadroesRoute: typeof AuthenticatedAnalisePadroesRoute
-  AuthenticatedInclusaoRoute: typeof AuthenticatedInclusaoRoute
-  AuthenticatedLeisRoute: typeof AuthenticatedLeisRoute
-  AuthenticatedProvaInterativaRoute: typeof AuthenticatedProvaInterativaRoute
-  AuthenticatedQuestoesRoute: typeof AuthenticatedQuestoesRoute
-  AuthenticatedRedacaoRoute: typeof AuthenticatedRedacaoRoute
-  AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
-  AuthenticatedTrilhaRoute: typeof AuthenticatedTrilhaRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -158,67 +158,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/analise-padroes': {
       id: '/_authenticated/analise-padroes'
       path: '/analise-padroes'
       fullPath: '/analise-padroes'
       preLoaderRoute: typeof AuthenticatedAnalisePadroesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inclusao': {
       id: '/_authenticated/inclusao'
       path: '/inclusao'
       fullPath: '/inclusao'
       preLoaderRoute: typeof AuthenticatedInclusaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/leis': {
       id: '/_authenticated/leis'
       path: '/leis'
       fullPath: '/leis'
       preLoaderRoute: typeof AuthenticatedLeisRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/prova-interativa': {
       id: '/_authenticated/prova-interativa'
       path: '/prova-interativa'
       fullPath: '/prova-interativa'
       preLoaderRoute: typeof AuthenticatedProvaInterativaRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/questoes': {
       id: '/_authenticated/questoes'
       path: '/questoes'
       fullPath: '/questoes'
       preLoaderRoute: typeof AuthenticatedQuestoesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/redacao': {
       id: '/_authenticated/redacao'
       path: '/redacao'
       fullPath: '/redacao'
       preLoaderRoute: typeof AuthenticatedRedacaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/revisao': {
       id: '/_authenticated/revisao'
       path: '/revisao'
       fullPath: '/revisao'
       preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/trilha': {
       id: '/_authenticated/trilha'
       path: '/trilha'
       fullPath: '/trilha'
       preLoaderRoute: typeof AuthenticatedTrilhaRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalisePadroesRoute: typeof AuthenticatedAnalisePadroesRoute
+  AuthenticatedInclusaoRoute: typeof AuthenticatedInclusaoRoute
+  AuthenticatedLeisRoute: typeof AuthenticatedLeisRoute
+  AuthenticatedProvaInterativaRoute: typeof AuthenticatedProvaInterativaRoute
+  AuthenticatedQuestoesRoute: typeof AuthenticatedQuestoesRoute
+  AuthenticatedRedacaoRoute: typeof AuthenticatedRedacaoRoute
+  AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
+  AuthenticatedTrilhaRoute: typeof AuthenticatedTrilhaRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalisePadroesRoute: AuthenticatedAnalisePadroesRoute,
   AuthenticatedInclusaoRoute: AuthenticatedInclusaoRoute,
   AuthenticatedLeisRoute: AuthenticatedLeisRoute,
@@ -227,6 +244,14 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRedacaoRoute: AuthenticatedRedacaoRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedTrilhaRoute: AuthenticatedTrilhaRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
