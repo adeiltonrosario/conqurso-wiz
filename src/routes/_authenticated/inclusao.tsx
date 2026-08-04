@@ -146,6 +146,9 @@ function InclusaoPage() {
     >
       <EditalMaterias />
 
+      <EditalRelevancia />
+
+
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Nova questão</h2>
 
