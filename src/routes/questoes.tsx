@@ -152,6 +152,7 @@ function QuestoesPage() {
     (q) => !q.materia || q.materia.toLowerCase().includes(materia.toLowerCase()),
   );
   const lista = visiveis.length ? visiveis : acervo.simulado;
+  const assuntos = agruparAssuntos(lista);
 
   return (
     <AppShell
