@@ -17,6 +17,7 @@ import { Route as ProvaInterativaRouteImport } from './routes/prova-interativa'
 import { Route as QuestoesRouteImport } from './routes/questoes'
 import { Route as RedacaoRouteImport } from './routes/redacao'
 import { Route as RevisaoRouteImport } from './routes/revisao'
+import { Route as TrilhaRouteImport } from './routes/trilha'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const RevisaoRoute = RevisaoRouteImport.update({
   path: '/revisao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrilhaRoute = TrilhaRouteImport.update({
+  id: '/trilha',
+  path: '/trilha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
   '/revisao': typeof RevisaoRoute
+  '/trilha': typeof TrilhaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
   '/revisao': typeof RevisaoRoute
+  '/trilha': typeof TrilhaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/questoes': typeof QuestoesRoute
   '/redacao': typeof RedacaoRoute
   '/revisao': typeof RevisaoRoute
+  '/trilha': typeof TrilhaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/questoes'
     | '/redacao'
     | '/revisao'
+    | '/trilha'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/questoes'
     | '/redacao'
     | '/revisao'
+    | '/trilha'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/questoes'
     | '/redacao'
     | '/revisao'
+    | '/trilha'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +144,7 @@ export interface RootRouteChildren {
   QuestoesRoute: typeof QuestoesRoute
   RedacaoRoute: typeof RedacaoRoute
   RevisaoRoute: typeof RevisaoRoute
+  TrilhaRoute: typeof TrilhaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trilha': {
+      id: '/trilha'
+      path: '/trilha'
+      fullPath: '/trilha'
+      preLoaderRoute: typeof TrilhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,17 +224,8 @@ const rootRouteChildren: RootRouteChildren = {
   QuestoesRoute: QuestoesRoute,
   RedacaoRoute: RedacaoRoute,
   RevisaoRoute: RevisaoRoute,
+  TrilhaRoute: TrilhaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
