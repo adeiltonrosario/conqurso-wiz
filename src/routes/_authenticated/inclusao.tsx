@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EditalMaterias } from "@/components/EditalMaterias";
+import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
