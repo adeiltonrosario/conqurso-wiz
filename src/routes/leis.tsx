@@ -18,6 +18,7 @@ import {
 } from "../lib/acervo";
 import {
   contextoDaLeitura,
+  definirFocos,
   registrarLeitura,
   somarQuestoesGeradas,
   type Leitura,
@@ -78,6 +79,12 @@ function LeisPage() {
   const [resumo, setResumo] = useState<LeiResumida | null>(null);
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [auto, setAuto] = useState(true);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  const alternarFoco = (trecho: string) =>
+    setSelecionados((atual) =>
+      atual.includes(trecho) ? atual.filter((t) => t !== trecho) : [...atual, trecho],
+    );
 
   const reforco = useMutation({
     mutationFn: async (l: Leitura) => {
@@ -111,7 +118,11 @@ function LeisPage() {
         ),
       );
       somarQuestoesGeradas(l.id, questoes.length);
-      toast.success(`${questoes.length} questões da leitura enviadas para a revisão espaçada.`);
+      toast.success(
+        (l.focos ?? []).length
+          ? `${questoes.length} questões dos ${l.focos.length} tópico(s) selecionado(s) foram para a revisão.`
+          : `${questoes.length} questões da leitura enviadas para a revisão espaçada.`,
+      );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões da leitura."),
   });
@@ -139,6 +150,7 @@ function LeisPage() {
         ].join("\n"),
       });
       setLeitura(nova);
+      setSelecionados([]);
       if (auto) reforco.mutate(nova);
     },
     onError: (e: Error) => toast.error(e.message || "Não foi possível resumir a lei."),
@@ -361,13 +373,21 @@ function LeisPage() {
 
           <div className="grid gap-2 rounded-lg border border-border/70 p-3">
             <p className="text-xs text-muted-foreground">
-              {leitura && leitura.questoesGeradas > 0
+              {selecionados.length > 0
+                ? `Recorte ativo: ${selecionados.length} artigo(s)/tópico(s) marcados — as questões sairão só deles.`
+                : leitura && leitura.questoesGeradas > 0
                 ? `${leitura.questoesGeradas} questão(ões) desta leitura já estão na revisão espaçada.`
                 : "Transforme esta leitura em questões e reforços agendados."}
             </p>
             <Button
               disabled={!leitura || reforco.isPending}
-              onClick={() => leitura && reforco.mutate(leitura)}
+              onClick={() => {
+                if (!leitura) return;
+                definirFocos(leitura.id, selecionados);
+                const alvo = { ...leitura, focos: selecionados };
+                setLeitura(alvo);
+                reforco.mutate(alvo);
+              }}
             >
               {reforco.isPending ? (
                 <>
@@ -375,7 +395,10 @@ function LeisPage() {
                 </>
               ) : (
                 <>
-                  <Brain className="mr-2 size-4" /> Gerar questões deste capítulo para revisão
+                  <Brain className="mr-2 size-4" />{" "}
+                  {selecionados.length
+                    ? `Gerar questões dos ${selecionados.length} tópico(s) marcados`
+                    : "Gerar questões deste capítulo para revisão"}
                 </>
               )}
             </Button>
