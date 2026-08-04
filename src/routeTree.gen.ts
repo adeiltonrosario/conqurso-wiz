@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AnalisePadroesRouteImport } from './routes/analise-padroes'
 import { Route as InclusaoRouteImport } from './routes/inclusao'
 import { Route as RedacaoRouteImport } from './routes/redacao'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalisePadroesRoute = AnalisePadroesRouteImport.update({
+  id: '/analise-padroes',
+  path: '/analise-padroes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InclusaoRoute = InclusaoRouteImport.update({
@@ -31,30 +37,34 @@ const RedacaoRoute = RedacaoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analise-padroes': typeof AnalisePadroesRoute
   '/inclusao': typeof InclusaoRoute
   '/redacao': typeof RedacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inclusao' | '/redacao'
+  fullPaths: '/' | '/analise-padroes' | '/inclusao' | '/redacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inclusao' | '/redacao'
-  id: '__root__' | '/' | '/inclusao' | '/redacao'
+  to: '/' | '/analise-padroes' | '/inclusao' | '/redacao'
+  id: '__root__' | '/' | '/analise-padroes' | '/inclusao' | '/redacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalisePadroesRoute: typeof AnalisePadroesRoute
   InclusaoRoute: typeof InclusaoRoute
   RedacaoRoute: typeof RedacaoRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analise-padroes': {
+      id: '/analise-padroes'
+      path: '/analise-padroes'
+      fullPath: '/analise-padroes'
+      preLoaderRoute: typeof AnalisePadroesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inclusao': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalisePadroesRoute: AnalisePadroesRoute,
   InclusaoRoute: InclusaoRoute,
   RedacaoRoute: RedacaoRoute,
 }
