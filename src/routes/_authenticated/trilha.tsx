@@ -121,18 +121,34 @@ function Pagina() {
             )}
           </label>
           <label className="text-sm">
-            <span className="text-muted-foreground">Banca prevista</span>
-            <select
-              value={trilha.banca}
-              onChange={(e) => aplicar({ banca: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Não definida</option>
-              {BANCAS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
+            <span className="text-muted-foreground">Banca prevista (do edital)</span>
+            {BANCAS_EDITAL.length === 0 ? (
+              <>
+                <select
+                  disabled
+                  className="mt-1 w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <option>Nenhuma banca no edital</option>
+                </select>
+                <Link to="/inclusao" className="mt-1 block text-xs font-semibold text-primary">
+                  Cadastrar bancas do edital
+                </Link>
+              </>
+            ) : (
+              <select
+                value={BANCAS_EDITAL.includes(trilha.banca) ? trilha.banca : ""}
+                onChange={(e) => aplicar({ banca: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione a banca</option>
+                {BANCAS_EDITAL.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            )}
+
             </select>
           </label>
           <label className="text-sm">
