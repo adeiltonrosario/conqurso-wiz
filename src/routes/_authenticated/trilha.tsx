@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BANCAS } from "@/lib/acervo";
-import { ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+import { cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
@@ -56,6 +56,7 @@ function Pagina() {
   const [selecionado, setSelecionado] = useState(hojeIso());
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
+  const CARGOS = cargosDoEdital(edital);
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
   const setMateria = setMateriaSel;
