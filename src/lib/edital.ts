@@ -87,7 +87,34 @@ export function useEdital() {
     aplicar({ materias: atual.materias.filter((m) => m.id !== id) });
   };
 
-  return { edital, aplicar, definirMaterias, adicionarMateria, atualizarMateria, removerMateria };
+  const adicionarCargo = (nome: string) => {
+    const atual = lerEdital();
+    const limpo = nome.trim();
+    if (!limpo) return;
+    if ((atual.cargos ?? []).some((c) => c.trim().toLowerCase() === limpo.toLowerCase())) return;
+    aplicar({ cargos: [...(atual.cargos ?? []), limpo] });
+  };
+
+  const removerCargo = (nome: string) => {
+    const atual = lerEdital();
+    aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome) });
+  };
+
+  return {
+    edital,
+    aplicar,
+    definirMaterias,
+    adicionarMateria,
+    atualizarMateria,
+    removerMateria,
+    adicionarCargo,
+    removerCargo,
+  };
+}
+
+/** Cargos do edital (sem repetições). */
+export function cargosDoEdital(edital: EditalEstado) {
+  return unicos(edital.cargos ?? []);
 }
 
 function unicos(nomes: string[]) {
