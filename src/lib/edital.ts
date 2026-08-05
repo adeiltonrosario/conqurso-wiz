@@ -103,6 +103,19 @@ export function useEdital() {
     aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome) });
   };
 
+  const adicionarBanca = (nome: string) => {
+    const atual = lerEdital();
+    const limpo = nome.trim();
+    if (!limpo) return;
+    if ((atual.bancas ?? []).some((b) => b.trim().toLowerCase() === limpo.toLowerCase())) return;
+    aplicar({ bancas: [...(atual.bancas ?? []), limpo] });
+  };
+
+  const removerBanca = (nome: string) => {
+    const atual = lerEdital();
+    aplicar({ bancas: (atual.bancas ?? []).filter((b) => b !== nome) });
+  };
+
   return {
     edital,
     aplicar,
@@ -112,6 +125,8 @@ export function useEdital() {
     removerMateria,
     adicionarCargo,
     removerCargo,
+    adicionarBanca,
+    removerBanca,
   };
 }
 
@@ -119,6 +134,12 @@ export function useEdital() {
 export function cargosDoEdital(edital: EditalEstado) {
   return unicos(edital.cargos ?? []);
 }
+
+/** Bancas do edital (sem repetições). */
+export function bancasDoEdital(edital: EditalEstado) {
+  return unicos(edital.bancas ?? []);
+}
+
 
 function unicos(nomes: string[]) {
   const vistos = new Set<string>();
