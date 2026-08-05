@@ -119,6 +119,53 @@ export function EditalMaterias() {
         </div>
       </div>
 
+      <div className="space-y-2 border-t border-border pt-4">
+        <Label htmlFor="edital-cargo">Cargos do edital</Label>
+        <p className="text-xs text-muted-foreground">
+          Só estes cargos aparecem na Trilha, para você não estudar o conteúdo de outro cargo.
+        </p>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            adicionarCargo(novoCargo);
+            setNovoCargo("");
+          }}
+        >
+          <Input
+            id="edital-cargo"
+            value={novoCargo}
+            onChange={(e) => setNovoCargo(e.target.value.slice(0, 160))}
+            placeholder="Ex.: Escrivão de Polícia Civil"
+            className="h-9"
+          />
+          <Button type="submit" variant="outline" aria-label="Adicionar cargo">
+            <Plus className="size-4" />
+          </Button>
+        </form>
+        {cargos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum cargo cadastrado — extraia do edital ou adicione acima.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {cargos.map((c) => (
+              <li
+                key={c}
+                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+              >
+                <span>{c}</span>
+                <button type="button" onClick={() => removerCargo(c)} aria-label={`Remover ${c}`}>
+                  <Trash2 className="size-3 text-destructive" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
+
       <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[1fr_auto_auto]">
         <Input
           value={nova}
