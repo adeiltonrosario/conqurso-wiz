@@ -182,8 +182,9 @@ function QuestoesPage() {
   return (
     <AppShell
       titulo="Questões e explicações"
-      descricao="Padrão FCC com 5 alternativas e gabarito comentado passo a passo pela IA."
+      descricao={`Padrão ${banca} com 5 alternativas e gabarito comentado passo a passo pela IA.`}
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {GRUPOS.map((g) => (

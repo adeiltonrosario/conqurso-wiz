@@ -254,6 +254,7 @@ function RevisaoPage() {
       titulo="Revisão espaçada"
       descricao="A fila é montada sozinha a partir do seu histórico: o que você erra volta rápido, o que você domina volta bem depois."
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Brain className="size-4 text-primary" />

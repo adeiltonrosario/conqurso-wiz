@@ -74,7 +74,10 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const result = await runAIJson<{ questoes: Questao[] }>(
       `Você é um elaborador de questões da banca ${data.banca}, especialista em concursos brasileiros.
-Gere questões inéditas no padrão visual e de linguagem da banca.
+Gere questões inéditas no padrão visual e de linguagem da banca ${data.banca}.
+Regra obrigatória: enunciado, alternativas (quantidade, estilo, distratores típicos) e explicações devem seguir
+estritamente o estilo da banca ${data.banca} — não misture o formato de outras bancas. No campo "banca" de cada questão
+retorne exatamente "${data.banca}".
 ${data.formato === "multipla" ? "Cada questão tem 5 alternativas (A, B, C, D, E) e apenas uma correta." : "Cada questão tem 2 alternativas: Certo e Errado."}
 Cada alternativa recebe uma explicação passo a passo dizendo por que está correta ou errada, citando lei/artigo ou regra gramatical quando cabível.
 ${COR_INSTRUCOES}

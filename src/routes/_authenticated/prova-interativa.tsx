@@ -89,6 +89,7 @@ function ProvaPage() {
       titulo="Prova interativa"
       descricao={`Formato idêntico ao da banca ${banca}, em scroll vertical contínuo como uma prova impressa.`}
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex flex-wrap gap-2">
           {MATERIAS.map((m) => (
