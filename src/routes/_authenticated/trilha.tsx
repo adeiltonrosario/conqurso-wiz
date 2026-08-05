@@ -148,8 +148,6 @@ function Pagina() {
                 ))}
               </select>
             )}
-
-            </select>
           </label>
           <label className="text-sm">
             <span className="text-muted-foreground">Data prevista da prova</span>
