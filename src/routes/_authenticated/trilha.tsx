@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BANCAS } from "@/lib/acervo";
-import { cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+import { bancasDoEdital, cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
