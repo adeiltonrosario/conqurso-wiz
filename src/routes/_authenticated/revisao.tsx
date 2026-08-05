@@ -13,10 +13,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BancaAtual } from "@/components/BancaAtual";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
   contextoDaLeitura,

@@ -18,6 +18,8 @@ import {
 } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
+import { useBancaPrevista } from "@/lib/trilha";
+import { BancaAtual } from "@/components/BancaAtual";
 
 export const Route = createFileRoute("/_authenticated/questoes")({
   validateSearch: (search: Record<string, unknown>) => ({
