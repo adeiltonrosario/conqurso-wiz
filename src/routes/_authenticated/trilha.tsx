@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BANCAS } from "@/lib/acervo";
-import { ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+import { cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
@@ -56,6 +56,7 @@ function Pagina() {
   const [selecionado, setSelecionado] = useState(hojeIso());
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
+  const CARGOS = cargosDoEdital(edital);
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
   const setMateria = setMateriaSel;
@@ -91,13 +92,33 @@ function Pagina() {
         </h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
-            <span className="text-muted-foreground">Cargo</span>
-            <input
-              value={trilha.cargo}
-              onChange={(e) => aplicar({ cargo: e.target.value })}
-              placeholder="Ex.: Escrivão de Polícia Civil"
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
+            <span className="text-muted-foreground">Cargo (do edital)</span>
+            {CARGOS.length === 0 ? (
+              <>
+                <select
+                  disabled
+                  className="mt-1 w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <option>Nenhum cargo no edital</option>
+                </select>
+                <Link to="/inclusao" className="mt-1 block text-xs font-semibold text-primary">
+                  Cadastrar cargos do edital
+                </Link>
+              </>
+            ) : (
+              <select
+                value={CARGOS.includes(trilha.cargo) ? trilha.cargo : ""}
+                onChange={(e) => aplicar({ cargo: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione o cargo</option>
+                {CARGOS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className="text-sm">
             <span className="text-muted-foreground">Banca prevista</span>

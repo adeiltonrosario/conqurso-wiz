@@ -192,17 +192,18 @@ export const extrairMateriasEdital = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const result = await runAIJson<{ materias: MateriaExtraida[] }>(
+    const result = await runAIJson<{ materias: MateriaExtraida[]; cargos?: string[] }>(
       `Você organiza o conteúdo programático de editais de concursos públicos brasileiros.
 Leia o texto e liste as MATÉRIAS cobradas, classificando cada uma como "Conhecimento Geral"
 (português, matemática/raciocínio lógico, informática, atualidades, legislação básica de cidadania)
 ou "Conhecimento Específico" (matérias técnicas do cargo).
 Para cada matéria, liste os tópicos/capítulos exatamente como cobrados no edital, em itens curtos.
-Não invente matérias que não estejam no texto.
-Formato JSON: {"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecimento Específico","topicos":string[]}]}`,
+Liste também os CARGOS previstos no edital, com o nome exato (ex.: "Escrivão de Polícia Civil").
+Não invente matérias nem cargos que não estejam no texto.
+Formato JSON: {"cargos":string[],"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecimento Específico","topicos":string[]}]}`,
       `Texto do edital:\n${data.texto.slice(0, 30000)}`,
     );
-    return result.materias ?? [];
+    return { materias: result.materias ?? [], cargos: result.cargos ?? [] };
   });
 
 export type RelevanciaMateriaEdital = {

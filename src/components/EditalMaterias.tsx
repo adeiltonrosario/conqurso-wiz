@@ -14,18 +14,21 @@ const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"]
 
 /** Cadastro das matérias do edital: extração por IA e edição manual. */
 export function EditalMaterias() {
-  const { edital, aplicar, definirMaterias, atualizarMateria, removerMateria } = useEdital();
+  const { edital, aplicar, definirMaterias, atualizarMateria, removerMateria, adicionarCargo, removerCargo } =
+    useEdital();
   const extrair = useServerFn(extrairMateriasEdital);
   const [texto, setTexto] = useState<string | null>(null);
   const [nova, setNova] = useState("");
   const [novoGrupo, setNovoGrupo] = useState<GrupoEdital>("Conhecimento Específico");
   const [topicoNovo, setTopicoNovo] = useState<Record<string, string>>({});
+  const [novoCargo, setNovoCargo] = useState("");
 
   const valor = texto ?? edital.texto;
+  const cargos = edital.cargos ?? [];
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
-    onSuccess: (materias) => {
+    onSuccess: ({ materias, cargos: cargosIA }) => {
       if (!materias.length) {
         toast.error("A IA não encontrou matérias nesse texto.");
         return;
@@ -39,8 +42,19 @@ export function EditalMaterias() {
           grupo: m.grupo === "Conhecimento Geral" ? "Conhecimento Geral" : "Conhecimento Específico",
           topicos: (m.topicos ?? []).map((t) => t.trim()).filter(Boolean),
         })) as typeof edital.materias;
-      aplicar({ texto: valor.trim(), materias: [...edital.materias, ...novas] });
-      toast.success(`${novas.length} matéria(s) do edital cadastradas.`);
+      const cargosAtuais = edital.cargos ?? [];
+      const vistos = new Set(cargosAtuais.map((c) => c.trim().toLowerCase()));
+      const cargosNovos = (cargosIA ?? [])
+        .map((c) => c.trim())
+        .filter((c) => c && !vistos.has(c.toLowerCase()) && vistos.add(c.toLowerCase()));
+      aplicar({
+        texto: valor.trim(),
+        materias: [...edital.materias, ...novas],
+        cargos: [...cargosAtuais, ...cargosNovos],
+      });
+      toast.success(
+        `${novas.length} matéria(s) e ${cargosNovos.length} cargo(s) do edital cadastrados.`,
+      );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o edital."),
   });
@@ -104,6 +118,53 @@ export function EditalMaterias() {
           </Button>
         </div>
       </div>
+
+      <div className="space-y-2 border-t border-border pt-4">
+        <Label htmlFor="edital-cargo">Cargos do edital</Label>
+        <p className="text-xs text-muted-foreground">
+          Só estes cargos aparecem na Trilha, para você não estudar o conteúdo de outro cargo.
+        </p>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            adicionarCargo(novoCargo);
+            setNovoCargo("");
+          }}
+        >
+          <Input
+            id="edital-cargo"
+            value={novoCargo}
+            onChange={(e) => setNovoCargo(e.target.value.slice(0, 160))}
+            placeholder="Ex.: Escrivão de Polícia Civil"
+            className="h-9"
+          />
+          <Button type="submit" variant="outline" aria-label="Adicionar cargo">
+            <Plus className="size-4" />
+          </Button>
+        </form>
+        {cargos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum cargo cadastrado — extraia do edital ou adicione acima.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {cargos.map((c) => (
+              <li
+                key={c}
+                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+              >
+                <span>{c}</span>
+                <button type="button" onClick={() => removerCargo(c)} aria-label={`Remover ${c}`}>
+                  <Trash2 className="size-3 text-destructive" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
 
       <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[1fr_auto_auto]">
         <Input
