@@ -182,3 +182,23 @@ export function useTrilha() {
 
   return { trilha, aplicar, adicionarTarefa, alternarTarefa, removerTarefa, marcarPonto };
 }
+
+/** Banca padrão quando a Trilha ainda não tem banca prevista definida. */
+export const BANCA_PADRAO = "FCC";
+
+/**
+ * Banca prevista escolhida na Trilha. Toda geração de questões, simulados e
+ * reforços usa esta banca para manter alternativas e explicações no mesmo padrão.
+ */
+export function useBancaPrevista() {
+  const [banca, setBanca] = useState<string>("");
+
+  useEffect(() => {
+    const sync = () => setBanca(lerTrilha().banca);
+    sync();
+    window.addEventListener("trilha:mudou", sync);
+    return () => window.removeEventListener("trilha:mudou", sync);
+  }, []);
+
+  return { banca: banca || BANCA_PADRAO, definida: Boolean(banca) };
+}
