@@ -57,6 +57,8 @@ function Pagina() {
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
   const CARGOS = cargosDoEdital(edital);
+  const BANCAS_EDITAL = bancasDoEdital(edital);
+
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
   const setMateria = setMateriaSel;
