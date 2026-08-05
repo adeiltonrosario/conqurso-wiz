@@ -5,13 +5,25 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
 import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BANCAS, contextoDoAcervo, useAcervo, type QuestaoCadastrada } from "@/lib/acervo";
+import {
+  contextoDoAcervo,
+  ehAnexoDeLei,
+  marcarComoLei,
+  nomeLimpo,
+  provasAnteriores,
+  useAcervo,
+  type ArquivoAnexo,
+  type QuestaoCadastrada,
+} from "@/lib/acervo";
+import { extrairTextoPdf } from "@/lib/pdf";
+import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/inclusao")({
@@ -44,11 +56,34 @@ function UploadCampo({
 }: {
   label: string;
   ajuda: string;
-  arquivos: string[];
-  onAdd: (nomes: string[]) => void;
+  arquivos: ArquivoAnexo[];
+  onAdd: (anexos: ArquivoAnexo[]) => void;
   onRemove: (nome: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const [lendo, setLendo] = useState(false);
+
+  async function selecionar(files: File[]) {
+    setLendo(true);
+    const anexos: ArquivoAnexo[] = [];
+    for (const file of files) {
+      try {
+        const texto = await extrairTextoPdf(file);
+        if (!texto) {
+          toast.warning(
+            `Não foi possível ler o texto de “${file.name}” (PDF escaneado). Cole o conteúdo manualmente.`,
+          );
+        }
+        anexos.push({ nome: file.name, texto, chars: texto.length });
+      } catch {
+        toast.error(`Falha ao ler “${file.name}”.`);
+        anexos.push({ nome: file.name, texto: "", chars: 0 });
+      }
+    }
+    setLendo(false);
+    if (anexos.length) onAdd(anexos);
+  }
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -60,23 +95,46 @@ function UploadCampo({
         multiple
         className="hidden"
         onChange={(e) => {
-          const nomes = Array.from(e.target.files ?? []).map((f) => f.name);
-          if (nomes.length) onAdd(nomes);
+          const files = Array.from(e.target.files ?? []);
           e.target.value = "";
+          if (files.length) void selecionar(files);
         }}
       />
-      <Button type="button" variant="outline" className="w-full" onClick={() => ref.current?.click()}>
-        <FileUp className="mr-2 size-4" /> Selecionar PDF
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        disabled={lendo}
+        onClick={() => ref.current?.click()}
+      >
+        {lendo ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" /> Lendo o PDF…
+          </>
+        ) : (
+          <>
+            <FileUp className="mr-2 size-4" /> Selecionar PDF
+          </>
+        )}
       </Button>
       {arquivos.length > 0 && (
         <ul className="space-y-1">
-          {arquivos.map((nome) => (
+          {arquivos.map((a) => (
             <li
-              key={nome}
+              key={a.nome}
               className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs"
             >
-              <span className="truncate">{nome}</span>
-              <button type="button" onClick={() => onRemove(nome)} aria-label={`Remover ${nome}`}>
+              <span className="min-w-0 flex-1 truncate">
+                {nomeLimpo(a)}
+                <span
+                  className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
+                >
+                  {a.chars
+                    ? `${a.chars.toLocaleString("pt-BR")} caracteres lidos`
+                    : "sem texto lido — reanexe o PDF"}
+                </span>
+              </span>
+              <button type="button" onClick={() => onRemove(a.nome)} aria-label={`Remover ${nomeLimpo(a)}`}>
                 <Trash2 className="size-3.5 text-destructive" />
               </button>
             </li>
@@ -91,10 +149,10 @@ function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
   const gerar = useServerFn(gerarQuestoes);
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
 
   const [enunciado, setEnunciado] = useState("");
   const [assunto, setAssunto] = useState("");
-  const [banca, setBanca] = useState(BANCAS[0]!);
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
@@ -140,15 +198,19 @@ function InclusaoPage() {
     toast.success("Questão cadastrada no acervo.");
   };
 
+  const leisPdf = acervo.provas.filter(ehAnexoDeLei);
+  const provas = provasAnteriores(acervo);
+
   return (
     <AppShell
       titulo="Inclusão de conteúdo"
       descricao="Alimente o agente com questões, leis, gramática, provas anteriores e edital."
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
+
       <EditalMaterias />
 
       <EditalRelevancia />
-
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Nova questão</h2>
@@ -164,31 +226,17 @@ function InclusaoPage() {
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="assunto">Assunto</Label>
-            <Input
-              id="assunto"
-              value={assunto}
-              onChange={(e) => setAssunto(e.target.value.slice(0, 80))}
-              placeholder="Ex.: Concordância verbal"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="banca">Banca</Label>
-            <select
-              id="banca"
-              value={banca}
-              onChange={(e) => setBanca(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {BANCAS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="assunto">Assunto</Label>
+          <Input
+            id="assunto"
+            value={assunto}
+            onChange={(e) => setAssunto(e.target.value.slice(0, 80))}
+            placeholder="Ex.: Concordância verbal"
+          />
+          <p className="text-xs text-muted-foreground">
+            A banca usada é a prevista na Trilha: <strong>{banca}</strong>.
+          </p>
         </div>
 
         <div className="flex gap-2">
@@ -284,33 +332,42 @@ function InclusaoPage() {
         <UploadCampo
           label="Upload de PDF para leis"
           ajuda="PDFs com legislação usada como base das explicações."
-          arquivos={acervo.provas.filter((n) => n.startsWith("lei:")).map((n) => n.slice(4))}
-          onAdd={(nomes) => atualizar({ provas: [...acervo.provas, ...nomes.map((n) => `lei:${n}`)] })}
-          onRemove={(nome) => atualizar({ provas: acervo.provas.filter((n) => n !== `lei:${nome}`) })}
+          arquivos={leisPdf}
+          onAdd={(anexos) =>
+            atualizar({
+              provas: [
+                ...acervo.provas,
+                ...anexos.map((a) => ({ ...a, nome: marcarComoLei(a.nome) })),
+              ],
+            })
+          }
+          onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
         />
 
         <UploadCampo
           label="Upload de gramática (PDF)"
           ajuda="O agente cita a gramática e a página nas explicações, ex.: “conforme a Gramática de Cintra, pág. 123”."
           arquivos={acervo.gramatica}
-          onAdd={(nomes) => atualizar({ gramatica: [...acervo.gramatica, ...nomes] })}
-          onRemove={(nome) => atualizar({ gramatica: acervo.gramatica.filter((n) => n !== nome) })}
+          onAdd={(anexos) => atualizar({ gramatica: [...acervo.gramatica, ...anexos] })}
+          onRemove={(nome) =>
+            atualizar({ gramatica: acervo.gramatica.filter((a) => a.nome !== nome) })
+          }
         />
 
         <UploadCampo
           label="Provas anteriores por banca (PDF)"
-          ajuda="Usadas para buscar questões reais e montar a prova interativa."
-          arquivos={acervo.provas.filter((n) => !n.startsWith("lei:"))}
-          onAdd={(nomes) => atualizar({ provas: [...acervo.provas, ...nomes] })}
-          onRemove={(nome) => atualizar({ provas: acervo.provas.filter((n) => n !== nome) })}
+          ajuda="O texto é lido e vira banco de questões: a IA reaproveita os assuntos e o estilo dessas provas."
+          arquivos={provas}
+          onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
+          onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
         />
 
         <UploadCampo
           label="Upload de edital (PDF)"
           ajuda="Define as matérias de Conhecimento Geral e Específico."
           arquivos={acervo.edital}
-          onAdd={(nomes) => atualizar({ edital: [...acervo.edital, ...nomes] })}
-          onRemove={(nome) => atualizar({ edital: acervo.edital.filter((n) => n !== nome) })}
+          onAdd={(anexos) => atualizar({ edital: [...acervo.edital, ...anexos] })}
+          onRemove={(nome) => atualizar({ edital: acervo.edital.filter((a) => a.nome !== nome) })}
         />
       </section>
 
@@ -321,7 +378,7 @@ function InclusaoPage() {
               <Loader2 className="mr-2 size-4 animate-spin" /> Gerando…
             </>
           ) : (
-            "Gerar simulado com explicações"
+            `Gerar simulado no padrão ${banca}`
           )}
         </Button>
         <Button variant="outline" onClick={() => navigate({ to: "/prova-interativa" })}>
