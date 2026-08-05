@@ -68,7 +68,7 @@ function CampoPct({
   onChange,
   titulo,
 }: {
-  valor?: number;
+  valor?: number | undefined;
   onChange: (valor: number | undefined) => void;
   titulo: string;
 }) {
@@ -173,8 +173,12 @@ function LinhaMateria({
                         <span className="text-muted-foreground">{i + 1}. </span>
                         {t}
                       </td>
-                      <td className={`py-2 text-right align-top ${cor(disciplina)}`}>
-                        {pct(disciplina)}
+                      <td className="py-2 text-right align-top">
+                        <CampoPct
+                          valor={disciplina}
+                          onChange={(v) => onTopico(t, v)}
+                          titulo={`Relevância de "${t}" dentro de ${materia.nome}`}
+                        />
                       </td>
                       <td className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}>
                         {pct(relevanciaGeral(materia, t))}
