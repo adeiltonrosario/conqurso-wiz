@@ -14,21 +14,32 @@ const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"]
 
 /** Cadastro das matérias do edital: extração por IA e edição manual. */
 export function EditalMaterias() {
-  const { edital, aplicar, definirMaterias, atualizarMateria, removerMateria, adicionarCargo, removerCargo } =
-    useEdital();
+  const {
+    edital,
+    aplicar,
+    definirMaterias,
+    atualizarMateria,
+    removerMateria,
+    adicionarCargo,
+    removerCargo,
+    adicionarBanca,
+    removerBanca,
+  } = useEdital();
   const extrair = useServerFn(extrairMateriasEdital);
   const [texto, setTexto] = useState<string | null>(null);
   const [nova, setNova] = useState("");
   const [novoGrupo, setNovoGrupo] = useState<GrupoEdital>("Conhecimento Específico");
   const [topicoNovo, setTopicoNovo] = useState<Record<string, string>>({});
   const [novoCargo, setNovoCargo] = useState("");
+  const [novaBanca, setNovaBanca] = useState("");
 
   const valor = texto ?? edital.texto;
   const cargos = edital.cargos ?? [];
+  const bancas = edital.bancas ?? [];
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
-    onSuccess: ({ materias, cargos: cargosIA }) => {
+    onSuccess: ({ materias, cargos: cargosIA, bancas: bancasIA }) => {
       if (!materias.length) {
         toast.error("A IA não encontrou matérias nesse texto.");
         return;
@@ -47,17 +58,24 @@ export function EditalMaterias() {
       const cargosNovos = (cargosIA ?? [])
         .map((c) => c.trim())
         .filter((c) => c && !vistos.has(c.toLowerCase()) && vistos.add(c.toLowerCase()));
+      const bancasAtuais = edital.bancas ?? [];
+      const vistasBancas = new Set(bancasAtuais.map((b) => b.trim().toLowerCase()));
+      const bancasNovas = (bancasIA ?? [])
+        .map((b) => b.trim())
+        .filter((b) => b && !vistasBancas.has(b.toLowerCase()) && vistasBancas.add(b.toLowerCase()));
       aplicar({
         texto: valor.trim(),
         materias: [...edital.materias, ...novas],
         cargos: [...cargosAtuais, ...cargosNovos],
+        bancas: [...bancasAtuais, ...bancasNovas],
       });
       toast.success(
-        `${novas.length} matéria(s) e ${cargosNovos.length} cargo(s) do edital cadastrados.`,
+        `${novas.length} matéria(s), ${cargosNovos.length} cargo(s) e ${bancasNovas.length} banca(s) do edital cadastrados.`,
       );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o edital."),
   });
+
 
   const adicionar = () => {
     const nome = nova.trim();
