@@ -62,11 +62,16 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="mb-2 text-xs font-semibold text-muted-foreground">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="rounded bg-secondary px-2 py-0.5 text-primary">
             Questão {numero} — {questao.banca}
           </span>
           <span>{questao.materia}</span>
+          {questao.origem && (
+            <span className="rounded bg-mark-yellow-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
+              {questao.origem}
+            </span>
+          )}
         </div>
         <Relevancia
           materia={questao.materia}
@@ -75,6 +80,7 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
           relevanciaAssunto={questao.relevancia_assunto}
         />
       </header>
+
 
       <p className="text-[15px] leading-relaxed">
         <Marcado texto={questao.enunciado} />

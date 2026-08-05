@@ -53,6 +53,8 @@ export type Questao = {
   assunto?: string;
   relevancia_materia?: number;
   relevancia_assunto?: number;
+  /** "Baseada na prova X" quando vem de um PDF anexado, ou "Inédita". */
+  origem?: string;
   enunciado: string;
   alternativas: Alternativa[];
   explicacao: string;
@@ -66,7 +68,7 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
         grupo: z.string().trim().max(60),
         banca: z.string().trim().max(30),
         quantidade: z.number().int().min(1).max(40),
-        contexto: z.string().trim().max(20000).nullable(),
+        contexto: z.string().trim().max(120000).nullable(),
         formato: z.enum(["multipla", "certo-errado"]),
       })
       .parse(d),
@@ -74,10 +76,16 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const result = await runAIJson<{ questoes: Questao[] }>(
       `Você é um elaborador de questões da banca ${data.banca}, especialista em concursos brasileiros.
-Gere questões inéditas no padrão visual e de linguagem da banca ${data.banca}.
+Gere questões no padrão visual e de linguagem da banca ${data.banca}.
 Regra obrigatória: enunciado, alternativas (quantidade, estilo, distratores típicos) e explicações devem seguir
 estritamente o estilo da banca ${data.banca} — não misture o formato de outras bancas. No campo "banca" de cada questão
 retorne exatamente "${data.banca}".
+PRIORIDADE DE FONTE: se o contexto trouxer PROVAS ANTERIORES ANEXADAS, use-as como banco de questões principal —
+reaproveite as questões reais dessas provas (enunciado, alternativas, distratores e gabarito) sobre a matéria pedida,
+adaptando a redação ao formato da banca ${data.banca} quando a prova for de outra banca. Só crie questões inéditas
+quando as provas anexadas não tiverem conteúdo suficiente sobre a matéria/assunto pedido.
+No campo "origem" informe "Prova: <nome do arquivo/prova>" quando a questão vier de uma prova anexada, ou "Inédita".
+Provas de banca diferente de ${data.banca} servem apenas como fonte de conteúdo, nunca como modelo de formato.
 ${data.formato === "multipla" ? "Cada questão tem 5 alternativas (A, B, C, D, E) e apenas uma correta." : "Cada questão tem 2 alternativas: Certo e Errado."}
 Cada alternativa recebe uma explicação passo a passo dizendo por que está correta ou errada, citando lei/artigo ou regra gramatical quando cabível.
 ${COR_INSTRUCOES}
@@ -85,12 +93,13 @@ Informe também, para cada questão: "assunto" (o tópico específico do edital,
 "relevancia_materia" (percentual estimado de incidência da MATÉRIA no total da prova da banca, número de 0 a 100)
 e "relevancia_assunto" (percentual estimado de incidência do ASSUNTO dentro da matéria, número de 0 a 100).
 Baseie os percentuais no histórico real de provas da banca; use uma casa decimal.
-Formato JSON: {"questoes":[{"id":string,"banca":string,"grupo":string,"materia":string,"assunto":string,"relevancia_materia":number,"relevancia_assunto":number,"enunciado":string,"explicacao":string,"alternativas":[{"letra":string,"texto":string,"correta":boolean,"explicacao":string}]}]}`,
+Formato JSON: {"questoes":[{"id":string,"banca":string,"grupo":string,"materia":string,"assunto":string,"origem":string,"relevancia_materia":number,"relevancia_assunto":number,"enunciado":string,"explicacao":string,"alternativas":[{"letra":string,"texto":string,"correta":boolean,"explicacao":string}]}]}`,
       `Matéria: ${data.materia}. Grupo do edital: ${data.grupo}. Quantidade: ${data.quantidade} questões.
-${data.contexto ? `Baseie-se também neste conteúdo cadastrado pelo candidato (leis, edital, provas anteriores, questões):\n${data.contexto.slice(0, 15000)}` : ""}`,
+${data.contexto ? `Conteúdo cadastrado pelo candidato (provas anteriores, leis, edital, questões):\n${data.contexto.slice(0, 100000)}` : ""}`,
     );
     return result.questoes ?? [];
   });
+
 
 export type PadraoAnalise = {
   resumo: string[];
