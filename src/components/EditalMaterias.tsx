@@ -14,21 +14,32 @@ const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"]
 
 /** Cadastro das matérias do edital: extração por IA e edição manual. */
 export function EditalMaterias() {
-  const { edital, aplicar, definirMaterias, atualizarMateria, removerMateria, adicionarCargo, removerCargo } =
-    useEdital();
+  const {
+    edital,
+    aplicar,
+    definirMaterias,
+    atualizarMateria,
+    removerMateria,
+    adicionarCargo,
+    removerCargo,
+    adicionarBanca,
+    removerBanca,
+  } = useEdital();
   const extrair = useServerFn(extrairMateriasEdital);
   const [texto, setTexto] = useState<string | null>(null);
   const [nova, setNova] = useState("");
   const [novoGrupo, setNovoGrupo] = useState<GrupoEdital>("Conhecimento Específico");
   const [topicoNovo, setTopicoNovo] = useState<Record<string, string>>({});
   const [novoCargo, setNovoCargo] = useState("");
+  const [novaBanca, setNovaBanca] = useState("");
 
   const valor = texto ?? edital.texto;
   const cargos = edital.cargos ?? [];
+  const bancas = edital.bancas ?? [];
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
-    onSuccess: ({ materias, cargos: cargosIA }) => {
+    onSuccess: ({ materias, cargos: cargosIA, bancas: bancasIA }) => {
       if (!materias.length) {
         toast.error("A IA não encontrou matérias nesse texto.");
         return;
@@ -47,17 +58,24 @@ export function EditalMaterias() {
       const cargosNovos = (cargosIA ?? [])
         .map((c) => c.trim())
         .filter((c) => c && !vistos.has(c.toLowerCase()) && vistos.add(c.toLowerCase()));
+      const bancasAtuais = edital.bancas ?? [];
+      const vistasBancas = new Set(bancasAtuais.map((b) => b.trim().toLowerCase()));
+      const bancasNovas = (bancasIA ?? [])
+        .map((b) => b.trim())
+        .filter((b) => b && !vistasBancas.has(b.toLowerCase()) && vistasBancas.add(b.toLowerCase()));
       aplicar({
         texto: valor.trim(),
         materias: [...edital.materias, ...novas],
         cargos: [...cargosAtuais, ...cargosNovos],
+        bancas: [...bancasAtuais, ...bancasNovas],
       });
       toast.success(
-        `${novas.length} matéria(s) e ${cargosNovos.length} cargo(s) do edital cadastrados.`,
+        `${novas.length} matéria(s), ${cargosNovos.length} cargo(s) e ${bancasNovas.length} banca(s) do edital cadastrados.`,
       );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o edital."),
   });
+
 
   const adicionar = () => {
     const nome = nova.trim();
@@ -164,6 +182,51 @@ export function EditalMaterias() {
         )}
       </div>
 
+      <div className="space-y-2 border-t border-border pt-4">
+        <Label htmlFor="edital-banca">Bancas do edital</Label>
+        <p className="text-xs text-muted-foreground">
+          Só estas bancas aparecem como banca prevista na Trilha, para o estudo seguir o estilo da
+          organizadora certa.
+        </p>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            adicionarBanca(novaBanca);
+            setNovaBanca("");
+          }}
+        >
+          <Input
+            id="edital-banca"
+            value={novaBanca}
+            onChange={(e) => setNovaBanca(e.target.value.slice(0, 60))}
+            placeholder="Ex.: Cebraspe"
+            className="h-9"
+          />
+          <Button type="submit" variant="outline" aria-label="Adicionar banca">
+            <Plus className="size-4" />
+          </Button>
+        </form>
+        {bancas.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhuma banca cadastrada — extraia do edital ou adicione acima.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {bancas.map((b) => (
+              <li
+                key={b}
+                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+              >
+                <span>{b}</span>
+                <button type="button" onClick={() => removerBanca(b)} aria-label={`Remover ${b}`}>
+                  <Trash2 className="size-3 text-destructive" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
 
       <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[1fr_auto_auto]">

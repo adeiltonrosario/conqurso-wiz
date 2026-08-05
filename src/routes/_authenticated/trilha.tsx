@@ -11,8 +11,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { BANCAS } from "@/lib/acervo";
-import { cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+
+import { bancasDoEdital, cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
@@ -57,6 +57,8 @@ function Pagina() {
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
   const CARGOS = cargosDoEdital(edital);
+  const BANCAS_EDITAL = bancasDoEdital(edital);
+
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
   const setMateria = setMateriaSel;
@@ -121,19 +123,33 @@ function Pagina() {
             )}
           </label>
           <label className="text-sm">
-            <span className="text-muted-foreground">Banca prevista</span>
-            <select
-              value={trilha.banca}
-              onChange={(e) => aplicar({ banca: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Não definida</option>
-              {BANCAS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <span className="text-muted-foreground">Banca prevista (do edital)</span>
+            {BANCAS_EDITAL.length === 0 ? (
+              <>
+                <select
+                  disabled
+                  className="mt-1 w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <option>Nenhuma banca no edital</option>
+                </select>
+                <Link to="/inclusao" className="mt-1 block text-xs font-semibold text-primary">
+                  Cadastrar bancas do edital
+                </Link>
+              </>
+            ) : (
+              <select
+                value={BANCAS_EDITAL.includes(trilha.banca) ? trilha.banca : ""}
+                onChange={(e) => aplicar({ banca: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione a banca</option>
+                {BANCAS_EDITAL.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className="text-sm">
             <span className="text-muted-foreground">Data prevista da prova</span>
