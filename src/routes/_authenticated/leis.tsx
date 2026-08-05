@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BANCAS, contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { useBancaPrevista } from "@/lib/trilha";
 import {
   contextoDoEdital,
   ehDoEdital,
@@ -74,7 +75,10 @@ function LeisPage() {
   const gerarQ = useServerFn(gerarQuestoes);
 
   const [materia, setMateria] = useState("");
-  const [banca, setBanca] = useState(BANCAS[0]!);
+  const { banca: bancaTrilha } = useBancaPrevista();
+  const [bancaSel, setBancaSel] = useState("");
+  const banca = bancaSel || bancaTrilha;
+  const opcoesBanca = BANCAS.includes(banca) ? BANCAS : [banca, ...BANCAS];
   const [capitulo, setCapitulo] = useState("");
   const [topicos, setTopicos] = useState<string[]>([]);
   const [resumo, setResumo] = useState<LeiResumida | null>(null);
@@ -210,10 +214,10 @@ function LeisPage() {
             <select
               id="banca-lei"
               value={banca}
-              onChange={(e) => setBanca(e.target.value)}
+              onChange={(e) => setBancaSel(e.target.value)}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              {BANCAS.map((b) => (
+              {opcoesBanca.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
