@@ -62,7 +62,7 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        materia: z.string().trim().min(2).max(80),
+        materia: z.string().trim().min(2).max(400),
         grupo: z.string().trim().max(60),
         banca: z.string().trim().max(30),
         quantidade: z.number().int().min(1).max(40),
@@ -113,7 +113,7 @@ export const analisarPadroes = createServerFn({ method: "POST" })
     z
       .object({
         conteudo: z.string().trim().min(10).max(40000),
-        materia: z.string().trim().max(80),
+        materia: z.string().trim().max(400),
       })
       .parse(d),
   )
@@ -160,8 +160,8 @@ export const resumirLei = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        materia: z.string().trim().min(2).max(80),
-        capitulo: z.string().trim().min(2).max(200),
+        materia: z.string().trim().min(2).max(400),
+        capitulo: z.string().trim().min(2).max(400),
         banca: z.string().trim().max(30),
         contexto: z.string().trim().max(20000).nullable(),
       })
