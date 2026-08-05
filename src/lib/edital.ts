@@ -22,11 +22,13 @@ export type MateriaEdital = {
 export type EditalEstado = {
   texto: string;
   materias: MateriaEdital[];
+  /** Cargos previstos no edital — usados como filtro na Trilha. */
+  cargos: string[];
 };
 
 const KEY = "concurseiro:edital";
 
-const VAZIO: EditalEstado = { texto: "", materias: [] };
+const VAZIO: EditalEstado = { texto: "", materias: [], cargos: [] };
 
 export function lerEdital(): EditalEstado {
   if (typeof window === "undefined") return VAZIO;
