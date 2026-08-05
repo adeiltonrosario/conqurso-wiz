@@ -172,7 +172,12 @@ export const resumirLei = createServerFn({ method: "POST" })
         materia: z.string().trim().min(2).max(400),
         capitulo: z.string().trim().min(2).max(400),
         banca: z.string().trim().max(30),
-        contexto: z.string().trim().max(20000).nullable(),
+        // O acervo pode trazer PDFs longos; cortamos em vez de rejeitar.
+        contexto: z
+          .string()
+          .trim()
+          .nullable()
+          .transform((v) => (v ? v.slice(0, 60000) : v)),
       })
       .parse(d),
   )
