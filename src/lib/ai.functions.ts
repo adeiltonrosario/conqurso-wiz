@@ -68,7 +68,11 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
         grupo: z.string().trim().max(60),
         banca: z.string().trim().max(30),
         quantidade: z.number().int().min(1).max(40),
-        contexto: z.string().trim().max(120000).nullable(),
+        contexto: z
+          .string()
+          .trim()
+          .nullable()
+          .transform((v) => (v ? v.slice(0, 120000) : v)),
         formato: z.enum(["multipla", "certo-errado"]),
       })
       .parse(d),
