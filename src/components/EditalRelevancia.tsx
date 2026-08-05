@@ -295,7 +295,13 @@ export function EditalRelevancia() {
 
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
         {materiasPorRelevancia(edital).map((m) => (
-          <LinhaMateria key={m.id} materia={m} historico={historico} />
+          <LinhaMateria
+            key={m.id}
+            materia={m}
+            historico={historico}
+            onMateria={(v) => definirRelevanciaMateria(m, v)}
+            onTopico={(t, v) => definirRelevanciaTopico(m, t, v)}
+          />
         ))}
       </ul>
     </section>
