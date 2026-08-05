@@ -24,11 +24,14 @@ export type EditalEstado = {
   materias: MateriaEdital[];
   /** Cargos previstos no edital — usados como filtro na Trilha. */
   cargos: string[];
+  /** Bancas previstas/organizadoras do edital — usadas como filtro na Trilha. */
+  bancas: string[];
 };
 
 const KEY = "concurseiro:edital";
 
-const VAZIO: EditalEstado = { texto: "", materias: [], cargos: [] };
+const VAZIO: EditalEstado = { texto: "", materias: [], cargos: [], bancas: [] };
+
 
 export function lerEdital(): EditalEstado {
   if (typeof window === "undefined") return VAZIO;
