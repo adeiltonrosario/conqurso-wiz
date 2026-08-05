@@ -140,6 +140,7 @@ function QuestoesPage() {
     busca.materia ? grupoDaMateria(edital, busca.materia) : "Conhecimento Geral",
   );
   const [materia, setMateria] = useState(busca.materia ?? "");
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
   const materias = materiasPorGrupo(edital, grupo);
@@ -152,7 +153,7 @@ function QuestoesPage() {
         data: {
           materia: foco ? `${materiaAtiva} — ${foco}` : materiaAtiva,
           grupo,
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto:

@@ -159,6 +159,7 @@ function RevisaoPage() {
   const { historico, limparHistorico } = useRevisao();
   const { leituras } = useLeituras();
   const [indice, setIndice] = useState(0);
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
   const fila = useMemo(() => filaDeHoje(historico), [historico]);
@@ -174,7 +175,7 @@ function RevisaoPage() {
         data: {
           materia,
           grupo: "Conhecimento Geral",
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto: contextoDoAcervo(acervo) || null,
@@ -207,7 +208,7 @@ function RevisaoPage() {
         data: {
           materia: l.materia,
           grupo: "Conhecimento Específico",
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
