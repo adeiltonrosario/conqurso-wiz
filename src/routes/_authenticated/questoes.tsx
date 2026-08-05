@@ -18,6 +18,8 @@ import {
 } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
+import { useBancaPrevista } from "@/lib/trilha";
+import { BancaAtual } from "@/components/BancaAtual";
 
 export const Route = createFileRoute("/_authenticated/questoes")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -140,6 +142,7 @@ function QuestoesPage() {
     busca.materia ? grupoDaMateria(edital, busca.materia) : "Conhecimento Geral",
   );
   const [materia, setMateria] = useState(busca.materia ?? "");
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
   const materias = materiasPorGrupo(edital, grupo);
@@ -152,7 +155,7 @@ function QuestoesPage() {
         data: {
           materia: foco ? `${materiaAtiva} — ${foco}` : materiaAtiva,
           grupo,
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto:
@@ -179,8 +182,9 @@ function QuestoesPage() {
   return (
     <AppShell
       titulo="Questões e explicações"
-      descricao="Padrão FCC com 5 alternativas e gabarito comentado passo a passo pela IA."
+      descricao={`Padrão ${banca} com 5 alternativas e gabarito comentado passo a passo pela IA.`}
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {GRUPOS.map((g) => (

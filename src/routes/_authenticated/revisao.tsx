@@ -13,10 +13,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BancaAtual } from "@/components/BancaAtual";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
   contextoDaLeitura,
@@ -159,6 +161,7 @@ function RevisaoPage() {
   const { historico, limparHistorico } = useRevisao();
   const { leituras } = useLeituras();
   const [indice, setIndice] = useState(0);
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
   const fila = useMemo(() => filaDeHoje(historico), [historico]);
@@ -174,7 +177,7 @@ function RevisaoPage() {
         data: {
           materia,
           grupo: "Conhecimento Geral",
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto: contextoDoAcervo(acervo) || null,
@@ -207,7 +210,7 @@ function RevisaoPage() {
         data: {
           materia: l.materia,
           grupo: "Conhecimento Específico",
-          banca: "FCC",
+          banca,
           quantidade: 5,
           formato: "multipla",
           contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
@@ -251,6 +254,7 @@ function RevisaoPage() {
       titulo="Revisão espaçada"
       descricao="A fila é montada sozinha a partir do seu histórico: o que você erra volta rápido, o que você domina volta bem depois."
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Brain className="size-4 text-primary" />

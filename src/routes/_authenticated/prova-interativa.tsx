@@ -13,6 +13,8 @@ import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
 import { contextoDoEdital, ehDoEdital, grupoDaMateria, todasAsMaterias, useEdital } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
+import { useBancaPrevista } from "@/lib/trilha";
+import { BancaAtual } from "@/components/BancaAtual";
 
 export const Route = createFileRoute("/_authenticated/prova-interativa")({
   head: () => ({
@@ -46,6 +48,7 @@ function ProvaPage() {
   const [provas, setProvas] = useState<Record<string, Questao[]>>({});
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [corrigida, setCorrigida] = useState<Record<string, boolean>>({});
+  const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
   const questoes = provas[materia] ?? [];
@@ -61,7 +64,7 @@ function ProvaPage() {
           data: {
             materia,
             grupo: grupoDaMateria(edital, materia),
-            banca: "FCC",
+            banca,
             quantidade: Math.min(LOTE, alvo - acumulado.length),
             formato: "multipla",
             contexto:
@@ -84,8 +87,9 @@ function ProvaPage() {
   return (
     <AppShell
       titulo="Prova interativa"
-      descricao="Formato idêntico ao da banca FCC, em scroll vertical contínuo como uma prova impressa."
+      descricao={`Formato idêntico ao da banca ${banca}, em scroll vertical contínuo como uma prova impressa.`}
     >
+      <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex flex-wrap gap-2">
           {MATERIAS.map((m) => (
