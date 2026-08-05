@@ -11,7 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { BANCAS } from "@/lib/acervo";
+
 import { bancasDoEdital, cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
