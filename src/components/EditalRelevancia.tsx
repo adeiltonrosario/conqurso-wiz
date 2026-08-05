@@ -54,7 +54,7 @@ function IrParaQuestoes({ materia, assunto }: { materia: string; assunto?: strin
   return (
     <Link
       to="/questoes"
-      search={assunto ? { materia, assunto } : { materia }}
+      search={{ materia, assunto }}
       className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
     >
       <LineChart className="size-3.5" /> Ir para questões
@@ -62,12 +62,57 @@ function IrParaQuestoes({ materia, assunto }: { materia: string; assunto?: strin
   );
 }
 
+/** Campo de % editável manualmente. */
+function CampoPct({
+  valor,
+  onChange,
+  titulo,
+}: {
+  valor?: number | undefined;
+  onChange: (valor: number | undefined) => void;
+  titulo: string;
+}) {
+  const [texto, setTexto] = useState<string | null>(null);
+  const exibido = texto ?? (valor == null ? "" : String(valor).replace(".", ","));
+
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      <input
+        type="text"
+        inputMode="decimal"
+        title={titulo}
+        aria-label={titulo}
+        placeholder="—"
+        value={exibido}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={() => {
+          const bruto = (texto ?? "").trim().replace(",", ".");
+          setTexto(null);
+          if (texto === null) return;
+          if (!bruto) {
+            onChange(undefined);
+            return;
+          }
+          const n = Number(bruto);
+          onChange(Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : undefined);
+        }}
+        className={`w-14 rounded border border-border bg-background px-1 py-0.5 text-right text-xs outline-none focus:border-accent ${cor(valor)}`}
+      />
+      <span className="text-xs text-muted-foreground">%</span>
+    </span>
+  );
+}
+
 function LinhaMateria({
   materia,
   historico,
+  onMateria,
+  onTopico,
 }: {
   materia: MateriaEdital;
   historico: HistoricoRevisao;
+  onMateria: (valor: number | undefined) => void;
+  onTopico: (topico: string, valor: number | undefined) => void;
 }) {
   const [aberta, setAberta] = useState(false);
   const geral = desempenho(historico, materia.nome);
@@ -75,24 +120,31 @@ function LinhaMateria({
 
   return (
     <li className="border-l-4 border-accent/70">
-      <button
-        type="button"
-        onClick={() => setAberta((v) => !v)}
-        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 bg-secondary/60 px-3 py-2.5 text-left"
-      >
-        {aberta ? (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <span className="flex-1 font-display text-sm font-bold">{materia.nome}</span>
-        <span className="text-xs">
-          Relevância: <span className={cor(materia.relevancia)}>{pct(materia.relevancia)}</span>
+      <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 bg-secondary/60 px-3 py-2.5 text-left">
+        <button
+          type="button"
+          onClick={() => setAberta((v) => !v)}
+          className="flex flex-1 items-center gap-x-3 text-left"
+        >
+          {aberta ? (
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <span className="flex-1 font-display text-sm font-bold">{materia.nome}</span>
+        </button>
+        <span className="flex items-center gap-1 text-xs">
+          Relevância:
+          <CampoPct
+            valor={materia.relevancia}
+            onChange={onMateria}
+            titulo={`Relevância de ${materia.nome} na prova`}
+          />
         </span>
         <span className="text-xs text-muted-foreground">
           Meu desempenho: {geral.total ? `${geral.taxa}%` : "—"}
         </span>
-      </button>
+      </div>
 
       {aberta && (
         <div className="px-3 py-2">
@@ -121,8 +173,12 @@ function LinhaMateria({
                         <span className="text-muted-foreground">{i + 1}. </span>
                         {t}
                       </td>
-                      <td className={`py-2 text-right align-top ${cor(disciplina)}`}>
-                        {pct(disciplina)}
+                      <td className="py-2 text-right align-top">
+                        <CampoPct
+                          valor={disciplina}
+                          onChange={(v) => onTopico(t, v)}
+                          titulo={`Relevância de "${t}" dentro de ${materia.nome}`}
+                        />
                       </td>
                       <td className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}>
                         {pct(relevanciaGeral(materia, t))}
@@ -151,10 +207,24 @@ function LinhaMateria({
 
 /** Detalhamento de relevância das matérias e assuntos do edital. */
 export function EditalRelevancia() {
-  const { edital, definirMaterias } = useEdital();
+  const { edital, definirMaterias, atualizarMateria } = useEdital();
   const { historico } = useRevisao();
   const { trilha } = useTrilha();
   const estimar = useServerFn(estimarRelevanciaEdital);
+
+  const definirRelevanciaMateria = (m: MateriaEdital, valor: number | undefined) =>
+    atualizarMateria(m.id, valor == null ? { relevancia: undefined } : { relevancia: valor });
+
+  const definirRelevanciaTopico = (
+    m: MateriaEdital,
+    topico: string,
+    valor: number | undefined,
+  ) => {
+    const mapa = { ...(m.relevanciaTopicos ?? {}) };
+    if (valor == null) delete mapa[topico];
+    else mapa[topico] = valor;
+    atualizarMateria(m.id, { relevanciaTopicos: mapa });
+  };
 
   const mut = useMutation({
     mutationFn: () =>
@@ -225,7 +295,13 @@ export function EditalRelevancia() {
 
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
         {materiasPorRelevancia(edital).map((m) => (
-          <LinhaMateria key={m.id} materia={m} historico={historico} />
+          <LinhaMateria
+            key={m.id}
+            materia={m}
+            historico={historico}
+            onMateria={(v) => definirRelevanciaMateria(m, v)}
+            onTopico={(t, v) => definirRelevanciaTopico(m, t, v)}
+          />
         ))}
       </ul>
     </section>

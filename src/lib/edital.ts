@@ -13,9 +13,9 @@ export type MateriaEdital = {
   grupo: GrupoEdital;
   topicos: string[];
   /** Relevância da matéria na prova, em % do total de questões. */
-  relevancia?: number;
+  relevancia?: number | undefined;
   /** Relevância de cada tópico DENTRO da matéria, em %. */
-  relevanciaTopicos?: Record<string, number>;
+  relevanciaTopicos?: Record<string, number> | undefined;
 };
 
 
