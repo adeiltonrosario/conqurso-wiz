@@ -182,6 +182,51 @@ export function EditalMaterias() {
         )}
       </div>
 
+      <div className="space-y-2 border-t border-border pt-4">
+        <Label htmlFor="edital-banca">Bancas do edital</Label>
+        <p className="text-xs text-muted-foreground">
+          Só estas bancas aparecem como banca prevista na Trilha, para o estudo seguir o estilo da
+          organizadora certa.
+        </p>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            adicionarBanca(novaBanca);
+            setNovaBanca("");
+          }}
+        >
+          <Input
+            id="edital-banca"
+            value={novaBanca}
+            onChange={(e) => setNovaBanca(e.target.value.slice(0, 60))}
+            placeholder="Ex.: Cebraspe"
+            className="h-9"
+          />
+          <Button type="submit" variant="outline" aria-label="Adicionar banca">
+            <Plus className="size-4" />
+          </Button>
+        </form>
+        {bancas.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhuma banca cadastrada — extraia do edital ou adicione acima.
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {bancas.map((b) => (
+              <li
+                key={b}
+                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+              >
+                <span>{b}</span>
+                <button type="button" onClick={() => removerBanca(b)} aria-label={`Remover ${b}`}>
+                  <Trash2 className="size-3 text-destructive" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
 
       <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[1fr_auto_auto]">
