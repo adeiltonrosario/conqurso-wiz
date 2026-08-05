@@ -11,12 +11,19 @@ export type QuestaoCadastrada = {
   correta: string;
 };
 
+/** PDF anexado pelo candidato, com o texto extraído no navegador. */
+export type ArquivoAnexo = {
+  nome: string;
+  texto: string;
+  chars: number;
+};
+
 export type Acervo = {
   questoes: QuestaoCadastrada[];
   leis: string;
-  gramatica: string[];
-  provas: string[];
-  edital: string[];
+  gramatica: ArquivoAnexo[];
+  provas: ArquivoAnexo[];
+  edital: ArquivoAnexo[];
   simulado: Questao[];
 };
 
@@ -31,11 +38,35 @@ const VAZIO: Acervo = {
 
 const KEY = "concurseiro:acervo";
 
+/** Anexos antigos eram só nomes (string[]); migramos para o formato com texto. */
+function normalizarAnexos(valor: unknown): ArquivoAnexo[] {
+  if (!Array.isArray(valor)) return [];
+  return valor
+    .map((item): ArquivoAnexo | null => {
+      if (typeof item === "string") return { nome: item, texto: "", chars: 0 };
+      if (item && typeof item === "object" && typeof (item as ArquivoAnexo).nome === "string") {
+        const a = item as ArquivoAnexo;
+        const texto = typeof a.texto === "string" ? a.texto : "";
+        return { nome: a.nome, texto, chars: texto.length };
+      }
+      return null;
+    })
+    .filter((a): a is ArquivoAnexo => a !== null);
+}
+
 export function lerAcervo(): Acervo {
   if (typeof window === "undefined") return VAZIO;
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? { ...VAZIO, ...(JSON.parse(raw) as Acervo) } : VAZIO;
+    if (!raw) return VAZIO;
+    const bruto = JSON.parse(raw) as Partial<Acervo>;
+    return {
+      ...VAZIO,
+      ...bruto,
+      gramatica: normalizarAnexos(bruto.gramatica),
+      provas: normalizarAnexos(bruto.provas),
+      edital: normalizarAnexos(bruto.edital),
+    };
   } catch {
     return VAZIO;
   }
@@ -66,6 +97,41 @@ export function useAcervo() {
   return { acervo, atualizar };
 }
 
+const PREFIXO_LEI = "lei:";
+
+export function ehAnexoDeLei(a: ArquivoAnexo) {
+  return a.nome.startsWith(PREFIXO_LEI);
+}
+
+export function nomeLimpo(a: ArquivoAnexo) {
+  return ehAnexoDeLei(a) ? a.nome.slice(PREFIXO_LEI.length) : a.nome;
+}
+
+export function marcarComoLei(nome: string) {
+  return `${PREFIXO_LEI}${nome}`;
+}
+
+/** Provas anteriores (não são anexos de lei). */
+export function provasAnteriores(acervo: Acervo) {
+  return acervo.provas.filter((a) => !ehAnexoDeLei(a));
+}
+
+/** Trecho de cada anexo enviado à IA. */
+const TRECHO = 12000;
+
+function blocoAnexos(titulo: string, anexos: ArquivoAnexo[]) {
+  if (!anexos.length) return "";
+  const corpo = anexos
+    .map((a) => {
+      const nome = nomeLimpo(a);
+      return a.texto
+        ? `--- ${nome} ---\n${a.texto.slice(0, TRECHO)}`
+        : `--- ${nome} (texto não lido) ---`;
+    })
+    .join("\n\n");
+  return `${titulo}\n${corpo}`;
+}
+
 export function contextoDoAcervo(acervo: Acervo) {
   const questoes = acervo.questoes
     .map(
@@ -73,12 +139,20 @@ export function contextoDoAcervo(acervo: Acervo) {
         `Questão (${q.banca} — ${q.assunto}): ${q.enunciado}\nAlternativas: ${q.alternativas.join(" | ")}\nGabarito: ${q.correta}`,
     )
     .join("\n\n");
+
+  const provas = provasAnteriores(acervo);
+  const leisPdf = acervo.provas.filter(ehAnexoDeLei);
+
   return [
     questoes && `QUESTÕES CADASTRADAS:\n${questoes}`,
     acervo.leis && `LEIS / VADE MECUM:\n${acervo.leis}`,
-    acervo.gramatica.length && `GRAMÁTICAS ANEXADAS: ${acervo.gramatica.join(", ")}`,
-    acervo.provas.length && `PROVAS ANTERIORES ANEXADAS: ${acervo.provas.join(", ")}`,
-    acervo.edital.length && `EDITAL ANEXADO: ${acervo.edital.join(", ")}`,
+    blocoAnexos("PDFs DE LEIS ANEXADOS:", leisPdf),
+    blocoAnexos("GRAMÁTICAS ANEXADAS:", acervo.gramatica),
+    blocoAnexos(
+      "PROVAS ANTERIORES ANEXADAS (banco de questões reais do candidato — use como fonte prioritária):",
+      provas,
+    ),
+    blocoAnexos("EDITAL ANEXADO:", acervo.edital),
   ]
     .filter(Boolean)
     .join("\n\n");
