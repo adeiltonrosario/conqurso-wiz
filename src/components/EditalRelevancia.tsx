@@ -54,7 +54,7 @@ function IrParaQuestoes({ materia, assunto }: { materia: string; assunto?: strin
   return (
     <Link
       to="/questoes"
-      search={assunto ? { materia, assunto } : { materia }}
+      search={{ materia, assunto }}
       className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
     >
       <LineChart className="size-3.5" /> Ir para questões
@@ -207,10 +207,24 @@ function LinhaMateria({
 
 /** Detalhamento de relevância das matérias e assuntos do edital. */
 export function EditalRelevancia() {
-  const { edital, definirMaterias } = useEdital();
+  const { edital, definirMaterias, atualizarMateria } = useEdital();
   const { historico } = useRevisao();
   const { trilha } = useTrilha();
   const estimar = useServerFn(estimarRelevanciaEdital);
+
+  const definirRelevanciaMateria = (m: MateriaEdital, valor: number | undefined) =>
+    atualizarMateria(m.id, valor == null ? { relevancia: undefined } : { relevancia: valor });
+
+  const definirRelevanciaTopico = (
+    m: MateriaEdital,
+    topico: string,
+    valor: number | undefined,
+  ) => {
+    const mapa = { ...(m.relevanciaTopicos ?? {}) };
+    if (valor == null) delete mapa[topico];
+    else mapa[topico] = valor;
+    atualizarMateria(m.id, { relevanciaTopicos: mapa });
+  };
 
   const mut = useMutation({
     mutationFn: () =>

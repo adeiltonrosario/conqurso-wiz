@@ -114,7 +114,7 @@ function InclusaoPage() {
     onSuccess: (questoes) => {
       atualizar({ simulado: questoes });
       toast.success("Simulado gerado com explicações.");
-      navigate({ to: "/questoes" });
+      navigate({ to: "/questoes", search: { materia: undefined, assunto: undefined } });
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar o simulado."),
   });
