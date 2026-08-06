@@ -294,6 +294,10 @@ function LeisPage() {
       <LeiIntegralPainel
         materia={materiaAtiva}
         capitulo={capitulo}
+        pdfsLei={acervo.provas
+          .filter(ehAnexoDeLei)
+          .map((a) => ({ nome: nomeLimpo(a), chars: a.chars }))}
+
         contexto={
           [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
             .filter(Boolean)
