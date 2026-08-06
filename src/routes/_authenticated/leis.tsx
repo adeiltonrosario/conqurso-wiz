@@ -10,7 +10,7 @@ import { LeiIntegralPainel } from "@/components/LeiIntegral";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BANCAS, contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { BANCAS, contextoDoAcervo, ehAnexoDeLei, nomeLimpo, useAcervo } from "@/lib/acervo";
 import { useBancaPrevista } from "@/lib/trilha";
 import {
   contextoDoEdital,
