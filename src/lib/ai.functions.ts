@@ -202,7 +202,12 @@ export type ArtigoIntegral = {
   referencia: string;
   texto: string;
   paragrafos?: string[];
+  /** Hierarquia do dispositivo, para o sumário em árvore. */
+  titulo?: string;
+  capitulo_lei?: string;
+  secao?: string;
 };
+
 
 export type LeiIntegral = {
   materia: string;
