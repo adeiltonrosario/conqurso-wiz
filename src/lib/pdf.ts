@@ -2,9 +2,14 @@
  * Leitura de PDFs no navegador. Só é usada em handlers de evento (nunca no SSR),
  * por isso o pdfjs é carregado dinamicamente.
  */
-export const LIMITE_TEXTO_ARQUIVO = 60000;
 
-export async function extrairTextoPdf(file: File): Promise<string> {
+/** Trecho enviado à IA como contexto (o texto integral fica no IndexedDB). */
+export const LIMITE_TRECHO_IA = 12000;
+
+export type PdfLido = { texto: string; paginas: number };
+
+/** Lê o PDF por completo, sem cortar páginas. */
+export async function extrairTextoPdf(file: File): Promise<PdfLido> {
   const pdfjs = await import("pdfjs-dist");
   const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
@@ -13,7 +18,6 @@ export async function extrairTextoPdf(file: File): Promise<string> {
   const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
 
   const partes: string[] = [];
-  let total = 0;
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const conteudo = await page.getTextContent();
@@ -22,12 +26,8 @@ export async function extrairTextoPdf(file: File): Promise<string> {
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-    if (texto) {
-      partes.push(texto);
-      total += texto.length;
-    }
-    if (total > LIMITE_TEXTO_ARQUIVO) break;
+    if (texto) partes.push(texto);
   }
 
-  return partes.join("\n").slice(0, LIMITE_TEXTO_ARQUIVO).trim();
+  return { texto: partes.join("\n").trim(), paginas: doc.numPages };
 }
