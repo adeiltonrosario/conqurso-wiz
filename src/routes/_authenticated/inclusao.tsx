@@ -22,7 +22,9 @@ import {
   type ArquivoAnexo,
   type QuestaoCadastrada,
 } from "@/lib/acervo";
-import { extrairTextoPdf } from "@/lib/pdf";
+import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
+import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes } from "@/lib/ai.functions";
 
