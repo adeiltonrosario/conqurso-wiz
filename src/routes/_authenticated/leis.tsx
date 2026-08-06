@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Marcado, LegendaCores } from "@/components/Marcado";
+import { LeiIntegralPainel } from "@/components/LeiIntegral";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
