@@ -239,7 +239,10 @@ Transcreva o TEXTO INTEGRAL e literal dos artigos do capítulo/tópico pedido, n
 Em "texto" coloque o caput completo; em "paragrafos" coloque, um por item, os parágrafos, incisos e alíneas com sua numeração original (§ 1º, I, a) ...).
 Use a redação vigente e atualizada. Se algum dispositivo foi revogado, escreva "(Revogado)".
 Não use marcação de cores nem negrito. Não invente artigos: se não tiver certeza da redação exata, informe isso em "observacao".
-Formato JSON: {"materia":string,"capitulo":string,"base_legal":string,"artigos":[{"referencia":string,"texto":string,"paragrafos":string[]}],"observacao":string}`,
+Para cada artigo informe também a hierarquia da lei em que ele está: "titulo" (ex.: "TÍTULO XI — Dos Crimes contra a Administração Pública"),
+"capitulo_lei" (ex.: "CAPÍTULO I — Dos Crimes Praticados por Funcionário Público") e "secao" (ex.: "Seção I"), usando "" quando não houver.
+Formato JSON: {"materia":string,"capitulo":string,"base_legal":string,"artigos":[{"referencia":string,"texto":string,"paragrafos":string[],"titulo":string,"capitulo_lei":string,"secao":string}],"observacao":string}`,
+
       `Matéria: ${data.materia}. Capítulo/tópico cobrado no edital: ${data.capitulo}.
 ${data.contexto ? `Referência cadastrada pelo candidato (edital/leis):\n${data.contexto.slice(0, 12000)}` : ""}`,
     );
