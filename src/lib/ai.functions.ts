@@ -198,6 +198,50 @@ ${data.contexto ? `Conteúdo cadastrado pelo candidato (edital/leis):\n${data.co
     );
   });
 
+export type ArtigoIntegral = {
+  referencia: string;
+  texto: string;
+  paragrafos?: string[];
+};
+
+export type LeiIntegral = {
+  materia: string;
+  capitulo: string;
+  base_legal: string;
+  artigos: ArtigoIntegral[];
+  observacao?: string;
+};
+
+/** Texto integral (estilo Vade Mecum) dos artigos do capítulo cobrado no edital. */
+export const leiIntegral = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        materia: z.string().trim().min(2).max(400),
+        capitulo: z.string().trim().min(2).max(400),
+        contexto: z
+          .string()
+          .trim()
+          .nullable()
+          .transform((v) => (v ? v.slice(0, 40000) : v)),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return await runAIJson<LeiIntegral>(
+      `Você reproduz legislação brasileira como em um Vade Mecum.
+Transcreva o TEXTO INTEGRAL e literal dos artigos do capítulo/tópico pedido, na ordem legal, sem resumir, sem comentar e sem parafrasear.
+Em "texto" coloque o caput completo; em "paragrafos" coloque, um por item, os parágrafos, incisos e alíneas com sua numeração original (§ 1º, I, a) ...).
+Use a redação vigente e atualizada. Se algum dispositivo foi revogado, escreva "(Revogado)".
+Não use marcação de cores nem negrito. Não invente artigos: se não tiver certeza da redação exata, informe isso em "observacao".
+Formato JSON: {"materia":string,"capitulo":string,"base_legal":string,"artigos":[{"referencia":string,"texto":string,"paragrafos":string[]}],"observacao":string}`,
+      `Matéria: ${data.materia}. Capítulo/tópico cobrado no edital: ${data.capitulo}.
+${data.contexto ? `Referência cadastrada pelo candidato (edital/leis):\n${data.contexto.slice(0, 12000)}` : ""}`,
+    );
+  });
+
+
+
 export type MateriaExtraida = {
   nome: string;
   grupo: "Conhecimento Geral" | "Conhecimento Específico";

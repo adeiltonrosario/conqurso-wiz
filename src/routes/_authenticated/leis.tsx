@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Marcado, LegendaCores } from "@/components/Marcado";
+import { LeiIntegralPainel } from "@/components/LeiIntegral";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -289,6 +290,59 @@ function LeisPage() {
           )}
         </Button>
       </section>
+
+      <LeiIntegralPainel
+        materia={materiaAtiva}
+        capitulo={capitulo}
+        contexto={
+          [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
+            .filter(Boolean)
+            .join("\n\n") || null
+        }
+        marcados={selecionados}
+        onAlternarMarcado={alternarFoco}
+        onCarregado={(lei) => {
+          const nova = registrarLeitura({
+            materia: lei.materia || materiaAtiva,
+            capitulo: lei.capitulo || capitulo,
+            baseLegal: lei.base_legal ?? "",
+            resumo: (lei.artigos ?? [])
+              .map((a) => `${a.referencia}: ${a.texto}\n${(a.paragrafos ?? []).join("\n")}`)
+              .join("\n\n"),
+          });
+          setLeitura(nova);
+        }}
+      />
+
+      {selecionados.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+          <p className="text-xs text-muted-foreground">
+            {selecionados.length} artigo(s)/tópico(s) marcados — as questões sairão só deles.
+          </p>
+          <Button
+            className="w-full"
+            disabled={!leitura || reforco.isPending}
+            onClick={() => {
+              if (!leitura) return;
+              definirFocos(leitura.id, selecionados);
+              const alvo = { ...leitura, focos: selecionados };
+              setLeitura(alvo);
+              reforco.mutate(alvo);
+            }}
+          >
+            {reforco.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> Criando questões dos artigos marcados…
+              </>
+            ) : (
+              <>
+                <Brain className="mr-2 size-4" /> Gerar questões dos artigos marcados
+              </>
+            )}
+          </Button>
+        </section>
+      )}
+
 
       {topicos.length > 0 && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
