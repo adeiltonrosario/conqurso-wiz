@@ -258,7 +258,9 @@ function LeisPage() {
 
         {acervo.edital.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            Edital anexado: {acervo.edital.join(", ")} — o resumo usa esse conteúdo como referência.
+            Edital anexado: {acervo.edital.map((a) => nomeLimpo(a)).join(", ")} — o resumo usa esse
+            conteúdo como referência.
+
           </p>
         )}
 
