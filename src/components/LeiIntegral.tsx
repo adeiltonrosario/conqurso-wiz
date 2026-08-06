@@ -10,6 +10,9 @@ import {
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
+import { lerTextoAnexo } from "@/lib/anexos-store";
+import { artigosDoCapitulo, lerFaixa, lerVadeMecum, numeroArtigo, type LeiDoPdf } from "@/lib/vademecum";
+
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
