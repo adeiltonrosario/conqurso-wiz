@@ -140,13 +140,21 @@ function UploadCampo({
                   className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
                 >
                   {a.chars
-                    ? `${a.chars.toLocaleString("pt-BR")} caracteres lidos`
+                    ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
                     : "sem texto lido — reanexe o PDF"}
                 </span>
               </span>
-              <button type="button" onClick={() => onRemove(a.nome)} aria-label={`Remover ${nomeLimpo(a)}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  void removerTextoAnexo(nomeLimpo(a));
+                  onRemove(a.nome);
+                }}
+                aria-label={`Remover ${nomeLimpo(a)}`}
+              >
                 <Trash2 className="size-3.5 text-destructive" />
               </button>
+
             </li>
           ))}
         </ul>
