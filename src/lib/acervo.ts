@@ -52,12 +52,18 @@ function normalizarAnexos(valor: unknown): ArquivoAnexo[] {
       if (item && typeof item === "object" && typeof (item as ArquivoAnexo).nome === "string") {
         const a = item as ArquivoAnexo;
         const texto = typeof a.texto === "string" ? a.texto : "";
-        return { nome: a.nome, texto, chars: texto.length };
+        return {
+          nome: a.nome,
+          texto,
+          chars: typeof a.chars === "number" ? a.chars : texto.length,
+          ...(typeof a.paginas === "number" ? { paginas: a.paginas } : {}),
+        };
       }
       return null;
     })
     .filter((a): a is ArquivoAnexo => a !== null);
 }
+
 
 export function lerAcervo(): Acervo {
   if (typeof window === "undefined") return VAZIO;
