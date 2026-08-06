@@ -11,12 +11,17 @@ export type QuestaoCadastrada = {
   correta: string;
 };
 
-/** PDF anexado pelo candidato, com o texto extraído no navegador. */
+/**
+ * PDF anexado pelo candidato. `texto` é apenas o trecho enviado à IA;
+ * o texto integral fica no IndexedDB (ver src/lib/anexos-store.ts).
+ */
 export type ArquivoAnexo = {
   nome: string;
   texto: string;
   chars: number;
+  paginas?: number;
 };
+
 
 export type Acervo = {
   questoes: QuestaoCadastrada[];
