@@ -10,7 +10,7 @@ import { LeiIntegralPainel } from "@/components/LeiIntegral";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BANCAS, contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { BANCAS, contextoDoAcervo, ehAnexoDeLei, nomeLimpo, useAcervo } from "@/lib/acervo";
 import { useBancaPrevista } from "@/lib/trilha";
 import {
   contextoDoEdital,
@@ -258,7 +258,9 @@ function LeisPage() {
 
         {acervo.edital.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            Edital anexado: {acervo.edital.join(", ")} — o resumo usa esse conteúdo como referência.
+            Edital anexado: {acervo.edital.map((a) => nomeLimpo(a)).join(", ")} — o resumo usa esse
+            conteúdo como referência.
+
           </p>
         )}
 
@@ -294,6 +296,10 @@ function LeisPage() {
       <LeiIntegralPainel
         materia={materiaAtiva}
         capitulo={capitulo}
+        pdfsLei={acervo.provas
+          .filter(ehAnexoDeLei)
+          .map((a) => ({ nome: nomeLimpo(a), chars: a.chars }))}
+
         contexto={
           [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)]
             .filter(Boolean)

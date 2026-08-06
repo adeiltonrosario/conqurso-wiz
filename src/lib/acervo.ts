@@ -11,12 +11,17 @@ export type QuestaoCadastrada = {
   correta: string;
 };
 
-/** PDF anexado pelo candidato, com o texto extraído no navegador. */
+/**
+ * PDF anexado pelo candidato. `texto` é apenas o trecho enviado à IA;
+ * o texto integral fica no IndexedDB (ver src/lib/anexos-store.ts).
+ */
 export type ArquivoAnexo = {
   nome: string;
   texto: string;
   chars: number;
+  paginas?: number;
 };
+
 
 export type Acervo = {
   questoes: QuestaoCadastrada[];
@@ -47,12 +52,18 @@ function normalizarAnexos(valor: unknown): ArquivoAnexo[] {
       if (item && typeof item === "object" && typeof (item as ArquivoAnexo).nome === "string") {
         const a = item as ArquivoAnexo;
         const texto = typeof a.texto === "string" ? a.texto : "";
-        return { nome: a.nome, texto, chars: texto.length };
+        return {
+          nome: a.nome,
+          texto,
+          chars: typeof a.chars === "number" ? a.chars : texto.length,
+          ...(typeof a.paginas === "number" ? { paginas: a.paginas } : {}),
+        };
       }
       return null;
     })
     .filter((a): a is ArquivoAnexo => a !== null);
 }
+
 
 export function lerAcervo(): Acervo {
   if (typeof window === "undefined") return VAZIO;

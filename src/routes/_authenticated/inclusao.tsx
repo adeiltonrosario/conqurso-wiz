@@ -22,7 +22,9 @@ import {
   type ArquivoAnexo,
   type QuestaoCadastrada,
 } from "@/lib/acervo";
-import { extrairTextoPdf } from "@/lib/pdf";
+import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
+import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes } from "@/lib/ai.functions";
 
@@ -68,13 +70,20 @@ function UploadCampo({
     const anexos: ArquivoAnexo[] = [];
     for (const file of files) {
       try {
-        const texto = await extrairTextoPdf(file);
+        const { texto, paginas } = await extrairTextoPdf(file);
         if (!texto) {
           toast.warning(
             `Não foi possível ler o texto de “${file.name}” (PDF escaneado). Cole o conteúdo manualmente.`,
           );
         }
-        anexos.push({ nome: file.name, texto, chars: texto.length });
+        // Texto integral no IndexedDB; no acervo fica só o trecho de contexto da IA.
+        await salvarTextoAnexo(file.name, texto);
+        anexos.push({
+          nome: file.name,
+          texto: texto.slice(0, LIMITE_TRECHO_IA),
+          chars: texto.length,
+          paginas,
+        });
       } catch {
         toast.error(`Falha ao ler “${file.name}”.`);
         anexos.push({ nome: file.name, texto: "", chars: 0 });
@@ -83,6 +92,7 @@ function UploadCampo({
     setLendo(false);
     if (anexos.length) onAdd(anexos);
   }
+
 
   return (
     <div className="space-y-2">
@@ -130,13 +140,21 @@ function UploadCampo({
                   className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
                 >
                   {a.chars
-                    ? `${a.chars.toLocaleString("pt-BR")} caracteres lidos`
+                    ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
                     : "sem texto lido — reanexe o PDF"}
                 </span>
               </span>
-              <button type="button" onClick={() => onRemove(a.nome)} aria-label={`Remover ${nomeLimpo(a)}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  void removerTextoAnexo(nomeLimpo(a));
+                  onRemove(a.nome);
+                }}
+                aria-label={`Remover ${nomeLimpo(a)}`}
+              >
                 <Trash2 className="size-3.5 text-destructive" />
               </button>
+
             </li>
           ))}
         </ul>

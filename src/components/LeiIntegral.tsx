@@ -10,6 +10,9 @@ import {
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
+import { lerTextoAnexo } from "@/lib/anexos-store";
+import { artigosDoCapitulo, lerFaixa, lerVadeMecum, numeroArtigo, type LeiDoPdf } from "@/lib/vademecum";
+
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
@@ -187,6 +190,7 @@ export function LeiIntegralPainel({
   capitulo,
   contexto,
   marcados,
+  pdfsLei = [],
   onAlternarMarcado,
   onCarregado,
 }: {
@@ -194,35 +198,89 @@ export function LeiIntegralPainel({
   capitulo: string;
   contexto: string | null;
   marcados: string[];
+  /** PDFs de lei anexados (nome já sem o prefixo interno). */
+  pdfsLei?: { nome: string; chars: number }[];
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
   const buscar = useServerFn(leiIntegral);
   const [lei, setLei] = useState<LeiIntegralTipo | null>(null);
   const [termo, setTermo] = useState("");
+  const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
+  const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
+  const [arquivo, setArquivo] = useState("");
+  const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
+  const [leiPdfSel, setLeiPdfSel] = useState("");
+  const [soCapitulo, setSoCapitulo] = useState(true);
+
+  const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
+
+  const mutPdf = useMutation({
+    mutationFn: async (nome: string) => {
+      const texto = await lerTextoAnexo(nome);
+      if (!texto) throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
+      return lerVadeMecum(texto);
+    },
+    onSuccess: (leis, nome) => {
+      setLeisPdf(leis);
+      setLeiPdfSel(leis[0]?.nome ?? "");
+      setLei(null);
+      if (!leis.length) {
+        toast.error("Não foi possível localizar artigos neste PDF.");
+        return;
+      }
+      const total = leis.reduce((s, l) => s + l.artigos.length, 0);
+      toast.success(`${total} artigo(s) extraídos de “${nome}”.`);
+      onCarregado?.({
+        materia,
+        capitulo,
+        base_legal: leis.map((l) => l.nome).join(" · "),
+        artigos: leis.flatMap((l) => l.artigos),
+      });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
+  });
 
   const mut = useMutation({
     mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
     onSuccess: (r) => {
       setLei(r);
+      setLeisPdf([]);
       onCarregado?.(r);
       if (!(r.artigos ?? []).length) toast.error("A IA não retornou os artigos deste capítulo.");
     },
     onError: (e: Error) => toast.error(e.message || "Não foi possível carregar o texto integral."),
   });
 
+  const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
+  const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
+
+  const brutos = useMemo<ArtigoIntegral[]>(() => {
+    if (fonte === "pdf") {
+      const lista = leiPdfAtiva?.artigos ?? [];
+      return soCapitulo && capitulo.trim().length > 2 ? artigosDoCapitulo(lista, capitulo) : lista;
+    }
+    return lei?.artigos ?? [];
+  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo]);
+
+  const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
+
   const artigos = useMemo<Indexado[]>(() => {
-    const lista = lei?.artigos ?? [];
-    return lista
+    const limites = lerFaixa(faixa);
+    return brutos
       .map((artigo, indice) => ({ artigo, indice }))
-      .filter(
-        ({ artigo }) =>
-          combina(artigo, termo) &&
-          (!soMarcados || marcados.includes(`${artigo.referencia} — ${artigo.texto}`)),
-      );
-  }, [lei, termo, soMarcados, marcados]);
+      .filter(({ artigo }) => {
+        if (!combina(artigo, termo)) return false;
+        if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
+        if (limites) {
+          const n = numeroArtigo(artigo);
+          if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
+        }
+        return true;
+      });
+  }, [brutos, termo, faixa, soMarcados, marcados]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
@@ -238,32 +296,102 @@ export function LeiIntegralPainel({
           <ScrollText className="size-4 text-primary" /> Texto integral (Vade Mecum)
         </h2>
         <p className="text-xs text-muted-foreground">
-          Leitura literal dos artigos do capítulo, com sumário em árvore, filtro por palavra-chave e
-          marcação de artigos para gerar questões só do que você marcou.
+          Leitura literal dos artigos, com sumário em árvore, filtro por palavra-chave e marcação de
+          artigos para gerar questões só do que você marcou.
         </p>
       </header>
 
-      <Button
-        variant={lei ? "outline" : "default"}
-        className="w-full"
-        disabled={mut.isPending || capitulo.trim().length < 3}
-        onClick={() => mut.mutate()}
-      >
-        {mut.isPending ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
-          </>
-        ) : lei ? (
-          "Recarregar texto integral"
-        ) : (
-          "Carregar texto integral dos artigos"
-        )}
-      </Button>
+      <div className="flex gap-2">
+        {(["pdf", "ia"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFonte(f)}
+            className={`flex-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
+              fonte === f
+                ? "border-primary bg-secondary font-semibold text-primary"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {f === "pdf" ? "PDF anexado" : "IA (reserva)"}
+          </button>
+        ))}
+      </div>
 
-      {lei && (
+      {fonte === "pdf" ? (
+        pdfsLei.length === 0 ? (
+          <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+            Nenhum PDF de lei anexado. Envie o Vade Mecum em “Inclusão → Upload de PDF para leis”.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <select
+              value={arquivoAtivo}
+              onChange={(e) => setArquivo(e.target.value)}
+              aria-label="PDF de lei anexado"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {pdfsLei.map((p) => (
+                <option key={p.nome} value={p.nome}>
+                  {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
+                </option>
+              ))}
+            </select>
+            <Button
+              variant={leisPdf.length ? "outline" : "default"}
+              className="w-full"
+              disabled={mutPdf.isPending || !arquivoAtivo}
+              onClick={() => mutPdf.mutate(arquivoAtivo)}
+            >
+              {mutPdf.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Extraindo os artigos do PDF…
+                </>
+              ) : leisPdf.length ? (
+                "Reler o PDF"
+              ) : (
+                "Extrair o texto integral do PDF"
+              )}
+            </Button>
+            {leisPdf.length > 1 && (
+              <select
+                value={leiPdfSel}
+                onChange={(e) => setLeiPdfSel(e.target.value)}
+                aria-label="Lei ou código dentro do PDF"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {leisPdf.map((l) => (
+                  <option key={l.nome} value={l.nome}>
+                    {l.nome} — {l.artigos.length} artigo(s)
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )
+      ) : (
+        <Button
+          variant={lei ? "outline" : "default"}
+          className="w-full"
+          disabled={mut.isPending || capitulo.trim().length < 3}
+          onClick={() => mut.mutate()}
+        >
+          {mut.isPending ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
+            </>
+          ) : lei ? (
+            "Recarregar texto integral"
+          ) : (
+            "Carregar texto integral dos artigos"
+          )}
+        </Button>
+      )}
+
+      {carregado && (
         <>
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">{lei.base_legal}</p>
+            {baseLegal && <p className="text-xs font-semibold text-muted-foreground">{baseLegal}</p>}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -274,9 +402,26 @@ export function LeiIntegralPainel({
                 aria-label="Filtrar artigos por palavra-chave"
               />
             </div>
+            <Input
+              value={faixa}
+              onChange={(e) => setFaixa(e.target.value.slice(0, 12))}
+              placeholder="Faixa de artigos (ex.: 312-327)"
+              aria-label="Filtrar por faixa de artigos"
+            />
+            {fonte === "pdf" && capitulo.trim().length > 2 && (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={soCapitulo}
+                  onChange={(e) => setSoCapitulo(e.target.checked)}
+                  className="size-3.5 accent-primary"
+                />
+                Restringir ao capítulo “{capitulo}”
+              </label>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
-                {artigos.length} de {lei.artigos?.length ?? 0} artigo(s)
+                {artigos.length} de {brutos.length} artigo(s)
                 {marcados.length > 0 ? ` · ${marcados.length} marcado(s)` : ""}
               </span>
               <label className="flex items-center gap-1.5">
@@ -367,7 +512,7 @@ export function LeiIntegralPainel({
             </p>
           )}
 
-          {lei.observacao && (
+          {fonte === "ia" && lei?.observacao && (
             <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
               {lei.observacao}
             </p>
@@ -377,3 +522,4 @@ export function LeiIntegralPainel({
     </section>
   );
 }
+
