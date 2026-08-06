@@ -68,13 +68,20 @@ function UploadCampo({
     const anexos: ArquivoAnexo[] = [];
     for (const file of files) {
       try {
-        const texto = await extrairTextoPdf(file);
+        const { texto, paginas } = await extrairTextoPdf(file);
         if (!texto) {
           toast.warning(
             `Não foi possível ler o texto de “${file.name}” (PDF escaneado). Cole o conteúdo manualmente.`,
           );
         }
-        anexos.push({ nome: file.name, texto, chars: texto.length });
+        // Texto integral no IndexedDB; no acervo fica só o trecho de contexto da IA.
+        await salvarTextoAnexo(file.name, texto);
+        anexos.push({
+          nome: file.name,
+          texto: texto.slice(0, LIMITE_TRECHO_IA),
+          chars: texto.length,
+          paginas,
+        });
       } catch {
         toast.error(`Falha ao ler “${file.name}”.`);
         anexos.push({ nome: file.name, texto: "", chars: 0 });
@@ -83,6 +90,7 @@ function UploadCampo({
     setLendo(false);
     if (anexos.length) onAdd(anexos);
   }
+
 
   return (
     <div className="space-y-2">
