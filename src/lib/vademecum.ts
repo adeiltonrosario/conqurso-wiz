@@ -80,21 +80,24 @@ export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
         secao,
       });
     }
-    if (!g["artigo"]) cortes.push(m.index);
-    else cortes.push(m.index);
+    cortes.push(m.index);
   }
 
-  brutos.forEach((b, i) => {
+  let proximoCorte = 0;
+  const mapa = new Map<string, LeiDoPdf>();
+  for (const b of brutos) {
     // O corpo do artigo vai até o próximo marcador (artigo, seção, capítulo, título ou lei).
-    const proximo = cortes.find((c) => c > b.inicio);
-    const bruto = texto.slice(b.inicio + b.referencia.length, proximo ?? texto.length);
+    while (proximoCorte < cortes.length && cortes[proximoCorte]! <= b.inicio) proximoCorte++;
+    const fim = cortes[proximoCorte] ?? texto.length;
+    const bruto = texto.slice(b.inicio + b.referencia.length, fim);
     const corpo = bruto.replace(/^\s*[.\-–—º°]*\s*/u, "");
-    if (limpar(corpo).length < 3) return;
+    if (limpar(corpo).length < 3) continue;
 
     const { texto: caput, paragrafos } = partirCorpo(corpo);
-    let lei = leis.find((l) => l.nome === b.lei);
+    let lei = mapa.get(b.lei);
     if (!lei) {
       lei = { nome: b.lei, artigos: [] };
+      mapa.set(b.lei, lei);
       leis.push(lei);
     }
     lei.artigos.push({
@@ -105,8 +108,8 @@ export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
       capitulo_lei: b.capitulo,
       secao: b.secao,
     });
-    void i;
-  });
+  }
+
 
   return leis.filter((l) => l.artigos.length > 0);
 }
