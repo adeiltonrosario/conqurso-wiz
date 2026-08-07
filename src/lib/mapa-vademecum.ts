@@ -123,6 +123,28 @@ export function normaDoTopico(texto: string): NormaMapeada | null {
     if (achou) return achou;
   }
 
+  // Atalhos das disciplinas do edital que não citam o número da lei.
+  const atalhos: [RegExp, string][] = [
+    [/processual penal|processo penal/, "4.3"],
+    [/constitucional/, "4.1"],
+    [/execucao penal/, "5.17"],
+    [/maria da penha/, "1.6"],
+    [/improbidade/, "3.2"],
+    [/licitac/, "3.1"],
+    [/drogas/, "5.7"],
+    [/desarmamento/, "5.6"],
+    [/organizac(ao|oes) criminosa/, "5.12"],
+    [/crianca e do adolescente|eca\b/, "5.13"],
+    [/idosa|idoso/, "5.14"],
+    [/penal/, "4.2"],
+  ];
+  for (const [re, item] of atalhos) {
+    if (re.test(alvo)) {
+      const achou = MAPA_VADE_MECUM.find((m) => m.item === item);
+      if (achou) return achou;
+    }
+  }
+
   let melhor: { m: NormaMapeada; nota: number } | null = null;
   for (const m of MAPA_VADE_MECUM) {
     const palavras = norm(m.norma)
