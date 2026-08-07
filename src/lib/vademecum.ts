@@ -25,9 +25,36 @@ const RE_MARCADOR = new RegExp(
 
 const RE_DIVISOR = /(?=§\s*\d+[º°]?|Parágrafo\s+único|(?:^|\s)[IVXLCDM]{1,5}\s*[-–—]\s|(?:^|\s)[a-z]\)\s)/gu;
 
+/** Marca inserida na extração do PDF para localizar a página de cada trecho. */
+const RE_PAGINA = /\[\[p:(\d+)\]\]/g;
+
+/** Recorta o texto do PDF entre duas páginas (usa o mapa edital → Vade Mecum). */
+export function fatiarPorPaginas(texto: string, de: number, ate: number): string {
+  let inicio = -1;
+  let fim = texto.length;
+  RE_PAGINA.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = RE_PAGINA.exec(texto))) {
+    const pagina = Number(m[1]);
+    if (inicio < 0 && pagina >= de) inicio = m.index;
+    if (pagina > ate) {
+      fim = m.index;
+      break;
+    }
+  }
+  if (inicio < 0) return "";
+  return texto.slice(inicio, fim);
+}
+
+/** Remove as marcas de página antes de exibir/parsear o texto legal. */
+export function semMarcasDePagina(texto: string) {
+  return texto.replace(/\[\[p:\d+\]\]/g, " ");
+}
+
 function limpar(s: string) {
   return s.replace(/\s+/g, " ").trim();
 }
+
 
 /** Separa o caput dos parágrafos, incisos e alíneas, mantendo a numeração original. */
 function partirCorpo(corpo: string) {
@@ -40,7 +67,7 @@ function partirCorpo(corpo: string) {
 }
 
 export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
-  const texto = textoBruto.replace(/\r/g, "");
+  const texto = semMarcasDePagina(textoBruto.replace(/\r/g, ""));
   const leis: LeiDoPdf[] = [];
 
   let leiAtual = "";

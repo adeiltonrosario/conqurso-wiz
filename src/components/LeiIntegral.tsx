@@ -11,7 +11,21 @@ import {
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
-import { artigosDoCapitulo, lerFaixa, lerVadeMecum, numeroArtigo, type LeiDoPdf } from "@/lib/vademecum";
+import {
+  artigosDoCapitulo,
+  fatiarPorPaginas,
+  lerFaixa,
+  lerVadeMecum,
+  numeroArtigo,
+  type LeiDoPdf,
+} from "@/lib/vademecum";
+import {
+  faixaDaNorma,
+  GRUPOS_VADE_MECUM,
+  MAPA_VADE_MECUM,
+  normaDoTopico,
+} from "@/lib/mapa-vademecum";
+
 
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
@@ -214,16 +228,26 @@ export function LeiIntegralPainel({
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
   const [leiPdfSel, setLeiPdfSel] = useState("");
   const [soCapitulo, setSoCapitulo] = useState(true);
+  const sugerido = useMemo(() => normaDoTopico(`${capitulo} ${materia}`), [capitulo, materia]);
+  const [itemMapa, setItemMapa] = useState("");
+  const itemAtivo = itemMapa || sugerido?.item || "";
+  const normaAtiva = MAPA_VADE_MECUM.find((m) => m.item === itemAtivo) ?? null;
 
   const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
 
   const mutPdf = useMutation({
-    mutationFn: async (nome: string) => {
+    mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
       const texto = await lerTextoAnexo(nome);
       if (!texto) throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
+      const faixaPaginas = item ? faixaDaNorma(item) : null;
+      if (faixaPaginas) {
+        const recorte = fatiarPorPaginas(texto, faixaPaginas[0], faixaPaginas[1]);
+        if (recorte.trim().length > 200) return lerVadeMecum(recorte);
+        toast.info("As páginas do mapa não foram localizadas neste PDF; lendo o arquivo inteiro.");
+      }
       return lerVadeMecum(texto);
     },
-    onSuccess: (leis, nome) => {
+    onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
       setLei(null);
@@ -242,6 +266,7 @@ export function LeiIntegralPainel({
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
   });
+
 
   const mut = useMutation({
     mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
@@ -337,11 +362,39 @@ export function LeiIntegralPainel({
                 </option>
               ))}
             </select>
+
+            <div className="space-y-1">
+              <select
+                value={itemAtivo}
+                onChange={(e) => setItemMapa(e.target.value)}
+                aria-label="Norma do edital (mapa PC-BA → páginas do Vade Mecum)"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Todo o PDF (sem corte por página)</option>
+                {GRUPOS_VADE_MECUM.map((g) => (
+                  <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
+                    {MAPA_VADE_MECUM.filter((m) => m.grupo === g.nome).map((m) => (
+                      <option key={m.item} value={m.item}>
+                        {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                {normaAtiva
+                  ? `${normaAtiva.edital} → páginas ${faixaDaNorma(normaAtiva.item)?.join("–")} do Vade Mecum${
+                      !itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""
+                    }`
+                  : "Escolha a norma do edital para ir direto ao ponto de corte do PDF."}
+              </p>
+            </div>
+
             <Button
               variant={leisPdf.length ? "outline" : "default"}
               className="w-full"
               disabled={mutPdf.isPending || !arquivoAtivo}
-              onClick={() => mutPdf.mutate(arquivoAtivo)}
+              onClick={() => mutPdf.mutate({ nome: arquivoAtivo, item: itemAtivo })}
             >
               {mutPdf.isPending ? (
                 <>
@@ -353,6 +406,7 @@ export function LeiIntegralPainel({
                 "Extrair o texto integral do PDF"
               )}
             </Button>
+
             {leisPdf.length > 1 && (
               <select
                 value={leiPdfSel}

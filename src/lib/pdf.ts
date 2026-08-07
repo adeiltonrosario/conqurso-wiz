@@ -26,8 +26,10 @@ export async function extrairTextoPdf(file: File): Promise<PdfLido> {
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-    if (texto) partes.push(texto);
+    // A marca de página permite ir direto ao ponto de corte do mapa do Vade Mecum.
+    if (texto) partes.push(`[[p:${i}]] ${texto}`);
   }
 
   return { texto: partes.join("\n").trim(), paginas: doc.numPages };
+
 }
