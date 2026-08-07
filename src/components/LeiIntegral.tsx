@@ -11,7 +11,21 @@ import {
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
-import { artigosDoCapitulo, lerFaixa, lerVadeMecum, numeroArtigo, type LeiDoPdf } from "@/lib/vademecum";
+import {
+  artigosDoCapitulo,
+  fatiarPorPaginas,
+  lerFaixa,
+  lerVadeMecum,
+  numeroArtigo,
+  type LeiDoPdf,
+} from "@/lib/vademecum";
+import {
+  faixaDaNorma,
+  GRUPOS_VADE_MECUM,
+  MAPA_VADE_MECUM,
+  normaDoTopico,
+} from "@/lib/mapa-vademecum";
+
 
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
