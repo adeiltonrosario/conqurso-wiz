@@ -214,16 +214,26 @@ export function LeiIntegralPainel({
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
   const [leiPdfSel, setLeiPdfSel] = useState("");
   const [soCapitulo, setSoCapitulo] = useState(true);
+  const sugerido = useMemo(() => normaDoTopico(`${capitulo} ${materia}`), [capitulo, materia]);
+  const [itemMapa, setItemMapa] = useState("");
+  const itemAtivo = itemMapa || sugerido?.item || "";
+  const normaAtiva = MAPA_VADE_MECUM.find((m) => m.item === itemAtivo) ?? null;
 
   const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
 
   const mutPdf = useMutation({
-    mutationFn: async (nome: string) => {
+    mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
       const texto = await lerTextoAnexo(nome);
       if (!texto) throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
+      const faixaPaginas = item ? faixaDaNorma(item) : null;
+      if (faixaPaginas) {
+        const recorte = fatiarPorPaginas(texto, faixaPaginas[0], faixaPaginas[1]);
+        if (recorte.trim().length > 200) return lerVadeMecum(recorte);
+        toast.info("As páginas do mapa não foram localizadas neste PDF; lendo o arquivo inteiro.");
+      }
       return lerVadeMecum(texto);
     },
-    onSuccess: (leis, nome) => {
+    onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
       setLei(null);
@@ -242,6 +252,7 @@ export function LeiIntegralPainel({
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
   });
+
 
   const mut = useMutation({
     mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
