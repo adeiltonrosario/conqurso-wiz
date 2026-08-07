@@ -362,11 +362,39 @@ export function LeiIntegralPainel({
                 </option>
               ))}
             </select>
+
+            <div className="space-y-1">
+              <select
+                value={itemAtivo}
+                onChange={(e) => setItemMapa(e.target.value)}
+                aria-label="Norma do edital (mapa PC-BA → páginas do Vade Mecum)"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Todo o PDF (sem corte por página)</option>
+                {GRUPOS_VADE_MECUM.map((g) => (
+                  <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
+                    {MAPA_VADE_MECUM.filter((m) => m.grupo === g.nome).map((m) => (
+                      <option key={m.item} value={m.item}>
+                        {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                {normaAtiva
+                  ? `${normaAtiva.edital} → páginas ${faixaDaNorma(normaAtiva.item)?.join("–")} do Vade Mecum${
+                      !itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""
+                    }`
+                  : "Escolha a norma do edital para ir direto ao ponto de corte do PDF."}
+              </p>
+            </div>
+
             <Button
               variant={leisPdf.length ? "outline" : "default"}
               className="w-full"
               disabled={mutPdf.isPending || !arquivoAtivo}
-              onClick={() => mutPdf.mutate(arquivoAtivo)}
+              onClick={() => mutPdf.mutate({ nome: arquivoAtivo, item: itemAtivo })}
             >
               {mutPdf.isPending ? (
                 <>
@@ -378,6 +406,7 @@ export function LeiIntegralPainel({
                 "Extrair o texto integral do PDF"
               )}
             </Button>
+
             {leisPdf.length > 1 && (
               <select
                 value={leiPdfSel}
