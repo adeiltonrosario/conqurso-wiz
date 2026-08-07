@@ -67,7 +67,7 @@ function partirCorpo(corpo: string) {
 }
 
 export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
-  const texto = textoBruto.replace(/\r/g, "");
+  const texto = semMarcasDePagina(textoBruto.replace(/\r/g, ""));
   const leis: LeiDoPdf[] = [];
 
   let leiAtual = "";
