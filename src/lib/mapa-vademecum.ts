@@ -129,8 +129,10 @@ export function normaDoTopico(texto: string): NormaMapeada | null {
       .split(/[^a-z0-9]+/)
       .filter((p) => p.length > 3);
     if (!palavras.length) continue;
-    const nota = palavras.filter((p) => alvo.includes(p)).length / palavras.length;
-    if (nota >= 0.5 && (!melhor || nota > melhor.nota)) melhor = { m, nota };
+    const achadas = palavras.filter((p) => alvo.includes(p)).length;
+    const nota = achadas / palavras.length;
+    const suficiente = palavras.length > 1 ? achadas >= 2 && nota >= 0.6 : nota === 1;
+    if (suficiente && (!melhor || nota > melhor.nota)) melhor = { m, nota };
   }
   return melhor?.m ?? null;
 }
