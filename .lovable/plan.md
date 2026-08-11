@@ -1,29 +1,53 @@
-# Por que a redação não foi gerada
+# Redação sem gastar créditos de IA
 
-## Causa confirmada
+## Objetivo
 
-Os registros do servidor mostram que, nas suas tentativas de agora (13:31 a 13:36), o pedido saiu do app corretamente e a IA respondeu com **402 – Payment Required**: os créditos de IA do workspace acabaram (0 de 100 créditos do período; restam apenas 4 créditos do limite diário).
+Fazer a aba **/redacao** funcionar sem chamar a IA do Lovable AI Gateway, eliminando o erro 402 por falta de crédito. A redação passa a ser montada localmente no navegador a partir do tema/estudo de caso que o usuário digita.
 
-Ou seja: não é bug no estudo de caso nem no texto que você colou. Nenhuma chamada de IA (redação, questões, leis, análise de padrões) vai funcionar até os créditos serem renovados/adicionados em Configurações → Plans & credits.
+## Como vai funcionar
 
-Hoje, quando isso acontece, a tela mostra apenas "Não foi possível gerar a redação" (ou nada perceptível), então parece que o app travou.
+1. **Modelos de estrutura pré-definidos**
+   - O app já tem `MODELOS_REDACAO` (ex.: "padrão de banca", "tese-antítese-síntese" etc.).
+   - Cada modelo vira um "esqueleto" com placeholders para o tema.
 
-## O que será feito no app
+2. **Geração local do texto**
+   - A partir do tema, o app cria:
+     - Título: reformulação do tema.
+     - Introdução: contextualização + tese + breve encaminhamento.
+     - Desenvolvimento: 2 ou 3 parágrafos com argumentos genéricos e exemplos vazios que o usuário preenche.
+     - Conclusão: reafirmação da tese + proposta de intervenção.
+   - Os conectivos são marcados automaticamente com as cores do sistema (`{{azul|...}}`, `{{vermelho|...}}`, `{{amarelo|...}}`).
 
-1. **Mensagem clara de crédito esgotado**
-   - Traduzir o erro 402 para: "Os créditos de IA acabaram. Adicione créditos para continuar gerando." Erro 429 vira: "Muitas solicitações — tente novamente em instantes."
-   - Aplicar em todas as telas que chamam a IA: Redação, Questões, Prova interativa, Revisão, Leis (resumo e texto integral), Análise de padrões e o simulado da aba Incluir.
+3. **Edição após geração**
+   - O texto gerado aparece em campos editáveis (introdução, cada parágrafo do desenvolvimento, conclusão).
+   - O usuário pode substituir os trechos genéricos pelos próprios argumentos.
+   - Contador de linhas atualiza em tempo real.
 
-2. **Preservar o que você escreveu**
-   - O tema/estudo de caso continua no campo após a falha (já é o caso hoje, será garantido), com botão "Tentar novamente" no aviso.
-
-3. **Aviso visível em vez de falha silenciosa**
-   - Além do toast, um bloco de erro fixo na tela da redação, para não passar batido se o toast desaparecer.
+4. **Fallback caso o usuário prefira IA**
+   - Mantém o botão "Gerar com IA" desabilitado quando os créditos acabam, com aviso explicativo.
+   - O botão principal passa a ser "Montar redação local".
 
 ## Detalhes técnicos
 
-- Em `src/lib/ai-gateway.server.ts`: capturar o erro do gateway e relançar `Error` com mensagem por status (402, 429, demais), preservando o texto original para depuração.
-- Em `src/lib/ai.functions.ts`: nenhuma mudança de contrato; os handlers apenas propagam a mensagem já tratada.
-- Em `src/routes/_authenticated/redacao.tsx` (e nas outras telas de IA): guardar `mutation.error` e renderizar um bloco de alerta com a mensagem + botão de repetir.
+- Criar `src/lib/redacao-local.ts` com funções puras para:
+  - `gerarTitulo(tema: string): string`
+  - `gerarIntroducao(tema: string, modelo: string): string`
+  - `gerarDesenvolvimento(tema: string, modelo: string): string[]`
+  - `gerarConclusao(tema: string): string`
+  - `marcarConectivos(texto: string): string`
+- Alterar `src/routes/_authenticated/redacao.tsx`:
+  - Adicionar estado `modo` ("local" | "ia").
+  - Usar geração local no `mutation.mutate` quando modo = local.
+  - Renderizar campos editáveis para cada bloco da redação gerada.
+  - Atualizar o contador de linhas conforme o usuário edita.
+- Remover a dependência obrigatória de `gerarRedacao` (server function) para o fluxo principal.
+- Manter `gerarRedacao` disponível para quem tiver créditos.
 
-Nada disso recria créditos — é para você saber na hora o que está acontecendo. Para voltar a gerar redações agora, é preciso adicionar créditos ao workspace.
+## Limitações
+
+- O texto local será mais genérico do que o da IA. Ele serve como ponto de partida editável, não como redação final pronta.
+- Não haverá personalização profunda por banca (a menos que o usuário edite).
+
+## Resultado esperado
+
+O usuário digita um tema, clica em "Montar redação local" e recebe imediatamente uma estrutura dissertativa-argumentativa com conectivos grifados, sem nenhuma chamada de IA.
