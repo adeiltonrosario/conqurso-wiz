@@ -111,7 +111,7 @@ export function gerarDesenvolvimento(tema: string, modelo: string): string[] {
 
 export function gerarConclusao(tema: string, _modelo: string): string {
   const limpo = limparTema(tema);
-  return marcarConectivos(`Diante do exposto, fica evidente que ${limpo} constitui questão de ${marcarConectivos("relevante")} importância para o desenvolvimento social. Assim, torna-se urgente a adoção de políticas públicas integradas, além do engajamento da sociedade civil, a fim de superar os obstáculos identificados e construir uma realidade mais justa e efetiva.`);
+  return marcarConectivos(`Diante do exposto, fica evidente que ${limpo} constitui questão de relevante importância para o desenvolvimento social. Assim, torna-se urgente a adoção de políticas públicas integradas, além do engajamento da sociedade civil, a fim de superar os obstáculos identificados e construir uma realidade mais justa e efetiva.`);
 }
 
 export function gerarRedacaoLocal(tema: string, modelo: string): RedacaoLocal {
