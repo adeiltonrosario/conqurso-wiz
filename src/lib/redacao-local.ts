@@ -63,7 +63,7 @@ function contextualizacao(tema: string): string {
 }
 
 function tese(tema: string): string {
-  return `Diante disso, é ${marcarConectivos("fundamental")} compreender que ${tema} exige uma abordagem integrada e efetiva.`;
+  return `Diante disso, é fundamental compreender que ${tema} exige uma abordagem integrada e efetiva.`;
 }
 
 function encaminhamento(): string {
