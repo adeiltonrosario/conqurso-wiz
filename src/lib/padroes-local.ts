@@ -23,7 +23,7 @@ export function extrairGabarito(texto: string): Record<number, string> {
   let m: RegExpExecArray | null;
   while ((m = re.exec(texto))) {
     const n = Number(m[1]);
-    if (n > 0 && n < 400) mapa[n] = m[2].toUpperCase();
+    if (n > 0 && n < 400) mapa[n] = String(m[2]).toUpperCase();
   }
   return mapa;
 }
