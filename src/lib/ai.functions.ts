@@ -125,8 +125,19 @@ export const analisarPadroes = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        conteudo: z.string().trim().min(10).max(40000),
+        conteudo: z
+          .string()
+          .trim()
+          .transform((v) => v.slice(0, 40000)),
         materia: z.string().trim().max(400),
+        imagens: z
+          .array(z.string().max(4_000_000))
+          .max(4)
+          .optional()
+          .transform((v) => v ?? []),
+      })
+      .refine((v) => v.conteudo.length >= 10 || v.imagens.length > 0, {
+        message: "Envie o texto da prova ou pelo menos uma imagem.",
       })
       .parse(d),
   )
@@ -134,11 +145,13 @@ export const analisarPadroes = createServerFn({ method: "POST" })
     return await runAIJson<PadraoAnalise>(
       `Você é um analista de padrões de provas de concurso. Resolva a prova e identifique padrões visuais e linguísticos recorrentes
 (início e término típicos da alternativa correta, uso de vírgulas, conectivos, vogais/consoantes, pontuação, extensão da alternativa).
+Quando houver imagens (foto/print/prova escaneada), leia o enunciado, as alternativas e o gabarito diretamente da imagem.
 Nas alternativas, marque com {{amarelo|...}} palavras idênticas ao gabarito, {{azul|...}} palavras corretas e {{vermelho|...}} palavras erradas.
 Em itens de certo/errado, classifique cada frase como "correta" (construção direta) ou "invertida".
 Formato JSON: {"resumo":string[],"questoes":[{"numero":number,"materia":string,"enunciado":string,"frases":[{"texto":string,"sentido":"correta"|"invertida"}],"alternativas":[{"letra":string,"texto":string,"correta":boolean,"padrao":string}]}]}`,
       `Matéria em foco: ${data.materia || "todas"}.
-Conteúdo da prova/gabarito enviado pelo candidato:\n${data.conteudo.slice(0, 30000)}`,
+Conteúdo da prova/gabarito enviado pelo candidato:\n${data.conteudo.slice(0, 30000) || "(sem texto — use as imagens anexadas)"}`,
+      data.imagens,
     );
   });
 
