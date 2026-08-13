@@ -11,7 +11,7 @@ Na aba **Análise de padrões**, o campo de arquivos guarda **apenas o nome** do
 3. **Imagens (foto da prova, print, gabarito digitalizado)** — a imagem é enviada à IA em modo visual: ela lê o enunciado e as alternativas direto da foto. Vale também para PDFs escaneados (sem texto), que passam a ser convertidos em página-imagem e enviados do mesmo jeito.
 4. **Colar texto passa a ser opcional** — o botão "Analisar padrões" libera quando houver qualquer fonte: texto colado, PDF/Word lido ou imagem anexada.
 5. **Lista de arquivos com status** — cada anexo mostra tipo, status ("texto lido", "será lido pela IA como imagem", "não foi possível ler") e botão para remover.
-6. **Mensagens de erro claras** — se os créditos de IA estiverem esgotados, aparece um aviso explícito em vez de falha silenciosa (esta tela depende de IA; não há modo local para ela).
+6. **Mensagens de erro claras** — se os créditos de IA estiverem esgotados, aparece um aviso explícito em vez de falha silenciosa (esta tela depende de IA; não há modo local para ela).Preciso que tenha modo local da IA ela não pode gastar crédito.
 
 ## Detalhes técnicos
 
