@@ -44,17 +44,22 @@ export function separarQuestoes(texto: string): QuestaoBruta[] {
     const marcas: { letra: string; inicio: number; fim: number }[] = [];
     let a: RegExpExecArray | null;
     while ((a = reAlt.exec(corpo))) {
-      marcas.push({ letra: a[1].toUpperCase(), inicio: a.index, fim: a.index + a[0].length });
+      marcas.push({
+        letra: String(a[1]).toUpperCase(),
+        inicio: a.index,
+        fim: a.index + a[0].length,
+      });
     }
     const validas = marcas.filter((mk, i) => mk.letra === "ABCDE"[i]);
     for (let i = 0; i < validas.length; i++) {
-      const ini = validas[i].fim;
-      const fim = i + 1 < validas.length ? validas[i + 1].inicio : corpo.length;
-      const t = corpo.slice(ini, fim).trim();
-      if (t) alternativas.push({ letra: validas[i].letra, texto: t });
+      const atual = validas[i]!;
+      const proxima = validas[i + 1];
+      const t = corpo.slice(atual.fim, proxima ? proxima.inicio : corpo.length).trim();
+      if (t) alternativas.push({ letra: atual.letra, texto: t });
     }
 
-    const enunciado = (validas.length ? corpo.slice(0, validas[0].inicio) : corpo).trim();
+    const primeira = validas[0];
+    const enunciado = (primeira ? corpo.slice(0, primeira.inicio) : corpo).trim();
     if (enunciado.length > 15) questoes.push({ numero, enunciado, alternativas });
   }
 
