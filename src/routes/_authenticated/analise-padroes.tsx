@@ -8,9 +8,13 @@ import {
   ArrowRight,
   ArrowUpRight,
   ArrowDownRight,
+  FileText,
+  Image as ImageIcon,
   Loader2,
   Printer,
   Send,
+  Trash2,
+  TriangleAlert,
   UploadCloud,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -21,6 +25,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ehDoEdital, todasAsMaterias, useEdital } from "@/lib/edital";
 import { analisarPadroes, conversarPadroes, type PadraoAnalise } from "@/lib/ai.functions";
+import { analisarPadroesLocal } from "@/lib/padroes-local";
+import {
+  consolidarConteudo,
+  imagensDe,
+  lerArquivoRef,
+  type ArquivoRef,
+} from "@/lib/documentos";
 
 export const Route = createFileRoute("/_authenticated/analise-padroes")({
   head: () => ({
@@ -29,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/analise-padroes")({
       {
         name: "description",
         content:
-          "Envie provas, gabaritos e imagens e veja a IA identificar padrões de acertos e erros questão por questão, com PDF pronto para impressão.",
+          "Envie provas em PDF, Word ou imagens e veja os padrões de acertos e erros questão por questão, com modo local sem gastar créditos.",
       },
       { property: "og:title", content: "Análise de padrões de provas" },
       {
@@ -41,14 +52,17 @@ export const Route = createFileRoute("/_authenticated/analise-padroes")({
   component: AnalisePage,
 });
 
+type Modo = "local" | "ia";
 
 function AnalisePage() {
   const { edital } = useEdital();
   const MATERIAS = ["Todas", ...todasAsMaterias(edital)];
   const inputRef = useRef<HTMLInputElement>(null);
-  const [arquivos, setArquivos] = useState<string[]>([]);
+  const [arquivos, setArquivos] = useState<ArquivoRef[]>([]);
+  const [lendo, setLendo] = useState(false);
   const [conteudo, setConteudo] = useState("");
   const [materia, setMateria] = useState("Todas");
+  const [modo, setModo] = useState<Modo>("local");
   const [analise, setAnalise] = useState<PadraoAnalise | null>(null);
   const [indice, setIndice] = useState(0);
   const [pergunta, setPergunta] = useState("");
@@ -57,17 +71,41 @@ function AnalisePage() {
   const analisar = useServerFn(analisarPadroes);
   const conversar = useServerFn(conversarPadroes);
 
+  const textoTotal = consolidarConteudo(conteudo, arquivos);
+  const imagens = imagensDe(arquivos);
+  const podeAnalisar =
+    modo === "local" ? textoTotal.trim().length >= 10 : textoTotal.trim().length >= 10 || imagens.length > 0;
+
+  async function receberArquivos(files: File[]) {
+    if (!files.length) return;
+    setLendo(true);
+    for (const file of files) {
+      const ref = await lerArquivoRef(file);
+      setArquivos((a) => [...a, ref]);
+      if (ref.status === "erro") toast.error(`${ref.nome}: ${ref.aviso ?? "não foi possível ler"}`);
+    }
+    setLendo(false);
+  }
+
   const analiseMut = useMutation({
-    mutationFn: () =>
-      analisar({
+    mutationFn: async () => {
+      if (modo === "local") {
+        return analisarPadroesLocal(textoTotal, materia === "Todas" ? "" : materia);
+      }
+      return await analisar({
         data: {
-          conteudo: `${arquivos.length ? `Arquivos enviados: ${arquivos.join(", ")}\n` : ""}${conteudo}`,
+          conteudo: textoTotal,
           materia: materia === "Todas" ? "" : materia,
+          imagens,
         },
-      }),
+      });
+    },
     onSuccess: (r) => {
       setAnalise(r);
       setIndice(0);
+      if (!r.questoes.length) {
+        toast.warning("Nenhuma questão foi reconhecida no material enviado.");
+      }
     },
     onError: (e: Error) => toast.error(e.message || "Não foi possível analisar a prova."),
   });
@@ -77,7 +115,7 @@ function AnalisePage() {
       conversar({
         data: {
           pergunta: texto,
-          contexto: analise ? JSON.stringify(analise).slice(0, 15000) : conteudo,
+          contexto: analise ? JSON.stringify(analise).slice(0, 15000) : textoTotal.slice(0, 15000),
         },
       }),
     onSuccess: (resposta) => setChat((c) => [...c, { autor: "ia", texto: resposta }]),
@@ -92,18 +130,18 @@ function AnalisePage() {
   return (
     <AppShell
       titulo="Análise de padrões"
-      descricao="A IA resolve a prova, grifa os padrões e gera o PDF respondido para impressão."
+      descricao="Envie PDF, Word ou fotos da prova: o app grifa os padrões e gera o PDF respondido para impressão."
     >
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
-        <Label>Arquivos de prova, gabarito e imagens</Label>
+        <Label>Arquivos de referência (PDF, Word, imagens)</Label>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept="application/pdf,image/*"
+          accept=".pdf,.doc,.docx,.txt,application/pdf,image/*"
           className="hidden"
           onChange={(e) => {
-            setArquivos((a) => [...a, ...Array.from(e.target.files ?? []).map((f) => f.name)]);
+            void receberArquivos(Array.from(e.target.files ?? []));
             e.target.value = "";
           }}
         />
@@ -112,21 +150,62 @@ function AnalisePage() {
           onClick={() => inputRef.current?.click()}
           className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-secondary/60 px-4 py-8 text-sm text-muted-foreground"
         >
-          <UploadCloud className="size-6 text-primary" />
-          Toque para selecionar ou arraste os arquivos
+          {lendo ? (
+            <Loader2 className="size-6 animate-spin text-primary" />
+          ) : (
+            <UploadCloud className="size-6 text-primary" />
+          )}
+          {lendo ? "Lendo o conteúdo dos arquivos…" : "Toque para selecionar PDF, Word ou imagens"}
         </button>
+
         {arquivos.length > 0 && (
-          <p className="text-xs text-muted-foreground">{arquivos.join(", ")}</p>
+          <ul className="space-y-1.5">
+            {arquivos.map((a, i) => (
+              <li
+                key={`${a.nome}-${i}`}
+                className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-xs"
+              >
+                {a.status === "imagem" ? (
+                  <ImageIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+                ) : a.status === "erro" ? (
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-mark-red" />
+                ) : (
+                  <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{a.nome}</p>
+                  <p className="text-muted-foreground">
+                    {a.status === "texto"
+                      ? `${a.chars.toLocaleString("pt-BR")} caracteres lidos`
+                      : a.status === "imagem"
+                        ? "será lido pela IA como imagem"
+                        : (a.aviso ?? "não foi possível ler")}
+                  </p>
+                  {a.status === "imagem" && a.aviso && (
+                    <p className="text-muted-foreground">{a.aviso}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Remover ${a.nome}`}
+                  onClick={() => setArquivos((lista) => lista.filter((_, idx) => idx !== i))}
+                  className="text-muted-foreground hover:text-mark-red"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="conteudo">Cole o texto da prova e do gabarito</Label>
+          <Label htmlFor="conteudo">Cole o texto da prova e do gabarito (opcional)</Label>
           <Textarea
             id="conteudo"
             rows={6}
             value={conteudo}
             onChange={(e) => setConteudo(e.target.value.slice(0, 40000))}
-            placeholder="Cole aqui as questões e o gabarito para a IA extrair os padrões…"
+            placeholder="Cole aqui as questões e o gabarito (ex.: 1-A, 2-C, 3-B) para extrair os padrões…"
           />
         </div>
 
@@ -147,11 +226,32 @@ function AnalisePage() {
           </select>
         </div>
 
-        <Button
-          className="w-full"
-          disabled={conteudo.trim().length < 10 || analiseMut.isPending}
-          onClick={() => analiseMut.mutate()}
-        >
+        <div className="space-y-2">
+          <Label>Modo de análise</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={modo === "local" ? "default" : "outline"}
+              onClick={() => setModo("local")}
+            >
+              Local (sem créditos)
+            </Button>
+            <Button
+              type="button"
+              variant={modo === "ia" ? "default" : "outline"}
+              onClick={() => setModo("ia")}
+            >
+              Com IA
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {modo === "local"
+              ? "O modo local calcula os padrões no seu navegador, sem gastar créditos. Precisa do texto (PDF, Word ou colado) e do gabarito no formato 1-A, 2-C."
+              : "O modo IA lê também imagens e PDFs escaneados, resolve a prova e explica cada distrator — consome créditos."}
+          </p>
+        </div>
+
+        <Button className="w-full" disabled={!podeAnalisar || analiseMut.isPending} onClick={() => analiseMut.mutate()}>
           {analiseMut.isPending ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" /> Analisando padrões…
@@ -160,6 +260,13 @@ function AnalisePage() {
             "Analisar padrões da prova"
           )}
         </Button>
+        {!podeAnalisar && (
+          <p className="text-xs text-muted-foreground">
+            {modo === "local"
+              ? "Anexe um PDF/Word com texto ou cole o conteúdo da prova."
+              : "Anexe um arquivo (PDF, Word ou imagem) ou cole o conteúdo da prova."}
+          </p>
+        )}
         <LegendaCores />
       </section>
 
@@ -242,6 +349,7 @@ function AnalisePage() {
 
           <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
             <h2 className="font-display text-base font-bold">Chat de padrões</h2>
+            <p className="text-xs text-muted-foreground">O chat usa IA e consome créditos.</p>
             <div className="space-y-2">
               {chat.map((m, i) => (
                 <p
