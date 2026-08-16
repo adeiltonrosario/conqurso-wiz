@@ -50,7 +50,11 @@ export function separarQuestoes(texto: string): QuestaoBruta[] {
         fim: a.index + a[0].length,
       });
     }
-    const validas = marcas.filter((mk, i) => mk.letra === "ABCDE"[i]);
+    // Aceita as marcas na ordem A, B, C, D, E, ignorando letras soltas no meio do texto.
+    const validas: typeof marcas = [];
+    for (const mk of marcas) {
+      if (mk.letra === "ABCDE"[validas.length]) validas.push(mk);
+    }
     for (let i = 0; i < validas.length; i++) {
       const atual = validas[i]!;
       const proxima = validas[i + 1];
