@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { LeiIntegralPainel } from "@/components/LeiIntegral";
 import { Button } from "@/components/ui/button";
@@ -192,6 +193,7 @@ function LeisPage() {
       titulo="Leis do edital, em resumo"
       descricao="Escolha a matéria e o capítulo exigido no edital: a leitura vem só desse trecho, em tópicos curtos."
     >
+      <FiltroConcurso compacto />
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
