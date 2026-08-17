@@ -54,7 +54,7 @@ function Pagina() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selecionado, setSelecionado] = useState(hojeIso());
-  const { edital } = useEdital();
+  const { edital, definirFiltro } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
   const CARGOS = cargosDoEdital(edital);
   const BANCAS_EDITAL = bancasDoEdital(edital);
@@ -110,7 +110,10 @@ function Pagina() {
             ) : (
               <select
                 value={CARGOS.includes(trilha.cargo) ? trilha.cargo : ""}
-                onChange={(e) => aplicar({ cargo: e.target.value })}
+                onChange={(e) => {
+                  aplicar({ cargo: e.target.value });
+                  definirFiltro({ cargo: e.target.value });
+                }}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Selecione o cargo</option>
@@ -139,7 +142,10 @@ function Pagina() {
             ) : (
               <select
                 value={BANCAS_EDITAL.includes(trilha.banca) ? trilha.banca : ""}
-                onChange={(e) => aplicar({ banca: e.target.value })}
+                onChange={(e) => {
+                  aplicar({ banca: e.target.value });
+                  definirFiltro({ banca: e.target.value });
+                }}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Selecione a banca</option>

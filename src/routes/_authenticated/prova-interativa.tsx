@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ function ProvaPage() {
       descricao={`Formato idêntico ao da banca ${banca}, em scroll vertical contínuo como uma prova impressa.`}
     >
       <BancaAtual banca={banca} definida={bancaDefinida} />
+      <FiltroConcurso compacto />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex flex-wrap gap-2">
           {MATERIAS.map((m) => (

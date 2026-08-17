@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
@@ -191,6 +192,7 @@ function QuestoesPage() {
       descricao={`Padrão ${banca} com 5 alternativas e gabarito comentado passo a passo pela IA.`}
     >
       <BancaAtual banca={banca} definida={bancaDefinida} />
+      <FiltroConcurso compacto />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {GRUPOS.map((g) => (
