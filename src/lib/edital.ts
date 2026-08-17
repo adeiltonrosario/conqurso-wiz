@@ -12,6 +12,10 @@ export type MateriaEdital = {
   nome: string;
   grupo: GrupoEdital;
   topicos: string[];
+  /** Banca do edital a que esta matéria pertence (vazio = vale para todas). */
+  banca?: string | undefined;
+  /** Cargo do edital a que esta matéria pertence (vazio = vale para todos). */
+  cargo?: string | undefined;
   /** Relevância da matéria na prova, em % do total de questões. */
   relevancia?: number | undefined;
   /** Relevância de cada tópico DENTRO da matéria, em %. */
@@ -26,11 +30,22 @@ export type EditalEstado = {
   cargos: string[];
   /** Bancas previstas/organizadoras do edital — usadas como filtro na Trilha. */
   bancas: string[];
+  /** Banca do concurso em estudo — filtra matérias, tópicos e leis. */
+  bancaAtiva?: string | undefined;
+  /** Cargo do concurso em estudo — filtra matérias, tópicos e leis. */
+  cargoAtivo?: string | undefined;
 };
 
 const KEY = "concurseiro:edital";
 
-const VAZIO: EditalEstado = { texto: "", materias: [], cargos: [], bancas: [] };
+const VAZIO: EditalEstado = {
+  texto: "",
+  materias: [],
+  cargos: [],
+  bancas: [],
+  bancaAtiva: "",
+  cargoAtivo: "",
+};
 
 
 export function lerEdital(): EditalEstado {
@@ -111,6 +126,12 @@ export function useEdital() {
     aplicar({ bancas: [...(atual.bancas ?? []), limpo] });
   };
 
+  const definirFiltro = (patch: { banca?: string; cargo?: string }) =>
+    aplicar({
+      ...(patch.banca === undefined ? {} : { bancaAtiva: patch.banca }),
+      ...(patch.cargo === undefined ? {} : { cargoAtivo: patch.cargo }),
+    });
+
   const removerBanca = (nome: string) => {
     const atual = lerEdital();
     aplicar({ bancas: (atual.bancas ?? []).filter((b) => b !== nome) });
@@ -127,6 +148,7 @@ export function useEdital() {
     removerCargo,
     adicionarBanca,
     removerBanca,
+    definirFiltro,
   };
 }
 
@@ -151,9 +173,28 @@ function unicos(nomes: string[]) {
   });
 }
 
+function combina(valor: string | undefined, filtro: string | undefined) {
+  const f = (filtro ?? "").trim().toLowerCase();
+  if (!f) return true;
+  const v = (valor ?? "").trim().toLowerCase();
+  return !v || v === f;
+}
+
+/**
+ * Matérias do edital visíveis com o concurso em estudo (banca + cargo ativos).
+ * Matérias sem banca/cargo definidos valem para qualquer seleção.
+ */
+export function materiasAtivas(edital: EditalEstado) {
+  return edital.materias.filter(
+    (m) => combina(m.banca, edital.bancaAtiva) && combina(m.cargo, edital.cargoAtivo),
+  );
+}
+
 /** Matérias do edital de um grupo somadas às padrão daquele grupo. */
 export function materiasPorGrupo(edital: EditalEstado, grupo: GrupoEdital) {
-  const doEdital = edital.materias.filter((m) => m.grupo === grupo).map((m) => m.nome);
+  const doEdital = materiasAtivas(edital)
+    .filter((m) => m.grupo === grupo)
+    .map((m) => m.nome);
   const padrao = grupo === "Conhecimento Geral" ? MATERIAS_GERAL : MATERIAS_ESPECIFICO;
   return unicos([...doEdital, ...padrao]);
 }
@@ -161,18 +202,18 @@ export function materiasPorGrupo(edital: EditalEstado, grupo: GrupoEdital) {
 /** Todas as matérias: as do edital primeiro, depois as padrão. */
 export function todasAsMaterias(edital: EditalEstado) {
   return unicos([
-    ...edital.materias.map((m) => m.nome),
+    ...materiasAtivas(edital).map((m) => m.nome),
     ...MATERIAS_GERAL,
     ...MATERIAS_ESPECIFICO,
   ]);
 }
 
 export function ehDoEdital(edital: EditalEstado, nome: string) {
-  return edital.materias.some((m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+  return materiasAtivas(edital).some((m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase());
 }
 
 export function grupoDaMateria(edital: EditalEstado, nome: string): GrupoEdital {
-  const achada = edital.materias.find(
+  const achada = materiasAtivas(edital).find(
     (m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase(),
   );
   if (achada) return achada.grupo;
@@ -180,7 +221,7 @@ export function grupoDaMateria(edital: EditalEstado, nome: string): GrupoEdital 
 }
 
 export function topicosDaMateria(edital: EditalEstado, nome: string) {
-  const achada = edital.materias.find(
+  const achada = materiasAtivas(edital).find(
     (m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase(),
   );
   return achada?.topicos ?? [];
@@ -188,14 +229,21 @@ export function topicosDaMateria(edital: EditalEstado, nome: string) {
 
 /** Recorte do edital enviado à IA para as gerações ficarem no conteúdo cobrado. */
 export function contextoDoEdital(edital: EditalEstado, materia?: string) {
-  if (!edital.materias.length) return "";
+  const ativas = materiasAtivas(edital);
+  if (!ativas.length) return "";
   const alvo = materia
-    ? edital.materias.filter((m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase())
-    : edital.materias;
-  const lista = (alvo.length ? alvo : edital.materias)
+    ? ativas.filter((m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase())
+    : ativas;
+  const lista = (alvo.length ? alvo : ativas)
     .map((m) => `- ${m.nome} (${m.grupo}): ${m.topicos.join("; ") || "sem tópicos detalhados"}`)
     .join("\n");
-  return `CONTEÚDO PROGRAMÁTICO DO EDITAL:\n${lista}`;
+  const escopo = [
+    edital.bancaAtiva ? `Banca: ${edital.bancaAtiva}` : "",
+    edital.cargoAtivo ? `Cargo: ${edital.cargoAtivo}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  return `CONTEÚDO PROGRAMÁTICO DO EDITAL${escopo ? ` (${escopo})` : ""}:\n${lista}`;
 }
 
 /** Relevância do tópico dentro da matéria (%). */
@@ -212,7 +260,7 @@ export function relevanciaGeral(materia: MateriaEdital, topico: string) {
 
 /** Matérias do edital ordenadas da mais cobrada para a menos cobrada. */
 export function materiasPorRelevancia(edital: EditalEstado) {
-  return [...edital.materias].sort((a, b) => (b.relevancia ?? 0) - (a.relevancia ?? 0));
+  return [...materiasAtivas(edital)].sort((a, b) => (b.relevancia ?? 0) - (a.relevancia ?? 0));
 }
 
 /** Tópicos de uma matéria ordenados por relevância na disciplina. */
