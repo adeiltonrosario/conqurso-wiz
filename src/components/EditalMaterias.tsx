@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extrairMateriasEdital } from "@/lib/ai.functions";
-import { novoId, useEdital, type GrupoEdital } from "@/lib/edital";
+import { bancasDoEdital, cargosDoEdital, novoId, useEdital, type GrupoEdital } from "@/lib/edital";
+import { FiltroConcurso } from "@/components/FiltroConcurso";
 
 const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"];
 
@@ -36,6 +37,8 @@ export function EditalMaterias() {
   const valor = texto ?? edital.texto;
   const cargos = edital.cargos ?? [];
   const bancas = edital.bancas ?? [];
+  const bancasDisponiveis = bancasDoEdital(edital);
+  const cargosDisponiveis = cargosDoEdital(edital);
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
@@ -52,6 +55,8 @@ export function EditalMaterias() {
           nome: m.nome.trim(),
           grupo: m.grupo === "Conhecimento Geral" ? "Conhecimento Geral" : "Conhecimento Específico",
           topicos: (m.topicos ?? []).map((t) => t.trim()).filter(Boolean),
+          banca: edital.bancaAtiva ?? "",
+          cargo: edital.cargoAtivo ?? "",
         })) as typeof edital.materias;
       const cargosAtuais = edital.cargos ?? [];
       const vistos = new Set(cargosAtuais.map((c) => c.trim().toLowerCase()));
@@ -84,7 +89,17 @@ export function EditalMaterias() {
       toast.error("Essa matéria já está cadastrada.");
       return;
     }
-    definirMaterias([...edital.materias, { id: novoId(), nome, grupo: novoGrupo, topicos: [] }]);
+    definirMaterias([
+      ...edital.materias,
+      {
+        id: novoId(),
+        nome,
+        grupo: novoGrupo,
+        topicos: [],
+        banca: edital.bancaAtiva ?? "",
+        cargo: edital.cargoAtivo ?? "",
+      },
+    ]);
     setNova("");
   };
 
@@ -94,9 +109,11 @@ export function EditalMaterias() {
         <h2 className="font-display text-base font-bold">Matérias do edital</h2>
         <p className="text-xs text-muted-foreground">
           Cole o conteúdo programático para a IA extrair as matérias e os tópicos, ou cadastre na mão.
-          Elas aparecem em Questões, Leis, Prova, Padrões e Trilha.
+          Elas aparecem em Questões, Leis, Prova, Padrões e Trilha, separadas por banca e cargo.
         </p>
       </div>
+
+      <FiltroConcurso />
 
       <div className="space-y-2">
         <Label htmlFor="edital-texto">Conteúdo programático do edital</Label>
@@ -275,6 +292,32 @@ export function EditalMaterias() {
                   {GRUPOS.map((g) => (
                     <option key={g} value={g}>
                       {g}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={m.banca ?? ""}
+                  onChange={(e) => atualizarMateria(m.id, { banca: e.target.value })}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label={`Banca de ${m.nome}`}
+                >
+                  <option value="">Todas as bancas</option>
+                  {bancasDisponiveis.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={m.cargo ?? ""}
+                  onChange={(e) => atualizarMateria(m.id, { cargo: e.target.value })}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label={`Cargo de ${m.nome}`}
+                >
+                  <option value="">Todos os cargos</option>
+                  {cargosDisponiveis.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
                     </option>
                   ))}
                 </select>
