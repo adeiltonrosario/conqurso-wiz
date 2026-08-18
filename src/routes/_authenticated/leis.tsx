@@ -89,7 +89,7 @@ function LeisPage() {
   const [selecionados, setSelecionados] = useState<string[]>([]);
 
   const MATERIAS = todasAsMaterias(edital);
-  const materiaAtiva = MATERIAS.includes(materia) ? materia : MATERIAS[0]!;
+  const materiaAtiva = MATERIAS.includes(materia) ? materia : (MATERIAS[0] ?? "");
   const doEdital = topicosDaMateria(edital, materiaAtiva);
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
 
