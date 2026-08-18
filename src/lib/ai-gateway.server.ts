@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { generateText } from "ai";
 
 const MODEL = "openai/gpt-5.6-sol";
 
@@ -27,6 +27,11 @@ function traduzirErro(erro: unknown): Error {
   if (/429|rate.?limit/i.test(texto)) {
     return new Error("Muitas requisições de IA em sequência. Aguarde alguns segundos e tente novamente.");
   }
+  if (/no output generated/i.test(texto)) {
+    return new Error(
+      "A IA não retornou conteúdo (o texto enviado pode ser muito longo). Tente com menos páginas ou use o modo local.",
+    );
+  }
   return erro instanceof Error ? erro : new Error(texto);
 }
 
@@ -37,9 +42,10 @@ export async function runAI(
 ): Promise<string> {
   const provider = getProvider();
   try {
-    const result = streamText({
+    const result = await generateText({
       model: provider.responses(MODEL),
       system,
+      maxRetries: 2,
       ...(imagens.length
         ? {
             messages: [
@@ -63,11 +69,21 @@ export async function runAI(
         },
       },
     });
-    return await result.text;
+    const texto = result.text?.trim() ?? "";
+    if (!texto) {
+      const motivo = result.finishReason ?? "desconhecido";
+      throw new Error(
+        motivo === "length"
+          ? "A resposta da IA foi cortada por tamanho. Reduza o texto enviado e tente novamente."
+          : `A IA não retornou conteúdo (motivo: ${motivo}). Tente novamente ou use o modo local.`,
+      );
+    }
+    return texto;
   } catch (e) {
     throw traduzirErro(e);
   }
 }
+
 
 export async function runAIJson<T>(
   system: string,
@@ -87,5 +103,10 @@ export async function runAIJson<T>(
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   const slice = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-  return JSON.parse(slice) as T;
+  try {
+    return JSON.parse(slice) as T;
+  } catch {
+    throw new Error("A IA respondeu em formato inesperado. Tente novamente ou use o modo local.");
+  }
 }
+
