@@ -181,10 +181,11 @@ function QuestoesPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões."),
   });
 
-  const visiveis = acervo.simulado.filter(
+  const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
+  const visiveis = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const lista = visiveis.length ? visiveis : acervo.simulado;
+  const lista = visiveis.length ? visiveis : permitidas;
   const assuntos = agruparAssuntos(lista);
 
   return (
