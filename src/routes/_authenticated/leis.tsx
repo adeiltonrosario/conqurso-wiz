@@ -17,6 +17,8 @@ import {
   contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
+  materiaPermitida,
+  topicoPermitido,
   todasAsMaterias,
   topicosDaMateria,
   useEdital,
