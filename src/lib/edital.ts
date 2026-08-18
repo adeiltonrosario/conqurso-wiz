@@ -190,26 +190,71 @@ export function materiasAtivas(edital: EditalEstado) {
   );
 }
 
-/** Matérias do edital de um grupo somadas às padrão daquele grupo. */
+/**
+ * Modo restrito: há matérias do edital para a banca/cargo em estudo, então
+ * só elas podem ser vistas ou importadas (nada das listas padrão).
+ */
+export function editalRestrito(edital: EditalEstado) {
+  return materiasAtivas(edital).length > 0;
+}
+
+/** Matérias do edital de um grupo (ou as padrão, quando não há edital ativo). */
 export function materiasPorGrupo(edital: EditalEstado, grupo: GrupoEdital) {
   const doEdital = materiasAtivas(edital)
     .filter((m) => m.grupo === grupo)
     .map((m) => m.nome);
+  if (editalRestrito(edital)) return unicos(doEdital);
   const padrao = grupo === "Conhecimento Geral" ? MATERIAS_GERAL : MATERIAS_ESPECIFICO;
-  return unicos([...doEdital, ...padrao]);
+  return unicos(padrao);
 }
 
-/** Todas as matérias: as do edital primeiro, depois as padrão. */
+/** Todas as matérias permitidas no filtro atual. */
 export function todasAsMaterias(edital: EditalEstado) {
-  return unicos([
-    ...materiasAtivas(edital).map((m) => m.nome),
-    ...MATERIAS_GERAL,
-    ...MATERIAS_ESPECIFICO,
-  ]);
+  if (editalRestrito(edital)) return unicos(materiasAtivas(edital).map((m) => m.nome));
+  return unicos([...MATERIAS_GERAL, ...MATERIAS_ESPECIFICO]);
 }
 
 export function ehDoEdital(edital: EditalEstado, nome: string) {
   return materiasAtivas(edital).some((m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+}
+
+const igual = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** A matéria pode ser vista/importada com o filtro atual? */
+export function materiaPermitida(edital: EditalEstado, nome: string) {
+  if (!nome?.trim()) return false;
+  if (!editalRestrito(edital)) return true;
+  return materiasAtivas(edital).some((m) => igual(m.nome, nome));
+}
+
+/** O tópico/capítulo pertence ao edital ativo? */
+export function topicoPermitido(edital: EditalEstado, materia: string, topico: string) {
+  if (!editalRestrito(edital)) return true;
+  if (!materiaPermitida(edital, materia)) return false;
+  const alvo = (topico ?? "").trim().toLowerCase();
+  if (!alvo) return true;
+  const topicos = topicosDaMateria(edital, materia);
+  if (!topicos.length) return true;
+  return topicos.some((t) => {
+    const v = t.trim().toLowerCase();
+    return v === alvo || v.includes(alvo) || alvo.includes(v);
+  });
+}
+
+/** Questão visível/importável no filtro atual. */
+export function questaoPermitida(
+  edital: EditalEstado,
+  questao: { materia?: string | undefined; assunto?: string | undefined },
+) {
+  if (!editalRestrito(edital)) return true;
+  const materia = (questao.materia ?? "").trim();
+  if (!materia) return false;
+  const casa = materiasAtivas(edital).find(
+    (m) => igual(m.nome, materia) || materia.toLowerCase().includes(m.nome.trim().toLowerCase()),
+  );
+  if (!casa) return false;
+  if (!questao.assunto) return true;
+  return topicoPermitido(edital, casa.nome, questao.assunto);
 }
 
 export function grupoDaMateria(edital: EditalEstado, nome: string): GrupoEdital {
