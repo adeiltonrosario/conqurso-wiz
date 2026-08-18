@@ -270,6 +270,29 @@ function InclusaoPage() {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="materia-questao">Matéria do edital</Label>
+          {semMaterias ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Cadastre acima as matérias do edital (com banca e cargo) para poder incluir questões.
+            </p>
+          ) : (
+            <select
+              id="materia-questao"
+              value={materia}
+              onChange={(e) => setMateriaSel(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {MATERIAS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                  {ehDoEdital(edital, m) ? " (edital)" : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="assunto">Assunto</Label>
           <Input
             id="assunto"
