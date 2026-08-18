@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { generateText } from "ai";
 
 const MODEL = "openai/gpt-5.6-sol";
 
