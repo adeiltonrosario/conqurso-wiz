@@ -169,6 +169,11 @@ function InclusaoPage() {
   const gerar = useServerFn(gerarQuestoes);
   const { banca, definida: bancaDefinida } = useBancaPrevista();
 
+  const { edital } = useEdital();
+  const MATERIAS = todasAsMaterias(edital);
+  const [materiaSel, setMateriaSel] = useState("");
+  const materia = MATERIAS.includes(materiaSel) ? materiaSel : (MATERIAS[0] ?? "");
+  const semMaterias = MATERIAS.length === 0;
   const [enunciado, setEnunciado] = useState("");
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
@@ -179,12 +184,15 @@ function InclusaoPage() {
     mutationFn: async () =>
       gerar({
         data: {
-          materia: assunto || "Língua Portuguesa",
-          grupo: "Conhecimento Geral",
+          materia: assunto ? `${materia} — ${assunto}` : materia || "Língua Portuguesa",
+          grupo: materia ? grupoDaMateria(edital, materia) : "Conhecimento Geral",
           banca,
           quantidade: 5,
           formato,
-          contexto: contextoDoAcervo(acervo) || null,
+          contexto:
+            [contextoDoEdital(edital, materia), contextoDoAcervo(acervo)]
+              .filter(Boolean)
+              .join("\n\n") || null,
         },
       }),
     onSuccess: (questoes) => {
@@ -200,11 +208,19 @@ function InclusaoPage() {
       toast.error("Escreva o enunciado da questão.");
       return;
     }
+    if (!materiaPermitida(edital, materia)) {
+      toast.error("Escolha uma matéria do edital/banca/cargo selecionados.");
+      return;
+    }
+    if (assunto.trim() && !topicoPermitido(edital, materia, assunto)) {
+      toast.error("Este assunto não consta no edital da banca/cargo em estudo.");
+      return;
+    }
 
     const nova: QuestaoCadastrada = {
       id: crypto.randomUUID(),
       enunciado: enunciado.trim(),
-      assunto: assunto.trim() || "Geral",
+      assunto: assunto.trim() ? `${materia} — ${assunto.trim()}` : materia || "Geral",
       banca,
       formato,
       alternativas: formato === "multipla" ? alternativas : ["Certo", "Errado"],
