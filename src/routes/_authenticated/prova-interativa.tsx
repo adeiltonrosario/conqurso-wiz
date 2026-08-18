@@ -11,7 +11,14 @@ import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Rele
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
-import { contextoDoEdital, ehDoEdital, grupoDaMateria, todasAsMaterias, useEdital } from "@/lib/edital";
+import {
+  contextoDoEdital,
+  ehDoEdital,
+  grupoDaMateria,
+  questaoPermitida,
+  todasAsMaterias,
+  useEdital,
+} from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
@@ -44,7 +51,8 @@ function ProvaPage() {
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
   const [materiaSel, setMateriaSel] = useState("");
-  const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
+  const materia = MATERIAS.includes(materiaSel) ? materiaSel : (MATERIAS[0] ?? "");
+  const semMaterias = MATERIAS.length === 0;
   const setMateria = setMateriaSel;
   const [provas, setProvas] = useState<Record<string, Questao[]>>({});
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -52,7 +60,7 @@ function ProvaPage() {
   const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
-  const questoes = provas[materia] ?? [];
+  const questoes = (provas[materia] ?? []).filter((q) => questaoPermitida(edital, q));
   const respondidas = questoes.filter((q) => respostas[q.id ?? ""]).length;
   const assuntos = agruparAssuntos(questoes);
 
@@ -93,27 +101,34 @@ function ProvaPage() {
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
-        <div className="flex flex-wrap gap-2">
-          {MATERIAS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMateria(m)}
-              className={`min-w-28 flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                materia === m
-                  ? "border-primary bg-primary text-primary-foreground font-semibold"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              {m}
-              {ehDoEdital(edital, m) && (
-                <span className="ml-1.5 rounded bg-secondary/70 px-1 text-[10px] font-semibold">
-                  Edital
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {semMaterias ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+            Nenhuma matéria deste edital/banca/cargo. Ajuste o filtro do concurso ou cadastre as
+            matérias em “Incluir”.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {MATERIAS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMateria(m)}
+                className={`min-w-28 flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  materia === m
+                    ? "border-primary bg-primary text-primary-foreground font-semibold"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {m}
+                {ehDoEdital(edital, m) && (
+                  <span className="ml-1.5 rounded bg-secondary/70 px-1 text-[10px] font-semibold">
+                    Edital
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -127,11 +142,17 @@ function ProvaPage() {
           <Progress value={questoes.length ? (respondidas / questoes.length) * 100 : 0} />
         </div>
 
-        <Button className="w-full" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+        <Button
+          className="w-full"
+          disabled={mutation.isPending || semMaterias}
+          onClick={() => mutation.mutate()}
+        >
           {mutation.isPending ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" /> Montando prova de {materia}…
             </>
+          ) : semMaterias ? (
+            "Selecione um edital com matérias"
           ) : questoes.length >= MINIMO ? (
             `Adicionar mais ${LOTE} questões`
           ) : (

@@ -17,6 +17,8 @@ import {
   contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
+  materiaPermitida,
+  topicoPermitido,
   todasAsMaterias,
   topicosDaMateria,
   useEdital,
@@ -89,7 +91,7 @@ function LeisPage() {
   const [selecionados, setSelecionados] = useState<string[]>([]);
 
   const MATERIAS = todasAsMaterias(edital);
-  const materiaAtiva = MATERIAS.includes(materia) ? materia : MATERIAS[0]!;
+  const materiaAtiva = MATERIAS.includes(materia) ? materia : (MATERIAS[0] ?? "");
   const doEdital = topicosDaMateria(edital, materiaAtiva);
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
 
@@ -174,6 +176,14 @@ function LeisPage() {
   const ler = (cap: string) => {
     if (cap.trim().length < 3) {
       toast.error("Informe o capítulo cobrado no edital.");
+      return;
+    }
+    if (!materiaPermitida(edital, materiaAtiva)) {
+      toast.error("Esta matéria não pertence ao edital/banca/cargo selecionados.");
+      return;
+    }
+    if (!topicoPermitido(edital, materiaAtiva, cap)) {
+      toast.error("Este capítulo não consta no edital da banca/cargo em estudo.");
       return;
     }
     setCapitulo(cap);
