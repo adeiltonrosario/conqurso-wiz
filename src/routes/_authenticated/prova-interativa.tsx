@@ -11,7 +11,14 @@ import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Rele
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
-import { contextoDoEdital, ehDoEdital, grupoDaMateria, todasAsMaterias, useEdital } from "@/lib/edital";
+import {
+  contextoDoEdital,
+  ehDoEdital,
+  grupoDaMateria,
+  questaoPermitida,
+  todasAsMaterias,
+  useEdital,
+} from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
