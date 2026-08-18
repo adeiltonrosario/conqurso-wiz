@@ -103,5 +103,10 @@ export async function runAIJson<T>(
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   const slice = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-  return JSON.parse(slice) as T;
+  try {
+    return JSON.parse(slice) as T;
+  } catch {
+    throw new Error("A IA respondeu em formato inesperado. Tente novamente ou use o modo local.");
+  }
 }
+
