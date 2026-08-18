@@ -217,33 +217,46 @@ function QuestoesPage() {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {materias.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMateria(m)}
-              className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                materiaAtiva === m
-                  ? "border-accent bg-accent text-accent-foreground font-semibold"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              {m}
-              {ehDoEdital(edital, m) && (
-                <span className="ml-1.5 rounded bg-secondary px-1 text-[10px] font-semibold text-primary">
-                  Edital
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {semMaterias ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+            Nenhuma matéria de {grupo} para o edital/banca/cargo selecionados. Ajuste o filtro do
+            concurso ou cadastre as matérias em “Incluir”.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {materias.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMateria(m)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  materiaAtiva === m
+                    ? "border-accent bg-accent text-accent-foreground font-semibold"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {m}
+                {ehDoEdital(edital, m) && (
+                  <span className="ml-1.5 rounded bg-secondary px-1 text-[10px] font-semibold text-primary">
+                    Edital
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <Button className="w-full" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+        <Button
+          className="w-full"
+          disabled={mutation.isPending || semMaterias}
+          onClick={() => mutation.mutate()}
+        >
           {mutation.isPending ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" /> Montando questões…
             </>
+          ) : semMaterias ? (
+            "Selecione um edital com matérias"
           ) : (
             foco ? `Gerar questões de ${foco}` : `Gerar questões de ${materiaAtiva}`
           )}
