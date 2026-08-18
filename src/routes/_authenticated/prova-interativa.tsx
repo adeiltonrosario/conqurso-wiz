@@ -44,7 +44,8 @@ function ProvaPage() {
   const { edital } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
   const [materiaSel, setMateriaSel] = useState("");
-  const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
+  const materia = MATERIAS.includes(materiaSel) ? materiaSel : (MATERIAS[0] ?? "");
+  const semMaterias = MATERIAS.length === 0;
   const setMateria = setMateriaSel;
   const [provas, setProvas] = useState<Record<string, Questao[]>>({});
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -52,7 +53,7 @@ function ProvaPage() {
   const { banca, definida: bancaDefinida } = useBancaPrevista();
   const gerar = useServerFn(gerarQuestoes);
 
-  const questoes = provas[materia] ?? [];
+  const questoes = (provas[materia] ?? []).filter((q) => questaoPermitida(edital, q));
   const respondidas = questoes.filter((q) => respostas[q.id ?? ""]).length;
   const assuntos = agruparAssuntos(questoes);
 
