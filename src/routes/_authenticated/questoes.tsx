@@ -153,8 +153,9 @@ function QuestoesPage() {
   const gerar = useServerFn(gerarQuestoes);
 
   const materias = materiasPorGrupo(edital, grupo);
-  const materiaAtiva = materias.includes(materia) ? materia : materias[0]!;
+  const materiaAtiva = materias.includes(materia) ? materia : (materias[0] ?? "");
   const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
+  const semMaterias = materias.length === 0;
 
   const mutation = useMutation({
     mutationFn: () =>
