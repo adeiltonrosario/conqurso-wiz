@@ -27,6 +27,15 @@ import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes } from "@/lib/ai.functions";
+import {
+  contextoDoEdital,
+  ehDoEdital,
+  grupoDaMateria,
+  materiaPermitida,
+  todasAsMaterias,
+  topicoPermitido,
+  useEdital,
+} from "@/lib/edital";
 
 export const Route = createFileRoute("/_authenticated/inclusao")({
   head: () => ({
