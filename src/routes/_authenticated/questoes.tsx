@@ -15,6 +15,7 @@ import {
   ehDoEdital,
   grupoDaMateria,
   materiasPorGrupo,
+  questaoPermitida,
   useEdital,
 } from "@/lib/edital";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
