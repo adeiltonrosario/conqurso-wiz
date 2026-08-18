@@ -176,6 +176,14 @@ function LeisPage() {
       toast.error("Informe o capítulo cobrado no edital.");
       return;
     }
+    if (!materiaPermitida(edital, materiaAtiva)) {
+      toast.error("Esta matéria não pertence ao edital/banca/cargo selecionados.");
+      return;
+    }
+    if (!topicoPermitido(edital, materiaAtiva, cap)) {
+      toast.error("Este capítulo não consta no edital da banca/cargo em estudo.");
+      return;
+    }
     setCapitulo(cap);
     mut.mutate(cap.trim());
   };
