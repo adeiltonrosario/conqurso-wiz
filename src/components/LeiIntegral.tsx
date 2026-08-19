@@ -24,7 +24,10 @@ import {
   GRUPOS_VADE_MECUM,
   MAPA_VADE_MECUM,
   normaDoTopico,
+  normasDoEdital,
 } from "@/lib/mapa-vademecum";
+import { materiasAtivas, useEdital } from "@/lib/edital";
+
 
 
 
