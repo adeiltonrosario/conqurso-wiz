@@ -152,7 +152,49 @@ export function useEdital() {
   };
 }
 
+/**
+ * Junta matérias extraídas localmente às já cadastradas: cria as inexistentes e
+ * faz união dos tópicos nas que já existem (comparação sem diferenciar caixa).
+ */
+export function mesclarMaterias(
+  atuais: MateriaEdital[],
+  novas: { nome: string; grupo: GrupoEdital; topicos: string[] }[],
+  escopo: { banca?: string | undefined; cargo?: string | undefined } = {},
+): { materias: MateriaEdital[]; criadas: number; topicosNovos: number } {
+  const materias = atuais.map((m) => ({ ...m, topicos: [...m.topicos] }));
+  let criadas = 0;
+  let topicosNovos = 0;
+
+  for (const nova of novas) {
+    const nome = nova.nome.trim();
+    if (!nome) continue;
+    let alvo = materias.find((m) => igual(m.nome, nome));
+    if (!alvo) {
+      alvo = {
+        id: novoId(),
+        nome,
+        grupo: nova.grupo,
+        topicos: [],
+        banca: escopo.banca ?? "",
+        cargo: escopo.cargo ?? "",
+      };
+      materias.push(alvo);
+      criadas += 1;
+    }
+    for (const topico of nova.topicos) {
+      const t = topico.trim();
+      if (!t) continue;
+      if (alvo.topicos.some((x) => igual(x, t))) continue;
+      alvo.topicos.push(t);
+      topicosNovos += 1;
+    }
+  }
+
+  return { materias, criadas, topicosNovos };
+}
+
 /** Cargos do edital (sem repetições). */
+
 export function cargosDoEdital(edital: EditalEstado) {
   return unicos(edital.cargos ?? []);
 }

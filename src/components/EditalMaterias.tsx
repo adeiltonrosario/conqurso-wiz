@@ -2,13 +2,22 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extrairMateriasEdital } from "@/lib/ai.functions";
-import { bancasDoEdital, cargosDoEdital, novoId, useEdital, type GrupoEdital } from "@/lib/edital";
+import { extrairMateriasDoTexto } from "@/lib/edital-parser";
+import {
+  bancasDoEdital,
+  cargosDoEdital,
+  mesclarMaterias,
+  novoId,
+  useEdital,
+  type GrupoEdital,
+} from "@/lib/edital";
+
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 
 const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"];
@@ -144,13 +153,30 @@ export function EditalMaterias() {
           <Button
             type="button"
             variant="outline"
+            disabled={valor.trim().length < 10}
             onClick={() => {
-              aplicar({ texto: valor.trim() });
-              toast.success("Texto do edital salvo.");
+              const extraidas = extrairMateriasDoTexto(valor);
+              if (!extraidas.length) {
+                toast.error(
+                  "Não reconheci matérias nesse formato — use 'Extrair matérias com a IA'.",
+                );
+                return;
+              }
+              const { materias, criadas, topicosNovos } = mesclarMaterias(
+                edital.materias,
+                extraidas,
+                { banca: edital.bancaAtiva, cargo: edital.cargoAtivo },
+              );
+              aplicar({ materias, texto: "" });
+              setTexto("");
+              toast.success(
+                `${criadas} matéria(s) e ${topicosNovos} tópico(s) incluídos — cole a próxima parte do edital.`,
+              );
             }}
           >
-            Salvar texto
+            <ListPlus className="mr-2 size-4" /> Extrair e limpar
           </Button>
+
         </div>
       </div>
 
