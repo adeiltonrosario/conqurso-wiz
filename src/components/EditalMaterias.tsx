@@ -144,13 +144,30 @@ export function EditalMaterias() {
           <Button
             type="button"
             variant="outline"
+            disabled={valor.trim().length < 10}
             onClick={() => {
-              aplicar({ texto: valor.trim() });
-              toast.success("Texto do edital salvo.");
+              const extraidas = extrairMateriasDoTexto(valor);
+              if (!extraidas.length) {
+                toast.error(
+                  "Não reconheci matérias nesse formato — use 'Extrair matérias com a IA'.",
+                );
+                return;
+              }
+              const { materias, criadas, topicosNovos } = mesclarMaterias(
+                edital.materias,
+                extraidas,
+                { banca: edital.bancaAtiva, cargo: edital.cargoAtivo },
+              );
+              aplicar({ materias, texto: "" });
+              setTexto("");
+              toast.success(
+                `${criadas} matéria(s) e ${topicosNovos} tópico(s) incluídos — cole a próxima parte do edital.`,
+              );
             }}
           >
-            Salvar texto
+            <ListPlus className="mr-2 size-4" /> Extrair e limpar
           </Button>
+
         </div>
       </div>
 
