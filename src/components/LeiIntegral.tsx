@@ -233,8 +233,26 @@ export function LeiIntegralPainel({
   const [soCapitulo, setSoCapitulo] = useState(true);
   const sugerido = useMemo(() => normaDoTopico(`${capitulo} ${materia}`), [capitulo, materia]);
   const [itemMapa, setItemMapa] = useState("");
-  const itemAtivo = itemMapa || sugerido?.item || "";
+  const { edital } = useEdital();
+  const [soDoEdital, setSoDoEdital] = useState(true);
+
+  /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
+  const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
+  const filtrando = soDoEdital && normasEdital.length > 0;
+  const itensEdital = useMemo(() => new Set(normasEdital.map((n) => n.item)), [normasEdital]);
+  const visiveis = filtrando ? normasEdital : MAPA_VADE_MECUM;
+
+  const itemAtivo = useMemo(() => {
+    const preferido = itemMapa || sugerido?.item || "";
+    if (!filtrando) return preferido;
+    if (preferido && itensEdital.has(preferido)) return preferido;
+    return sugerido && itensEdital.has(sugerido.item)
+      ? sugerido.item
+      : (normasEdital[0]?.item ?? "");
+  }, [itemMapa, sugerido, filtrando, itensEdital, normasEdital]);
   const normaAtiva = MAPA_VADE_MECUM.find((m) => m.item === itemAtivo) ?? null;
+  const faixaAtiva = normaAtiva ? faixaDaNorma(normaAtiva.item) : null;
+
 
   const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
 
