@@ -2,13 +2,22 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extrairMateriasEdital } from "@/lib/ai.functions";
-import { bancasDoEdital, cargosDoEdital, novoId, useEdital, type GrupoEdital } from "@/lib/edital";
+import { extrairMateriasDoTexto } from "@/lib/edital-parser";
+import {
+  bancasDoEdital,
+  cargosDoEdital,
+  mesclarMaterias,
+  novoId,
+  useEdital,
+  type GrupoEdital,
+} from "@/lib/edital";
+
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 
 const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"];
