@@ -158,3 +158,22 @@ export function normaDoTopico(texto: string): NormaMapeada | null {
   }
   return melhor?.m ?? null;
 }
+
+/**
+ * Normas do Vade Mecum efetivamente cobradas pelo edital em estudo:
+ * casa cada matéria e cada tópico com o mapa e devolve sem repetição, na ordem de página.
+ */
+export function normasDoEdital(
+  materias: { nome: string; topicos?: string[] }[],
+): NormaMapeada[] {
+  const achadas = new Map<string, NormaMapeada>();
+  for (const m of materias) {
+    const alvos = [m.nome, ...(m.topicos ?? []).map((t) => `${t} ${m.nome}`)];
+    for (const alvo of alvos) {
+      const norma = normaDoTopico(alvo);
+      if (norma) achadas.set(norma.item, norma);
+    }
+  }
+  return [...achadas.values()].sort((a, b) => a.pagina_vade_mecum - b.pagina_vade_mecum);
+}
+
