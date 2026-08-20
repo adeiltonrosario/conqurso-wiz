@@ -55,6 +55,10 @@ export type Questao = {
   relevancia_assunto?: number;
   /** "Baseada na prova X" quando vem de um PDF anexado, ou "Inédita". */
   origem?: string;
+  /** Nome do PDF de origem quando a questão foi extraída localmente. */
+  prova?: string;
+  /** Número da questão dentro da prova extraída. */
+  numero?: number;
   enunciado: string;
   alternativas: Alternativa[];
   explicacao: string;
