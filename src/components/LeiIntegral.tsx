@@ -385,31 +385,57 @@ export function LeiIntegralPainel({
             </select>
 
             <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-xs font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={soDoEdital}
+                    onChange={(e) => setSoDoEdital(e.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  Somente as leis do edital
+                </label>
+                <span className="text-[11px] text-muted-foreground">
+                  {normasEdital.length
+                    ? `${normasEdital.length} de ${MAPA_VADE_MECUM.length} normas do seu edital`
+                    : "Sem matérias do edital cadastradas — mostrando todo o Vade Mecum"}
+                </span>
+              </div>
               <select
                 value={itemAtivo}
                 onChange={(e) => setItemMapa(e.target.value)}
                 aria-label="Norma do edital (mapa PC-BA → páginas do Vade Mecum)"
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="">Todo o PDF (sem corte por página)</option>
-                {GRUPOS_VADE_MECUM.map((g) => (
-                  <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
-                    {MAPA_VADE_MECUM.filter((m) => m.grupo === g.nome).map((m) => (
-                      <option key={m.item} value={m.item}>
-                        {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
+                <option value="">
+                  {filtrando
+                    ? "Todo o PDF — inclui leis fora do edital"
+                    : "Todo o PDF (sem corte por página)"}
+                </option>
+                {GRUPOS_VADE_MECUM.filter((g) => visiveis.some((m) => m.grupo === g.nome)).map(
+                  (g) => (
+                    <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
+                      {visiveis
+                        .filter((m) => m.grupo === g.nome)
+                        .map((m) => (
+                          <option key={m.item} value={m.item}>
+                            {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
+                            {!filtrando && itensEdital.has(m.item) ? " · Edital" : ""}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ),
+                )}
               </select>
               <p className="text-[11px] text-muted-foreground">
                 {normaAtiva
-                  ? `${normaAtiva.edital} → páginas ${faixaDaNorma(normaAtiva.item)?.join("–")} do Vade Mecum${
-                      !itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""
-                    }`
+                  ? `${normaAtiva.edital}${
+                      faixaAtiva ? ` → páginas ${faixaAtiva[0]}–${faixaAtiva[1]} do Vade Mecum` : ""
+                    }${!itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""}`
                   : "Escolha a norma do edital para ir direto ao ponto de corte do PDF."}
               </p>
             </div>
+
 
             <Button
               variant={leisPdf.length ? "outline" : "default"}
