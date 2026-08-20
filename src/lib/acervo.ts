@@ -30,6 +30,8 @@ export type Acervo = {
   provas: ArquivoAnexo[];
   edital: ArquivoAnexo[];
   simulado: Questao[];
+  /** Questões extraídas dos PDFs das provas, sem IA. */
+  extraidas: Questao[];
 };
 
 const VAZIO: Acervo = {
@@ -39,6 +41,7 @@ const VAZIO: Acervo = {
   provas: [],
   edital: [],
   simulado: [],
+  extraidas: [],
 };
 
 const KEY = "concurseiro:acervo";
@@ -77,6 +80,7 @@ export function lerAcervo(): Acervo {
       gramatica: normalizarAnexos(bruto.gramatica),
       provas: normalizarAnexos(bruto.provas),
       edital: normalizarAnexos(bruto.edital),
+      extraidas: Array.isArray(bruto.extraidas) ? bruto.extraidas : [],
     };
   } catch {
     return VAZIO;
