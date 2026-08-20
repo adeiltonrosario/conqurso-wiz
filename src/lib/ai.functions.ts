@@ -350,3 +350,53 @@ ${lista}`,
     );
     return result.materias ?? [];
   });
+
+export type ExplicacaoQuestao = {
+  explicacao: string;
+  alternativas: { letra: string; explicacao: string }[];
+};
+
+/** Explica, sob demanda, uma questão já extraída de um PDF (só gasta crédito no clique). */
+export const explicarQuestao = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        banca: z.string().trim().max(60),
+        materia: z.string().trim().max(400),
+        enunciado: z.string().trim().min(10).max(4000),
+        alternativas: z
+          .array(
+            z.object({
+              letra: z.string().trim().max(10),
+              texto: z.string().trim().max(600),
+              correta: z.boolean(),
+            }),
+          )
+          .min(2)
+          .max(6),
+        contexto: z
+          .string()
+          .trim()
+          .nullable()
+          .transform((v) => (v ? v.slice(0, 60000) : v)),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const gabarito = data.alternativas.find((a) => a.correta)?.letra;
+    const lista = data.alternativas.map((a) => `${a.letra}) ${a.texto}`).join("\n");
+
+    return await runAIJson<ExplicacaoQuestao>(
+      `Você é professor de concursos e comenta questões no padrão da banca ${data.banca}.
+Explique a questão passo a passo: uma explicação geral e uma explicação por alternativa,
+dizendo por que cada uma está correta ou errada e citando lei/artigo ou regra gramatical quando cabível.
+${gabarito ? `O gabarito oficial é a alternativa ${gabarito}.` : "O gabarito não é conhecido: indique a alternativa correta com justificativa na explicação geral."}
+${COR_INSTRUCOES}
+Formato JSON: {"explicacao":string,"alternativas":[{"letra":string,"explicacao":string}]}`,
+      `Matéria: ${data.materia}
+Enunciado: ${data.enunciado}
+Alternativas:
+${lista}
+${data.contexto ? `\nMaterial de apoio do candidato:\n${data.contexto}` : ""}`,
+    );
+  });
