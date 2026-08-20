@@ -17,6 +17,7 @@ import {
   ehAnexoDeLei,
   marcarComoLei,
   nomeLimpo,
+  lerAcervo,
   provasAnteriores,
   useAcervo,
   type ArquivoAnexo,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
 
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes } from "@/lib/ai.functions";
@@ -64,12 +66,15 @@ function UploadCampo({
   arquivos,
   onAdd,
   onRemove,
+  onArquivoLido,
 }: {
   label: string;
   ajuda: string;
   arquivos: ArquivoAnexo[];
   onAdd: (anexos: ArquivoAnexo[]) => void;
   onRemove: (nome: string) => void;
+  /** Recebe o texto integral logo após a leitura (usado para extrair questões sem IA). */
+  onArquivoLido?: (nome: string, texto: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
@@ -93,6 +98,7 @@ function UploadCampo({
           chars: texto.length,
           paginas,
         });
+        if (texto) onArquivoLido?.(file.name, texto);
       } catch {
         toast.error(`Falha ao ler “${file.name}”.`);
         anexos.push({ nome: file.name, texto: "", chars: 0 });
@@ -243,6 +249,39 @@ function InclusaoPage() {
 
   const leisPdf = acervo.provas.filter(ehAnexoDeLei);
   const provas = provasAnteriores(acervo);
+
+  /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
+  const extrairDaProva = (nome: string, texto: string) => {
+    const res = extrairQuestoesDePdf(nome, texto, edital, banca);
+
+    if (res.soGabarito) {
+      const atual = lerAcervo().extraidas;
+      if (!atual.length) {
+        toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
+        return;
+      }
+      const ultima = atual[atual.length - 1]?.prova;
+      const atualizadas = aplicarGabarito(atual, res.gabarito, ultima);
+      atualizar({ extraidas: atualizadas });
+      toast.success(
+        `Gabarito de “${nome}” aplicado a ${Object.keys(res.gabarito).length} questão(ões) da prova ${ultima ?? ""}.`,
+      );
+      return;
+    }
+
+    if (!res.questoes.length) {
+      toast.warning(
+        `Nenhuma questão reconhecida em “${nome}”. Se o PDF for escaneado, use a Análise de padrões com imagem.`,
+      );
+      return;
+    }
+
+    const restantes = lerAcervo().extraidas.filter((q) => q.prova !== nome);
+    atualizar({ extraidas: [...restantes, ...res.questoes] });
+    toast.success(
+      `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) sem gastar IA.`,
+    );
+  };
 
   return (
     <AppShell
@@ -422,10 +461,16 @@ function InclusaoPage() {
 
         <UploadCampo
           label="Provas anteriores por banca (PDF)"
-          ajuda="O texto é lido e vira banco de questões: a IA reaproveita os assuntos e o estilo dessas provas."
+          ajuda="O texto é lido e as questões são extraídas automaticamente, sem gastar IA. Pode anexar também o PDF só do gabarito."
           arquivos={provas}
           onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
-          onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
+          onRemove={(nome) =>
+            atualizar({
+              provas: acervo.provas.filter((a) => a.nome !== nome),
+              extraidas: acervo.extraidas.filter((q) => q.prova !== nome),
+            })
+          }
+          onArquivoLido={extrairDaProva}
         />
 
         <UploadCampo
