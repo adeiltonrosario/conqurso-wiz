@@ -50,16 +50,64 @@ export const Route = createFileRoute("/_authenticated/questoes")({
 
 const GRUPOS = ["Conhecimento Geral", "Conhecimento Específico"] as const;
 
-function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }) {
+function CartaoQuestao({
+  questao,
+  numero,
+  onAtualizar,
+  contexto,
+}: {
+  questao: Questao;
+  numero: number;
+  /** Presente só nas questões extraídas de PDF (gabarito e explicação editáveis). */
+  onAtualizar?: (q: Questao) => void;
+  contexto?: string | null;
+}) {
   const [escolha, setEscolha] = useState<string | null>(null);
+  const [minha, setMinha] = useState("");
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
+  const explicarIA = useServerFn(explicarQuestao);
+
+  const explicacaoIA = useMutation({
+    mutationFn: () =>
+      explicarIA({
+        data: {
+          banca: questao.banca,
+          materia: questao.assunto ? `${questao.materia} — ${questao.assunto}` : questao.materia,
+          enunciado: questao.enunciado,
+          alternativas: questao.alternativas.map((a) => ({
+            letra: a.letra,
+            texto: a.texto,
+            correta: a.correta,
+          })),
+          contexto: contexto ?? null,
+        },
+      }),
+    onSuccess: (res) => {
+      onAtualizar?.({
+        ...questao,
+        explicacao: res.explicacao,
+        alternativas: questao.alternativas.map((a) => ({
+          ...a,
+          explicacao: res.alternativas?.find((x) => x.letra === a.letra)?.explicacao ?? a.explicacao,
+        })),
+      });
+      toast.success("Explicação gerada.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao explicar a questão."),
+  });
 
   function escolher(letra: string) {
     setEscolha(letra);
-    registrarResposta(questao, letra === correta?.letra);
+    if (correta) registrarResposta(questao, letra === correta.letra);
   }
 
+  function definirGabarito(letra: string) {
+    onAtualizar?.({
+      ...questao,
+      alternativas: questao.alternativas.map((a) => ({ ...a, correta: a.letra === letra })),
+    });
+  }
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
@@ -72,6 +120,11 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
           {questao.origem && (
             <span className="rounded bg-mark-yellow-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
               {questao.origem}
+            </span>
+          )}
+          {onAtualizar && !correta && (
+            <span className="rounded bg-mark-red-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
+              sem gabarito
             </span>
           )}
         </div>
