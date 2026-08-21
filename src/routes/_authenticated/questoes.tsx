@@ -9,7 +9,9 @@ import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { NAO_CLASSIFICADA, provasExtraidas } from "@/lib/questoes-pdf";
 import {
   contextoDoEdital,
   ehDoEdital,
@@ -294,12 +296,34 @@ function QuestoesPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões."),
   });
 
+  const extraidas = acervo.extraidas;
+  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
+  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+
+  const contextoIA =
+    [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
+    null;
+
+  const atualizarExtraida = (q: Questao) =>
+    atualizar({ extraidas: extraidas.map((x) => (x.id === q.id ? q : x)) });
+
+  const doPdf = extraidas.filter(
+    (q) =>
+      q.materia === NAO_CLASSIFICADA ||
+      (grupoDaMateria(edital, q.materia) === grupo && questaoPermitida(edital, q)),
+  );
+  const doPdfNaMateria = doPdf.filter(
+    (q) => materiaAtiva && q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
+  );
+
   const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
   const visiveis = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const lista = visiveis.length ? visiveis : permitidas;
+  const daIA = visiveis.length ? visiveis : permitidas;
+  const lista = fonteAtiva === "pdf" ? (doPdfNaMateria.length ? doPdfNaMateria : doPdf) : daIA;
   const assuntos = agruparAssuntos(lista);
+  const provas = provasExtraidas(extraidas);
 
   return (
     <AppShell
@@ -308,6 +332,32 @@ function QuestoesPage() {
     >
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
+
+      <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="flex gap-2">
+          {(["pdf", "ia"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFonte(f)}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                fonteAtiva === f
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {f === "pdf" ? `Das minhas provas (${extraidas.length})` : "Geradas por IA"}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {fonteAtiva === "pdf"
+            ? extraidas.length
+              ? `Questões extraídas automaticamente dos PDFs${provas.length ? `: ${provas.join(", ")}` : ""} — sem gastar crédito de IA.`
+              : "Nenhuma questão extraída ainda. Anexe o PDF da prova em “Incluir → Provas anteriores”."
+            : "Questões criadas pela IA no padrão da banca prevista."}
+        </p>
+      </section>
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {GRUPOS.map((g) => (
@@ -383,7 +433,19 @@ function QuestoesPage() {
           Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”.
         </p>
       ) : (
-        lista.map((q, i) => <CartaoQuestao key={q.id || i} questao={q} numero={i + 1} />)
+        lista.map((q, i) =>
+          fonteAtiva === "pdf" ? (
+            <CartaoQuestao
+              key={q.id || i}
+              questao={q}
+              numero={q.numero ?? i + 1}
+              onAtualizar={atualizarExtraida}
+              contexto={contextoIA}
+            />
+          ) : (
+            <CartaoQuestao key={q.id || i} questao={q} numero={i + 1} />
+          ),
+        )
       )}
     </AppShell>
   );
