@@ -9,7 +9,9 @@ import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
+import { NAO_CLASSIFICADA, provasExtraidas } from "@/lib/questoes-pdf";
 import {
   contextoDoEdital,
   ehDoEdital,
@@ -18,7 +20,7 @@ import {
   questaoPermitida,
   useEdital,
 } from "@/lib/edital";
-import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
+import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
 import { BancaAtual } from "@/components/BancaAtual";
@@ -50,16 +52,64 @@ export const Route = createFileRoute("/_authenticated/questoes")({
 
 const GRUPOS = ["Conhecimento Geral", "Conhecimento Específico"] as const;
 
-function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }) {
+function CartaoQuestao({
+  questao,
+  numero,
+  onAtualizar,
+  contexto,
+}: {
+  questao: Questao;
+  numero: number;
+  /** Presente só nas questões extraídas de PDF (gabarito e explicação editáveis). */
+  onAtualizar?: (q: Questao) => void;
+  contexto?: string | null;
+}) {
   const [escolha, setEscolha] = useState<string | null>(null);
+  const [minha, setMinha] = useState("");
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
+  const explicarIA = useServerFn(explicarQuestao);
+
+  const explicacaoIA = useMutation({
+    mutationFn: () =>
+      explicarIA({
+        data: {
+          banca: questao.banca,
+          materia: questao.assunto ? `${questao.materia} — ${questao.assunto}` : questao.materia,
+          enunciado: questao.enunciado,
+          alternativas: questao.alternativas.map((a) => ({
+            letra: a.letra,
+            texto: a.texto,
+            correta: a.correta,
+          })),
+          contexto: contexto ?? null,
+        },
+      }),
+    onSuccess: (res) => {
+      onAtualizar?.({
+        ...questao,
+        explicacao: res.explicacao,
+        alternativas: questao.alternativas.map((a) => ({
+          ...a,
+          explicacao: res.alternativas?.find((x) => x.letra === a.letra)?.explicacao ?? a.explicacao,
+        })),
+      });
+      toast.success("Explicação gerada.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao explicar a questão."),
+  });
 
   function escolher(letra: string) {
     setEscolha(letra);
-    registrarResposta(questao, letra === correta?.letra);
+    if (correta) registrarResposta(questao, letra === correta.letra);
   }
 
+  function definirGabarito(letra: string) {
+    onAtualizar?.({
+      ...questao,
+      alternativas: questao.alternativas.map((a) => ({ ...a, correta: a.letra === letra })),
+    });
+  }
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
@@ -72,6 +122,11 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
           {questao.origem && (
             <span className="rounded bg-mark-yellow-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
               {questao.origem}
+            </span>
+          )}
+          {onAtualizar && !correta && (
+            <span className="rounded bg-mark-red-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
+              sem gabarito
             </span>
           )}
         </div>
@@ -126,16 +181,75 @@ function CartaoQuestao({ questao, numero }: { questao: Questao; numero: number }
       {respondida && (
         <div className="mt-3 rounded-lg bg-secondary p-3 text-sm">
           <p className="font-semibold text-primary">
-            Gabarito: {correta?.letra}
-            {escolha !== correta?.letra && (
+            {correta ? `Gabarito: ${correta.letra}` : "Gabarito não informado nesta prova"}
+            {correta && escolha !== correta.letra && (
               <span className="ml-2 font-normal text-mark-red">
                 sua marcação: {escolha} (erro grifado em vermelho)
               </span>
             )}
           </p>
-          <p className="mt-1.5 leading-relaxed">
-            <Marcado texto={questao.explicacao} />
-          </p>
+          {questao.explicacao && (
+            <p className="mt-1.5 leading-relaxed">
+              <Marcado texto={questao.explicacao} />
+            </p>
+          )}
+        </div>
+      )}
+
+      {onAtualizar && (
+        <div className="mt-3 space-y-2 rounded-lg border border-dashed border-border p-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-semibold">Gabarito correto:</span>
+            {questao.alternativas.map((a) => (
+              <button
+                key={a.letra}
+                type="button"
+                onClick={() => definirGabarito(a.letra)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                  a.correta
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {a.letra}
+              </button>
+            ))}
+          </div>
+
+          <Textarea
+            rows={2}
+            value={minha}
+            onChange={(e) => setMinha(e.target.value.slice(0, 2000))}
+            placeholder="Minha explicação (sem IA)…"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={minha.trim().length < 3}
+              onClick={() => {
+                onAtualizar({ ...questao, explicacao: minha.trim() });
+                setMinha("");
+                toast.success("Explicação salva no aparelho.");
+              }}
+            >
+              Salvar minha explicação
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={explicacaoIA.isPending}
+              onClick={() => explicacaoIA.mutate()}
+            >
+              {explicacaoIA.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-3.5 animate-spin" /> Explicando…
+                </>
+              ) : (
+                "Explicar com IA"
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </article>
@@ -182,12 +296,34 @@ function QuestoesPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões."),
   });
 
+  const extraidas = acervo.extraidas;
+  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
+  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+
+  const contextoIA =
+    [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
+    null;
+
+  const atualizarExtraida = (q: Questao) =>
+    atualizar({ extraidas: extraidas.map((x) => (x.id === q.id ? q : x)) });
+
+  const doPdf = extraidas.filter(
+    (q) =>
+      q.materia === NAO_CLASSIFICADA ||
+      (grupoDaMateria(edital, q.materia) === grupo && questaoPermitida(edital, q)),
+  );
+  const doPdfNaMateria = doPdf.filter(
+    (q) => materiaAtiva && q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
+  );
+
   const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
   const visiveis = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const lista = visiveis.length ? visiveis : permitidas;
+  const daIA = visiveis.length ? visiveis : permitidas;
+  const lista = fonteAtiva === "pdf" ? (doPdfNaMateria.length ? doPdfNaMateria : doPdf) : daIA;
   const assuntos = agruparAssuntos(lista);
+  const provas = provasExtraidas(extraidas);
 
   return (
     <AppShell
@@ -196,6 +332,32 @@ function QuestoesPage() {
     >
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
+
+      <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="flex gap-2">
+          {(["pdf", "ia"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFonte(f)}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                fonteAtiva === f
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {f === "pdf" ? `Das minhas provas (${extraidas.length})` : "Geradas por IA"}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {fonteAtiva === "pdf"
+            ? extraidas.length
+              ? `Questões extraídas automaticamente dos PDFs${provas.length ? `: ${provas.join(", ")}` : ""} — sem gastar crédito de IA.`
+              : "Nenhuma questão extraída ainda. Anexe o PDF da prova em “Incluir → Provas anteriores”."
+            : "Questões criadas pela IA no padrão da banca prevista."}
+        </p>
+      </section>
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {GRUPOS.map((g) => (
@@ -271,7 +433,19 @@ function QuestoesPage() {
           Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”.
         </p>
       ) : (
-        lista.map((q, i) => <CartaoQuestao key={q.id || i} questao={q} numero={i + 1} />)
+        lista.map((q, i) =>
+          fonteAtiva === "pdf" ? (
+            <CartaoQuestao
+              key={q.id || i}
+              questao={q}
+              numero={q.numero ?? i + 1}
+              onAtualizar={atualizarExtraida}
+              contexto={contextoIA}
+            />
+          ) : (
+            <CartaoQuestao key={q.id || i} questao={q} numero={i + 1} />
+          ),
+        )
       )}
     </AppShell>
   );
