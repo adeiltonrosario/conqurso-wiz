@@ -179,16 +179,75 @@ function CartaoQuestao({
       {respondida && (
         <div className="mt-3 rounded-lg bg-secondary p-3 text-sm">
           <p className="font-semibold text-primary">
-            Gabarito: {correta?.letra}
-            {escolha !== correta?.letra && (
+            {correta ? `Gabarito: ${correta.letra}` : "Gabarito não informado nesta prova"}
+            {correta && escolha !== correta.letra && (
               <span className="ml-2 font-normal text-mark-red">
                 sua marcação: {escolha} (erro grifado em vermelho)
               </span>
             )}
           </p>
-          <p className="mt-1.5 leading-relaxed">
-            <Marcado texto={questao.explicacao} />
-          </p>
+          {questao.explicacao && (
+            <p className="mt-1.5 leading-relaxed">
+              <Marcado texto={questao.explicacao} />
+            </p>
+          )}
+        </div>
+      )}
+
+      {onAtualizar && (
+        <div className="mt-3 space-y-2 rounded-lg border border-dashed border-border p-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-semibold">Gabarito correto:</span>
+            {questao.alternativas.map((a) => (
+              <button
+                key={a.letra}
+                type="button"
+                onClick={() => definirGabarito(a.letra)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                  a.correta
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {a.letra}
+              </button>
+            ))}
+          </div>
+
+          <Textarea
+            rows={2}
+            value={minha}
+            onChange={(e) => setMinha(e.target.value.slice(0, 2000))}
+            placeholder="Minha explicação (sem IA)…"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={minha.trim().length < 3}
+              onClick={() => {
+                onAtualizar({ ...questao, explicacao: minha.trim() });
+                setMinha("");
+                toast.success("Explicação salva no aparelho.");
+              }}
+            >
+              Salvar minha explicação
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={explicacaoIA.isPending}
+              onClick={() => explicacaoIA.mutate()}
+            >
+              {explicacaoIA.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-3.5 animate-spin" /> Explicando…
+                </>
+              ) : (
+                "Explicar com IA"
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </article>
