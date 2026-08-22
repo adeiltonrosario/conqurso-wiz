@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -10,20 +10,33 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
-import { NAO_CLASSIFICADA, provasExtraidas } from "@/lib/questoes-pdf";
+import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
+import {
+  assuntosComQuestoes,
+  provasExtraidas,
+  questoesDaMateria,
+  questoesPendentes,
+  reclassificar,
+} from "@/lib/questoes-pdf";
+import {
+  listarQuestoesExtraidas,
+  salvarQuestoesExtraidas,
+} from "@/lib/questoes-banco.functions";
 import {
   contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
   materiasPorGrupo,
   questaoPermitida,
+  todasAsMaterias,
+  topicosDaMateria,
   useEdital,
 } from "@/lib/edital";
 import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
 import { BancaAtual } from "@/components/BancaAtual";
+
 
 export const Route = createFileRoute("/_authenticated/questoes")({
   validateSearch: (search: Record<string, unknown>) => ({
