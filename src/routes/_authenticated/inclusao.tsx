@@ -26,9 +26,13 @@ import {
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
+import {
+  removerQuestoesDaProva,
+  salvarQuestoesExtraidas,
+} from "@/lib/questoes-banco.functions";
 
 import { useBancaPrevista } from "@/lib/trilha";
-import { gerarQuestoes } from "@/lib/ai.functions";
+import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
   contextoDoEdital,
   ehDoEdital,
@@ -182,6 +186,8 @@ function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
   const gerar = useServerFn(gerarQuestoes);
+  const salvarBanco = useServerFn(salvarQuestoesExtraidas);
+  const removerBanco = useServerFn(removerQuestoesDaProva);
   const { banca, definida: bancaDefinida } = useBancaPrevista();
 
   const { edital } = useEdital();
@@ -250,6 +256,14 @@ function InclusaoPage() {
   const leisPdf = acervo.provas.filter(ehAnexoDeLei);
   const provas = provasAnteriores(acervo);
 
+  /** Salva as questões no banco da conta (fica disponível em qualquer aparelho). */
+  const salvarNoBanco = (questoes: Questao[]) => {
+    if (!questoes.length) return;
+    void salvarBanco({ data: { questoes } }).catch(() =>
+      toast.error("As questões ficaram salvas no aparelho, mas não subiram para a nuvem agora."),
+    );
+  };
+
   /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
   const extrairDaProva = (nome: string, texto: string) => {
     const res = extrairQuestoesDePdf(nome, texto, edital, banca);
@@ -263,6 +277,7 @@ function InclusaoPage() {
       const ultima = atual[atual.length - 1]?.prova;
       const atualizadas = aplicarGabarito(atual, res.gabarito, ultima);
       atualizar({ extraidas: atualizadas });
+      salvarNoBanco(atualizadas.filter((q) => !ultima || q.prova === ultima));
       toast.success(
         `Gabarito de “${nome}” aplicado a ${Object.keys(res.gabarito).length} questão(ões) da prova ${ultima ?? ""}.`,
       );
@@ -278,10 +293,12 @@ function InclusaoPage() {
 
     const restantes = lerAcervo().extraidas.filter((q) => q.prova !== nome);
     atualizar({ extraidas: [...restantes, ...res.questoes] });
+    salvarNoBanco(res.questoes);
     toast.success(
-      `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) sem gastar IA.`,
+      `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) e salvas no seu banco, sem gastar IA.`,
     );
   };
+
 
   return (
     <AppShell
@@ -464,12 +481,13 @@ function InclusaoPage() {
           ajuda="O texto é lido e as questões são extraídas automaticamente, sem gastar IA. Pode anexar também o PDF só do gabarito."
           arquivos={provas}
           onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
-          onRemove={(nome) =>
+          onRemove={(nome) => {
             atualizar({
               provas: acervo.provas.filter((a) => a.nome !== nome),
               extraidas: acervo.extraidas.filter((q) => q.prova !== nome),
-            })
-          }
+            });
+            void removerBanco({ data: { prova: nome } }).catch(() => {});
+          }}
           onArquivoLido={extrairDaProva}
         />
 

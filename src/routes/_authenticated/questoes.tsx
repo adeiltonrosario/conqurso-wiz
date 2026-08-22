@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -10,20 +10,33 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { contextoDoAcervo, useAcervo } from "@/lib/acervo";
-import { NAO_CLASSIFICADA, provasExtraidas } from "@/lib/questoes-pdf";
+import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
+import {
+  assuntosComQuestoes,
+  provasExtraidas,
+  questoesDaMateria,
+  questoesPendentes,
+  reclassificar,
+} from "@/lib/questoes-pdf";
+import {
+  listarQuestoesExtraidas,
+  salvarQuestoesExtraidas,
+} from "@/lib/questoes-banco.functions";
 import {
   contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
   materiasPorGrupo,
   questaoPermitida,
+  todasAsMaterias,
+  topicosDaMateria,
   useEdital,
 } from "@/lib/edital";
 import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
 import { BancaAtual } from "@/components/BancaAtual";
+
 
 export const Route = createFileRoute("/_authenticated/questoes")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -299,31 +312,54 @@ function QuestoesPage() {
   const extraidas = acervo.extraidas;
   const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
   const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+  const [assuntoSel, setAssuntoSel] = useState<string | null>(busca.assunto ?? null);
+
+  // Banco na nuvem: traz as questões salvas na conta e mantém o cache local em sincronia.
+  const listar = useServerFn(listarQuestoesExtraidas);
+  const salvar = useServerFn(salvarQuestoesExtraidas);
+  const banco = useQuery({ queryKey: ["questoes-extraidas"], queryFn: () => listar({}) });
+
+  useEffect(() => {
+    const nuvem = banco.data;
+    if (!nuvem?.length) return;
+    const local = lerAcervo().extraidas;
+    const mapa = new Map(local.map((q) => [q.id, q]));
+    for (const q of nuvem) if (!mapa.has(q.id)) mapa.set(q.id, q);
+    const juntas = Array.from(mapa.values());
+    if (juntas.length !== local.length) atualizar({ extraidas: juntas });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banco.data]);
 
   const contextoIA =
     [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
     null;
 
-  const atualizarExtraida = (q: Questao) =>
-    atualizar({ extraidas: extraidas.map((x) => (x.id === q.id ? q : x)) });
+  const atualizarExtraida = (q: Questao) => {
+    atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
+    void salvar({ data: { questoes: [q] } }).catch(() =>
+      toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."),
+    );
+  };
 
-  const doPdf = extraidas.filter(
-    (q) =>
-      q.materia === NAO_CLASSIFICADA ||
-      (grupoDaMateria(edital, q.materia) === grupo && questaoPermitida(edital, q)),
-  );
-  const doPdfNaMateria = doPdf.filter(
-    (q) => materiaAtiva && q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
-  );
+  // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
+  const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
+  const pendentes = questoesPendentes(extraidas);
+  const doPdfNaMateria = questoesDaMateria(permitidasPdf, materiaAtiva);
+  const assuntosDisponiveis = assuntosComQuestoes(doPdfNaMateria);
+  const assuntoAtivo =
+    assuntoSel && assuntosDisponiveis.some((a) => a.assunto === assuntoSel) ? assuntoSel : null;
+  const doPdf = assuntoAtivo
+    ? doPdfNaMateria.filter((q) => q.assunto === assuntoAtivo)
+    : doPdfNaMateria;
 
   const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
-  const visiveis = permitidas.filter(
+  const daIA = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const daIA = visiveis.length ? visiveis : permitidas;
-  const lista = fonteAtiva === "pdf" ? (doPdfNaMateria.length ? doPdfNaMateria : doPdf) : daIA;
+  const lista = fonteAtiva === "pdf" ? doPdf : daIA;
   const assuntos = agruparAssuntos(lista);
   const provas = provasExtraidas(extraidas);
+
 
   return (
     <AppShell
@@ -426,11 +462,50 @@ function QuestoesPage() {
         <LegendaCores />
       </section>
 
+      {fonteAtiva === "pdf" && assuntosDisponiveis.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+          <p className="text-xs font-semibold text-muted-foreground">
+            Assunto do edital em {materiaAtiva}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAssuntoSel(null)}
+              className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                !assuntoAtivo
+                  ? "border-primary bg-primary text-primary-foreground font-semibold"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              Todos ({doPdfNaMateria.length})
+            </button>
+            {assuntosDisponiveis.map((a) => (
+              <button
+                key={a.assunto}
+                type="button"
+                onClick={() => setAssuntoSel(a.assunto)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  assuntoAtivo === a.assunto
+                    ? "border-primary bg-primary text-primary-foreground font-semibold"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {a.assunto} ({a.total})
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <ResumoRelevancia itens={assuntos} />
 
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”.
+          {fonteAtiva === "pdf"
+            ? `Nenhuma questão das suas provas em ${materiaAtiva || "esta matéria"}${
+                assuntoAtivo ? ` — assunto ${assuntoAtivo}` : ""
+              }. Anexe outra prova em “Incluir” ou classifique as questões pendentes abaixo.`
+            : "Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”."}
         </p>
       ) : (
         lista.map((q, i) =>
@@ -447,6 +522,62 @@ function QuestoesPage() {
           ),
         )
       )}
+
+      {fonteAtiva === "pdf" && pendentes.length > 0 && (
+        <section className="space-y-3 rounded-xl border border-dashed border-border bg-card p-4 shadow-card">
+          <h2 className="font-display text-base font-bold">
+            Pendentes de classificação ({pendentes.length})
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Estas questões não entraram em nenhuma matéria. Escolha a matéria e o assunto do edital
+            para que elas apareçam no filtro certo.
+          </p>
+          {pendentes.slice(0, 30).map((q) => (
+            <div key={q.id} className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-xs text-muted-foreground">{q.origem}</p>
+              <p className="line-clamp-3 text-sm">{q.enunciado}</p>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  defaultValue=""
+                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                  onChange={(e) => {
+                    const m = e.target.value;
+                    if (!m) return;
+                    atualizarExtraida(reclassificar(q, edital, m));
+                    toast.success(`Questão classificada em ${m}.`);
+                  }}
+                >
+                  <option value="">Classificar em…</option>
+                  {todasAsMaterias(edital).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                {q.materia && q.materia !== "Não classificada" && (
+                  <select
+                    defaultValue=""
+                    className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      if (!t) return;
+                      atualizarExtraida(reclassificar(q, edital, q.materia, t));
+                    }}
+                  >
+                    <option value="">Assunto…</option>
+                    {topicosDaMateria(edital, q.materia).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
     </AppShell>
   );
 }
