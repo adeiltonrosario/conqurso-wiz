@@ -343,7 +343,7 @@ function QuestoesPage() {
 
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
   const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
-  const pendentes = questoesPendentes(permitidasPdf);
+  const pendentes = questoesPendentes(extraidas);
   const doPdfNaMateria = questoesDaMateria(permitidasPdf, materiaAtiva);
   const assuntosDisponiveis = assuntosComQuestoes(doPdfNaMateria);
   const assuntoAtivo =
