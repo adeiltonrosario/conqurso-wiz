@@ -462,11 +462,50 @@ function QuestoesPage() {
         <LegendaCores />
       </section>
 
+      {fonteAtiva === "pdf" && assuntosDisponiveis.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+          <p className="text-xs font-semibold text-muted-foreground">
+            Assunto do edital em {materiaAtiva}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAssuntoSel(null)}
+              className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                !assuntoAtivo
+                  ? "border-primary bg-primary text-primary-foreground font-semibold"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              Todos ({doPdfNaMateria.length})
+            </button>
+            {assuntosDisponiveis.map((a) => (
+              <button
+                key={a.assunto}
+                type="button"
+                onClick={() => setAssuntoSel(a.assunto)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  assuntoAtivo === a.assunto
+                    ? "border-primary bg-primary text-primary-foreground font-semibold"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {a.assunto} ({a.total})
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <ResumoRelevancia itens={assuntos} />
 
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”.
+          {fonteAtiva === "pdf"
+            ? `Nenhuma questão das suas provas em ${materiaAtiva || "esta matéria"}${
+                assuntoAtivo ? ` — assunto ${assuntoAtivo}` : ""
+              }. Anexe outra prova em “Incluir” ou classifique as questões pendentes abaixo.`
+            : "Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”."}
         </p>
       ) : (
         lista.map((q, i) =>
@@ -483,6 +522,62 @@ function QuestoesPage() {
           ),
         )
       )}
+
+      {fonteAtiva === "pdf" && pendentes.length > 0 && (
+        <section className="space-y-3 rounded-xl border border-dashed border-border bg-card p-4 shadow-card">
+          <h2 className="font-display text-base font-bold">
+            Pendentes de classificação ({pendentes.length})
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Estas questões não entraram em nenhuma matéria. Escolha a matéria e o assunto do edital
+            para que elas apareçam no filtro certo.
+          </p>
+          {pendentes.slice(0, 30).map((q) => (
+            <div key={q.id} className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-xs text-muted-foreground">{q.origem}</p>
+              <p className="line-clamp-3 text-sm">{q.enunciado}</p>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  defaultValue=""
+                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                  onChange={(e) => {
+                    const m = e.target.value;
+                    if (!m) return;
+                    atualizarExtraida(reclassificar(q, edital, m));
+                    toast.success(`Questão classificada em ${m}.`);
+                  }}
+                >
+                  <option value="">Classificar em…</option>
+                  {todasAsMaterias(edital).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                {q.materia && q.materia !== "Não classificada" && (
+                  <select
+                    defaultValue=""
+                    className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      if (!t) return;
+                      atualizarExtraida(reclassificar(q, edital, q.materia, t));
+                    }}
+                  >
+                    <option value="">Assunto…</option>
+                    {topicosDaMateria(edital, q.materia).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
     </AppShell>
   );
 }
