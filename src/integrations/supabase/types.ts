@@ -59,6 +59,57 @@ export type Database = {
         }
         Relationships: []
       }
+      questoes_extraidas: {
+        Row: {
+          alternativas: Json
+          assunto: string | null
+          atualizado_em: string
+          banca: string | null
+          criado_em: string
+          enunciado: string
+          explicacao: string | null
+          grupo: string | null
+          id: string
+          materia: string | null
+          numero: number | null
+          origem: string | null
+          prova: string | null
+          user_id: string
+        }
+        Insert: {
+          alternativas?: Json
+          assunto?: string | null
+          atualizado_em?: string
+          banca?: string | null
+          criado_em?: string
+          enunciado: string
+          explicacao?: string | null
+          grupo?: string | null
+          id: string
+          materia?: string | null
+          numero?: number | null
+          origem?: string | null
+          prova?: string | null
+          user_id: string
+        }
+        Update: {
+          alternativas?: Json
+          assunto?: string | null
+          atualizado_em?: string
+          banca?: string | null
+          criado_em?: string
+          enunciado?: string
+          explicacao?: string | null
+          grupo?: string | null
+          id?: string
+          materia?: string | null
+          numero?: number | null
+          origem?: string | null
+          prova?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
