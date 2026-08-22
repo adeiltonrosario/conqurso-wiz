@@ -299,31 +299,54 @@ function QuestoesPage() {
   const extraidas = acervo.extraidas;
   const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
   const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+  const [assuntoSel, setAssuntoSel] = useState<string | null>(busca.assunto ?? null);
+
+  // Banco na nuvem: traz as questões salvas na conta e mantém o cache local em sincronia.
+  const listar = useServerFn(listarQuestoesExtraidas);
+  const salvar = useServerFn(salvarQuestoesExtraidas);
+  const banco = useQuery({ queryKey: ["questoes-extraidas"], queryFn: () => listar({}) });
+
+  useEffect(() => {
+    const nuvem = banco.data;
+    if (!nuvem?.length) return;
+    const local = lerAcervo().extraidas;
+    const mapa = new Map(local.map((q) => [q.id, q]));
+    for (const q of nuvem) if (!mapa.has(q.id)) mapa.set(q.id, q);
+    const juntas = Array.from(mapa.values());
+    if (juntas.length !== local.length) atualizar({ extraidas: juntas });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banco.data]);
 
   const contextoIA =
     [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
     null;
 
-  const atualizarExtraida = (q: Questao) =>
-    atualizar({ extraidas: extraidas.map((x) => (x.id === q.id ? q : x)) });
+  const atualizarExtraida = (q: Questao) => {
+    atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
+    void salvar({ data: { questoes: [q] } }).catch(() =>
+      toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."),
+    );
+  };
 
-  const doPdf = extraidas.filter(
-    (q) =>
-      q.materia === NAO_CLASSIFICADA ||
-      (grupoDaMateria(edital, q.materia) === grupo && questaoPermitida(edital, q)),
-  );
-  const doPdfNaMateria = doPdf.filter(
-    (q) => materiaAtiva && q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
-  );
+  // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
+  const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
+  const pendentes = questoesPendentes(permitidasPdf);
+  const doPdfNaMateria = questoesDaMateria(permitidasPdf, materiaAtiva);
+  const assuntosDisponiveis = assuntosComQuestoes(doPdfNaMateria);
+  const assuntoAtivo =
+    assuntoSel && assuntosDisponiveis.some((a) => a.assunto === assuntoSel) ? assuntoSel : null;
+  const doPdf = assuntoAtivo
+    ? doPdfNaMateria.filter((q) => q.assunto === assuntoAtivo)
+    : doPdfNaMateria;
 
   const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
-  const visiveis = permitidas.filter(
+  const daIA = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const daIA = visiveis.length ? visiveis : permitidas;
-  const lista = fonteAtiva === "pdf" ? (doPdfNaMateria.length ? doPdfNaMateria : doPdf) : daIA;
+  const lista = fonteAtiva === "pdf" ? doPdf : daIA;
   const assuntos = agruparAssuntos(lista);
   const provas = provasExtraidas(extraidas);
+
 
   return (
     <AppShell
