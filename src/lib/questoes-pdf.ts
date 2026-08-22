@@ -176,3 +176,43 @@ export function temGabarito(q: Questao) {
 export function provasExtraidas(questoes: Questao[]) {
   return Array.from(new Set(questoes.map((q) => q.prova).filter((p): p is string => Boolean(p))));
 }
+
+/** Questões da matéria escolhida (sem cair para "mostra tudo"). */
+export function questoesDaMateria(questoes: Questao[], materia: string) {
+  if (!materia) return [];
+  const alvo = materia.toLowerCase();
+  return questoes.filter((q) => q.materia.toLowerCase() === alvo);
+}
+
+/** Questões que o extrator não conseguiu classificar. */
+export function questoesPendentes(questoes: Questao[]) {
+  return questoes.filter((q) => !q.materia || q.materia === NAO_CLASSIFICADA);
+}
+
+/** Assuntos do edital com questões dentro da lista, com contagem. */
+export function assuntosComQuestoes(questoes: Questao[]) {
+  const mapa = new Map<string, number>();
+  for (const q of questoes) {
+    if (!q.assunto) continue;
+    mapa.set(q.assunto, (mapa.get(q.assunto) ?? 0) + 1);
+  }
+  return Array.from(mapa, ([assunto, total]) => ({ assunto, total })).sort(
+    (a, b) => b.total - a.total,
+  );
+}
+
+/** Reclassifica manualmente uma questão para uma matéria/assunto do edital. */
+export function reclassificar(
+  q: Questao,
+  edital: EditalEstado,
+  materia: string,
+  assunto?: string,
+): Questao {
+  const { assunto: _antigo, ...resto } = q;
+  return {
+    ...resto,
+    materia,
+    grupo: grupoDaMateria(edital, materia),
+    ...(assunto ? { assunto } : {}),
+  } as Questao;
+}
