@@ -26,9 +26,13 @@ import {
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
+import {
+  removerQuestoesDaProva,
+  salvarQuestoesExtraidas,
+} from "@/lib/questoes-banco.functions";
 
 import { useBancaPrevista } from "@/lib/trilha";
-import { gerarQuestoes } from "@/lib/ai.functions";
+import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
   contextoDoEdital,
   ehDoEdital,
@@ -182,6 +186,8 @@ function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
   const gerar = useServerFn(gerarQuestoes);
+  const salvarBanco = useServerFn(salvarQuestoesExtraidas);
+  const removerBanco = useServerFn(removerQuestoesDaProva);
   const { banca, definida: bancaDefinida } = useBancaPrevista();
 
   const { edital } = useEdital();
@@ -475,12 +481,13 @@ function InclusaoPage() {
           ajuda="O texto é lido e as questões são extraídas automaticamente, sem gastar IA. Pode anexar também o PDF só do gabarito."
           arquivos={provas}
           onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
-          onRemove={(nome) =>
+          onRemove={(nome) => {
             atualizar({
               provas: acervo.provas.filter((a) => a.nome !== nome),
               extraidas: acervo.extraidas.filter((q) => q.prova !== nome),
-            })
-          }
+            });
+            void removerBanco({ data: { prova: nome } }).catch(() => {});
+          }}
           onArquivoLido={extrairDaProva}
         />
 
