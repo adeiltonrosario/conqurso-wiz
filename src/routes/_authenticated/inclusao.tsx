@@ -493,7 +493,7 @@ function InclusaoPage() {
 
         <UploadCampo
           label="Upload de edital (PDF)"
-          ajuda="Define as matérias de Conhecimento Geral e Específico."
+          ajuda="Apenas arquivo de consulta. A referência do sistema é o Detalhamento do edital (matérias e assuntos analisados)."
           arquivos={acervo.edital}
           onAdd={(anexos) => atualizar({ edital: [...acervo.edital, ...anexos] })}
           onRemove={(nome) => atualizar({ edital: acervo.edital.filter((a) => a.nome !== nome) })}

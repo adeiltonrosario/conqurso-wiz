@@ -268,13 +268,10 @@ function LeisPage() {
           )}
         </div>
 
-        {acervo.edital.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Edital anexado: {acervo.edital.map((a) => nomeLimpo(a)).join(", ")} — o resumo usa esse
-            conteúdo como referência.
-
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Referência: o <strong>Detalhamento do edital</strong> (matérias, assuntos e relevâncias) —
+          o PDF do edital não é usado na geração.
+        </p>
 
         <label className="flex items-start gap-2 rounded-lg bg-secondary p-3 text-xs">
           <input

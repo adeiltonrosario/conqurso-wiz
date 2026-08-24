@@ -167,7 +167,9 @@ export function contextoDoAcervo(acervo: Acervo) {
       "PROVAS ANTERIORES ANEXADAS (banco de questões reais do candidato — use como fonte prioritária):",
       provas,
     ),
-    blocoAnexos("EDITAL ANEXADO:", acervo.edital),
+    // O PDF do edital NÃO entra como referência: a referência oficial do sistema
+    // é o "Detalhamento do edital" (matérias, assuntos e relevâncias analisadas).
+
   ]
     .filter(Boolean)
     .join("\n\n");

@@ -314,7 +314,10 @@ export function topicosDaMateria(edital: EditalEstado, nome: string) {
   return achada?.topicos ?? [];
 }
 
-/** Recorte do edital enviado à IA para as gerações ficarem no conteúdo cobrado. */
+/**
+ * Referência oficial do sistema: o "Detalhamento do edital" (matérias, assuntos
+ * e relevâncias analisadas). O PDF do edital não é usado como referência.
+ */
 export function contextoDoEdital(edital: EditalEstado, materia?: string) {
   const ativas = materiasAtivas(edital);
   if (!ativas.length) return "";
@@ -322,7 +325,23 @@ export function contextoDoEdital(edital: EditalEstado, materia?: string) {
     ? ativas.filter((m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase())
     : ativas;
   const lista = (alvo.length ? alvo : ativas)
-    .map((m) => `- ${m.nome} (${m.grupo}): ${m.topicos.join("; ") || "sem tópicos detalhados"}`)
+    .map((m) => {
+      const rel = m.relevancia == null ? "" : ` — relevância na prova: ${m.relevancia}%`;
+      const topicos = topicosPorRelevancia(m)
+        .map((t) => {
+          const dentro = m.relevanciaTopicos?.[t];
+          const geral = relevanciaGeral(m, t);
+          const pesos = [
+            dentro == null ? "" : `${dentro}% da matéria`,
+            geral == null ? "" : `${geral.toFixed(1)}% da prova`,
+          ]
+            .filter(Boolean)
+            .join(", ");
+          return `  • ${t}${pesos ? ` (${pesos})` : ""}`;
+        })
+        .join("\n");
+      return `- ${m.nome} (${m.grupo})${rel}\n${topicos || "  • sem assuntos detalhados"}`;
+    })
     .join("\n");
   const escopo = [
     edital.bancaAtiva ? `Banca: ${edital.bancaAtiva}` : "",
@@ -330,7 +349,9 @@ export function contextoDoEdital(edital: EditalEstado, materia?: string) {
   ]
     .filter(Boolean)
     .join(" | ");
-  return `CONTEÚDO PROGRAMÁTICO DO EDITAL${escopo ? ` (${escopo})` : ""}:\n${lista}`;
+  return `DETALHAMENTO DO EDITAL — ÚNICA REFERÊNCIA DE CONTEÚDO${escopo ? ` (${escopo})` : ""}.
+Use apenas as matérias e assuntos abaixo, priorizando os de maior relevância; ignore qualquer outro conteúdo:
+${lista}`;
 }
 
 /** Relevância do tópico dentro da matéria (%). */
