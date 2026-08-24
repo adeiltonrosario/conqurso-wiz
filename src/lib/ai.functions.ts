@@ -51,6 +51,10 @@ export type Questao = {
   grupo: "Conhecimento Geral" | "Conhecimento Específico";
   materia: string;
   assunto?: string;
+  /** Título do cartão: matéria · assunto · banca · ano. */
+  titulo?: string;
+  /** Ano da prova de origem. */
+  ano?: number;
   relevancia_materia?: number;
   relevancia_assunto?: number;
   /** "Baseada na prova X" quando vem de um PDF anexado, ou "Inédita". */
@@ -63,6 +67,7 @@ export type Questao = {
   alternativas: Alternativa[];
   explicacao: string;
 };
+
 
 export const gerarQuestoes = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
