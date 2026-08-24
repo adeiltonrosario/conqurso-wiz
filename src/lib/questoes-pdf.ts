@@ -78,6 +78,32 @@ function comentariosDaProva(texto: string) {
   return mapa;
 }
 
+/** Ano da prova: procura no nome do arquivo e depois no texto. */
+export function anoDaProva(nomeArquivo: string, texto: string): number | undefined {
+  const atual = new Date().getFullYear() + 1;
+  const doNome = nomeArquivo.match(/(19|20)\d{2}/);
+  if (doNome) {
+    const n = Number(doNome[0]);
+    if (n >= 1990 && n <= atual) return n;
+  }
+  const candidatos = texto.slice(0, 4000).match(/(19|20)\d{2}/g) ?? [];
+  const validos = candidatos.map(Number).filter((n) => n >= 1990 && n <= atual);
+  return validos.length ? Math.max(...validos) : undefined;
+}
+
+/** Título do cartão: matéria, assunto, banca e ano. */
+export function tituloDaQuestao(q: {
+  materia: string;
+  assunto?: string;
+  banca?: string;
+  ano?: number;
+}) {
+  return [q.materia, q.assunto, q.banca, q.ano ? String(q.ano) : ""]
+    .map((p) => (p ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /**
  * Converte o texto de um PDF de prova em questões prontas para a aba Questões.
  * Nenhuma chamada de IA é feita aqui.
@@ -90,9 +116,11 @@ export function extrairQuestoesDePdf(
 ): ResultadoExtracao {
   const texto = limpar(textoIntegral);
   const gabarito = extrairGabarito(texto);
-  const brutas = separarQuestoes(texto).slice(0, MAX_QUESTOES);
+  // O texto bruto (com as marcas de página) permite limpar cabeçalhos/rodapés.
+  const brutas = separarQuestoes(textoIntegral).slice(0, MAX_QUESTOES);
   const comentarios = comentariosDaProva(texto);
   const indice = classificadorDoEdital(edital);
+  const ano = anoDaProva(nomeArquivo, texto);
 
   const soGabarito = brutas.length < 3 && Object.keys(gabarito).length >= 5;
   if (soGabarito) {
@@ -133,6 +161,13 @@ export function extrairQuestoesDePdf(
         materia === NAO_CLASSIFICADA ? "Conhecimento Geral" : grupoDaMateria(edital, materia),
       materia,
       ...(achado?.assunto ? { assunto: achado.assunto } : {}),
+      ...(ano ? { ano } : {}),
+      titulo: tituloDaQuestao({
+        materia,
+        ...(achado?.assunto ? { assunto: achado.assunto } : {}),
+        banca,
+        ...(ano ? { ano } : {}),
+      }),
       origem: `Prova: ${nomeArquivo}, questão ${q.numero}`,
       prova: nomeArquivo,
       numero: q.numero,
@@ -144,6 +179,7 @@ export function extrairQuestoesDePdf(
 
   return { questoes, soGabarito: false, gabarito, comGabarito, comComentario };
 }
+
 
 /** Aplica um gabarito (de PDF separado ou manual) às questões de uma prova. */
 export function aplicarGabarito(
@@ -214,5 +250,12 @@ export function reclassificar(
     materia,
     grupo: grupoDaMateria(edital, materia),
     ...(assunto ? { assunto } : {}),
+    titulo: tituloDaQuestao({
+      materia,
+      ...(assunto ? { assunto } : {}),
+      banca: q.banca,
+      ...(q.ano ? { ano: q.ano } : {}),
+    }),
   } as Questao;
 }
+

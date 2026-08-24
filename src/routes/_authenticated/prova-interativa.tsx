@@ -254,7 +254,10 @@ function ProvaPage() {
             return (
               <article key={q.id || i} className="rounded-xl border border-border bg-paper p-4">
                 <header className="mb-2 text-xs font-semibold text-muted-foreground">
-                  {String(i + 1).padStart(2, "0")} · {q.materia || materia} · {q.banca || banca}
+                  {String(i + 1).padStart(2, "0")} ·{" "}
+                  {q.titulo ??
+                    [q.materia || materia, q.assunto, q.banca || banca].filter(Boolean).join(" · ")}
+
                   {q.origem && (
                     <span className="ml-1.5 rounded bg-mark-yellow-soft px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
                       {q.origem}

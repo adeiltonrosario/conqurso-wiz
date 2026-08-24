@@ -127,11 +127,10 @@ function CartaoQuestao({
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="mb-2 text-xs font-semibold text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded bg-secondary px-2 py-0.5 text-primary">
-            Questão {numero} — {questao.banca}
-          </span>
-          <span>{questao.materia}</span>
+        <h3 className="text-sm font-bold text-foreground">
+          Questão {numero} — {questao.titulo ?? [questao.materia, questao.assunto, questao.banca].filter(Boolean).join(" · ")}
+        </h3>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           {questao.origem && (
             <span className="rounded bg-mark-yellow-soft px-2 py-0.5 text-[10px] font-semibold text-foreground">
               {questao.origem}
@@ -143,6 +142,7 @@ function CartaoQuestao({
             </span>
           )}
         </div>
+
         <Relevancia
           materia={questao.materia}
           assunto={questao.assunto}

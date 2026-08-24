@@ -20,16 +20,29 @@ type LinhaQuestao = {
   origem: string | null;
 };
 
+function anoDoNome(nome: string | null) {
+  const m = nome?.match(/(19|20)\d{2}/);
+  const n = m ? Number(m[0]) : 0;
+  return n >= 1990 && n <= new Date().getFullYear() + 1 ? n : undefined;
+}
+
 function paraQuestao(l: LinhaQuestao): Questao {
   const alternativas = Array.isArray(l.alternativas)
     ? (l.alternativas as Questao["alternativas"])
     : [];
+  const ano = anoDoNome(l.prova);
+  const titulo = [l.materia, l.assunto, l.banca, ano ? String(ano) : ""]
+    .map((p) => (p ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
   return {
     id: l.id,
     banca: l.banca ?? "",
     grupo: (l.grupo as Questao["grupo"]) ?? "Conhecimento Geral",
     materia: l.materia ?? "",
     ...(l.assunto ? { assunto: l.assunto } : {}),
+    ...(ano ? { ano } : {}),
+    ...(titulo ? { titulo } : {}),
     ...(l.origem ? { origem: l.origem } : {}),
     ...(l.prova ? { prova: l.prova } : {}),
     ...(typeof l.numero === "number" ? { numero: l.numero } : {}),
@@ -38,6 +51,7 @@ function paraQuestao(l: LinhaQuestao): Questao {
     explicacao: l.explicacao ?? "",
   } as Questao;
 }
+
 
 function paraLinha(q: Questao, userId: string) {
   return {
