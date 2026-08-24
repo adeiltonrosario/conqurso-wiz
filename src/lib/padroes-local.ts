@@ -16,20 +16,69 @@ function limpar(t: string) {
   return t.replace(/\[\[p:\d+\]\]/g, " ").replace(/[ \t]+/g, " ").trim();
 }
 
-/** Gabarito em formatos "1-A", "1) B", "01 C", "1. D". */
-export function extrairGabarito(texto: string): Record<number, string> {
-  const mapa: Record<number, string> = {};
-  const re = /\b(\d{1,3})\s*[-—.)]?\s*([A-Ea-e])\b(?![a-zà-ú])/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(texto))) {
-    const n = Number(m[1]);
-    if (n > 0 && n < 400) mapa[n] = String(m[2]).toUpperCase();
+/** Lixo típico de cabeçalho/rodapé de caderno de prova. */
+const RODAPE_PADROES: RegExp[] = [
+  /p[áa]g(?:ina)?\.?\s*\d+(?:\s*(?:de|\/)\s*\d+)?/gi,
+  /www\.[^\s]+/gi,
+  /https?:\/\/[^\s]+/gi,
+  /[\w.+-]+@[\w-]+\.[\w.]+/gi,
+  /CNPJ[^\s]*\s*[\d./-]+/gi,
+  /caderno\s+de\s+(?:prova|quest[õo]es)[^.]{0,60}/gi,
+  /folha\s+de\s+respostas?[^.]{0,40}/gi,
+  /nome\s+do\s+candidato\s*:?[^.]{0,60}/gi,
+  /(?:n[ºo]\.?\s*de\s*)?inscri[çc][ãa]o\s*:?\s*[\d.-]*/gi,
+  /concurso\s+p[úu]blico[^.]{0,80}/gi,
+  /(?:^|\s)rascunho(?:\s|$)/gi,
+  /reserv(?:a|ado)\s+para\s+rascunho/gi,
+  /boa\s+prova!?/gi,
+  /instru[çc][õo]es\s+gerais[^.]{0,60}/gi,
+];
+
+/**
+ * Remove cabeçalhos/rodapés do PDF: trechos repetidos em várias páginas
+ * (usando as marcas [[p:n]]) e os padrões típicos de caderno de prova.
+ */
+export function limparRodapes(texto: string) {
+  const paginas = texto.split(/\[\[p:\d+\]\]/).filter((p) => p.trim());
+  let saida = texto;
+
+  if (paginas.length >= 3) {
+    // Segmentos curtos que aparecem na maioria das páginas são cabeçalho/rodapé.
+    const contagem = new Map<string, number>();
+    for (const pag of paginas) {
+      const vistos = new Set<string>();
+      for (const seg of pag.split(/(?<=[.;:!?])\s+|\s{3,}/)) {
+        const s = seg.trim();
+        if (s.length < 8 || s.length > 120) continue;
+        if (vistos.has(s)) continue;
+        vistos.add(s);
+        contagem.set(s, (contagem.get(s) ?? 0) + 1);
+      }
+    }
+    const limite = Math.max(3, Math.ceil(paginas.length * 0.5));
+    for (const [seg, n] of contagem) {
+      if (n < limite) continue;
+      saida = saida.split(seg).join(" ");
+    }
   }
-  return mapa;
+
+  for (const re of RODAPE_PADROES) saida = saida.replace(re, " ");
+  return saida.replace(/[ \t]+/g, " ").trim();
+}
+
+/** Corta de um texto de alternativa qualquer resto de rodapé/cabeçalho. */
+export function limparAlternativa(texto: string) {
+  let t = texto;
+  for (const re of RODAPE_PADROES) t = t.replace(re, " ");
+  // Corta quando começa um novo bloco de prova/gabarito depois da alternativa.
+  t = t.split(
+    /\s(?=(?:QUEST[ÃA]O\s*\d{1,3}|GABARITO|COMENT[ÁA]RIO|TEXTO\s+\d|[A-ZÀ-Ú]{4,}(?:\s+[A-ZÀ-Ú]{2,}){2,}\s))/,
+  )[0]!;
+  return t.replace(/\s+/g, " ").replace(/[\s.;,-]+$/, (m) => (m.includes(".") ? "." : "")).trim();
 }
 
 export function separarQuestoes(texto: string): QuestaoBruta[] {
-  const limpo = limpar(texto);
+  const limpo = limpar(limparRodapes(texto));
   const partes = limpo.split(/(?=(?:QUEST[ÃA]O\s*)?\b\d{1,3}\s*[-—.)]\s)/gi);
   const questoes: QuestaoBruta[] = [];
 
@@ -58,7 +107,9 @@ export function separarQuestoes(texto: string): QuestaoBruta[] {
     for (let i = 0; i < validas.length; i++) {
       const atual = validas[i]!;
       const proxima = validas[i + 1];
-      const t = corpo.slice(atual.fim, proxima ? proxima.inicio : corpo.length).trim();
+      const bruto = corpo.slice(atual.fim, proxima ? proxima.inicio : corpo.length).trim();
+      // A última alternativa é a que costuma arrastar o rodapé da página.
+      const t = limparAlternativa(bruto);
       if (t) alternativas.push({ letra: atual.letra, texto: t });
     }
 
@@ -69,6 +120,7 @@ export function separarQuestoes(texto: string): QuestaoBruta[] {
 
   return questoes;
 }
+
 
 function marcarConectivos(texto: string) {
   let saida = texto;
