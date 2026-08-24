@@ -250,5 +250,12 @@ export function reclassificar(
     materia,
     grupo: grupoDaMateria(edital, materia),
     ...(assunto ? { assunto } : {}),
+    titulo: tituloDaQuestao({
+      materia,
+      ...(assunto ? { assunto } : {}),
+      banca: q.banca,
+      ...(q.ano ? { ano: q.ano } : {}),
+    }),
   } as Questao;
 }
+
