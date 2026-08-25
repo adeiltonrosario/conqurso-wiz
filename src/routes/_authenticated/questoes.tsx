@@ -79,9 +79,12 @@ function CartaoQuestao({
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
   const [minha, setMinha] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<Questao>(questao);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
   const explicarIA = useServerFn(explicarQuestao);
+
 
   const explicacaoIA = useMutation({
     mutationFn: () =>
