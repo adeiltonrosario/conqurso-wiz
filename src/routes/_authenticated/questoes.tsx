@@ -309,7 +309,17 @@ function QuestoesPage() {
         },
       }),
 
-    onSuccess: (questoes) => atualizar({ simulado: questoes }),
+    onSuccess: (resultado) => {
+      if (resultado.indisponivel) {
+        toast.error(resultado.indisponivel);
+        if (lerAcervo().extraidas.length) {
+          setFonte("pdf");
+          toast.info("Mostrando as questões extraídas dos seus PDFs (sem IA).");
+        }
+        return;
+      }
+      atualizar({ simulado: resultado.questoes });
+    },
     onError: (e: Error) => {
       const semCredito = /cr[ée]dito/i.test(e.message);
       toast.error(e.message || "Falha ao gerar as questões.");

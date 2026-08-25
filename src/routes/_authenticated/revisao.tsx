@@ -173,7 +173,7 @@ function RevisaoPage() {
   const reforco = useMutation({
     mutationFn: async () => {
       const materia = materiaMaisFraca(historico) ?? "Língua Portuguesa";
-      const questoes = await gerar({
+      const resultado = await gerar({
         data: {
           materia,
           grupo: "Conhecimento Geral",
@@ -183,9 +183,13 @@ function RevisaoPage() {
           contexto: contextoDoAcervo(acervo) || null,
         },
       });
-      return { materia, questoes };
+      return { materia, ...resultado };
     },
-    onSuccess: ({ materia, questoes }) => {
+    onSuccess: ({ materia, questoes, indisponivel }) => {
+      if (indisponivel) {
+        toast.error(indisponivel);
+        return;
+      }
       if (!questoes.length) {
         toast.error("A IA não retornou questões. Tente novamente.");
         return;
@@ -206,7 +210,7 @@ function RevisaoPage() {
 
   const reforcoLeitura = useMutation({
     mutationFn: async (l: Leitura) => {
-      const questoes = await gerar({
+      const resultado = await gerar({
         data: {
           materia: l.materia,
           grupo: "Conhecimento Específico",
@@ -216,9 +220,13 @@ function RevisaoPage() {
           contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
         },
       });
-      return { l, questoes };
+      return { l, ...resultado };
     },
-    onSuccess: ({ l, questoes }) => {
+    onSuccess: ({ l, questoes, indisponivel }) => {
+      if (indisponivel) {
+        toast.error(indisponivel);
+        return;
+      }
       if (!questoes.length) {
         toast.error("A IA não retornou questões deste capítulo.");
         return;

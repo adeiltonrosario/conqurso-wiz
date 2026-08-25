@@ -216,8 +216,12 @@ function InclusaoPage() {
               .join("\n\n") || null,
         },
       }),
-    onSuccess: (questoes) => {
-      atualizar({ simulado: questoes });
+    onSuccess: (resultado) => {
+      if (resultado.indisponivel) {
+        toast.error(resultado.indisponivel);
+        return;
+      }
+      atualizar({ simulado: resultado.questoes });
       toast.success("Simulado gerado com explicações.");
       navigate({ to: "/questoes", search: { materia: undefined, assunto: undefined } });
     },
