@@ -35,6 +35,13 @@ function traduzirErro(erro: unknown): Error {
   return erro instanceof Error ? erro : new Error(texto);
 }
 
+export function mensagemDeCreditoEsgotado(erro: unknown): string | null {
+  const texto = erro instanceof Error ? erro.message : String(erro);
+  return /402|payment required|insufficient|cr[ée]ditos? de ia esgotados/i.test(texto)
+    ? "Créditos de IA esgotados no workspace. Use o modo local (sem IA) ou adicione créditos."
+    : null;
+}
+
 export async function runAI(
   system: string,
   prompt: string,

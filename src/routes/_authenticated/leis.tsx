@@ -102,7 +102,7 @@ function LeisPage() {
 
   const reforco = useMutation({
     mutationFn: async (l: Leitura) => {
-      const questoes = await gerarQ({
+      const resultado = await gerarQ({
         data: {
           materia: l.materia,
           grupo: grupoDaMateria(edital, l.materia),
@@ -112,9 +112,13 @@ function LeisPage() {
           contexto: `${contextoDaLeitura(l)}\n\nGere questões APENAS sobre esse capítulo lido.`,
         },
       });
-      return { l, questoes };
+      return { l, ...resultado };
     },
-    onSuccess: ({ l, questoes }) => {
+    onSuccess: ({ l, questoes, indisponivel }) => {
+      if (indisponivel) {
+        toast.error(indisponivel);
+        return;
+      }
       if (!questoes.length) {
         toast.error("A IA não retornou questões deste capítulo.");
         return;

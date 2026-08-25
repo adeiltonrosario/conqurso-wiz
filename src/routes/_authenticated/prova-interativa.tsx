@@ -111,7 +111,7 @@ function ProvaPage() {
       const alvo = Math.max(ALVO, questoes.length + LOTE);
       const acumulado: Questao[] = [...questoes];
       while (acumulado.length < alvo) {
-        const lote = await gerar({
+        const resultado = await gerar({
           data: {
             materia,
             grupo: grupoDaMateria(edital, materia),
@@ -124,14 +124,19 @@ function ProvaPage() {
                 .join("\n\n") || null,
           },
         });
+        if (resultado.indisponivel) return { acumulado, indisponivel: resultado.indisponivel };
+        const lote = resultado.questoes;
         if (!lote.length) break;
         acumulado.push(
           ...lote.map((q, i) => ({ ...q, id: q.id || `${materia}-${acumulado.length + i}` })),
         );
       }
-      return acumulado;
+      return { acumulado };
     },
-    onSuccess: (lista) => setProvas((p) => ({ ...p, [materia]: lista })),
+    onSuccess: ({ acumulado, indisponivel }) => {
+      if (acumulado.length) setProvas((p) => ({ ...p, [materia]: acumulado }));
+      if (indisponivel) toast.error(indisponivel);
+    },
     onError: (e: Error) => toast.error(e.message || "Falha ao completar a prova."),
   });
 

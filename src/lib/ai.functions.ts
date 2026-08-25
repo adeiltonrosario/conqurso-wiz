@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { runAIJson, runAI } from "./ai-gateway.server";
+import { mensagemDeCreditoEsgotado, runAIJson, runAI } from "./ai-gateway.server";
 
 /**
  * Marcação de cores usada em todos os textos gerados:
@@ -68,6 +68,11 @@ export type Questao = {
   explicacao: string;
 };
 
+export type ResultadoGeracaoQuestoes = {
+  questoes: Questao[];
+  indisponivel?: string;
+};
+
 
 export const gerarQuestoes = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -87,7 +92,8 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const result = await runAIJson<{ questoes: Questao[] }>(
+    try {
+      const result = await runAIJson<{ questoes: Questao[] }>(
       `Você é um elaborador de questões da banca ${data.banca}, especialista em concursos brasileiros.
 Gere questões no padrão visual e de linguagem da banca ${data.banca}.
 Regra obrigatória: enunciado, alternativas (quantidade, estilo, distratores típicos) e explicações devem seguir
@@ -109,8 +115,15 @@ Baseie os percentuais no histórico real de provas da banca; use uma casa decima
 Formato JSON: {"questoes":[{"id":string,"banca":string,"grupo":string,"materia":string,"assunto":string,"origem":string,"relevancia_materia":number,"relevancia_assunto":number,"enunciado":string,"explicacao":string,"alternativas":[{"letra":string,"texto":string,"correta":boolean,"explicacao":string}]}]}`,
       `Matéria: ${data.materia}. Grupo do edital: ${data.grupo}. Quantidade: ${data.quantidade} questões.
 ${data.contexto ? `Conteúdo cadastrado pelo candidato (provas anteriores, leis, edital, questões):\n${data.contexto.slice(0, 100000)}` : ""}`,
-    );
-    return result.questoes ?? [];
+      );
+      return { questoes: result.questoes ?? [] } satisfies ResultadoGeracaoQuestoes;
+    } catch (erro) {
+      const indisponivel = mensagemDeCreditoEsgotado(erro);
+      if (indisponivel) {
+        return { questoes: [], indisponivel } satisfies ResultadoGeracaoQuestoes;
+      }
+      throw erro;
+    }
   });
 
 
