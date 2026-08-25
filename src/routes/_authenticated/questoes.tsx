@@ -285,6 +285,10 @@ function QuestoesPage() {
   const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
   const semMaterias = materias.length === 0;
 
+  const extraidas = acervo.extraidas;
+  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
+  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+
   const mutation = useMutation({
     mutationFn: () =>
       gerar({
@@ -306,12 +310,17 @@ function QuestoesPage() {
       }),
 
     onSuccess: (questoes) => atualizar({ simulado: questoes }),
-    onError: (e: Error) => toast.error(e.message || "Falha ao gerar as questões."),
+    onError: (e: Error) => {
+      const semCredito = /cr[ée]dito/i.test(e.message);
+      toast.error(e.message || "Falha ao gerar as questões.");
+      if (semCredito && lerAcervo().extraidas.length) {
+        setFonte("pdf");
+        toast.info("Mostrando as questões extraídas dos seus PDFs (sem IA).");
+      }
+    },
   });
 
-  const extraidas = acervo.extraidas;
-  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
-  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+
   const [assuntoSel, setAssuntoSel] = useState<string | null>(busca.assunto ?? null);
 
   // Banco na nuvem: traz as questões salvas na conta e mantém o cache local em sincronia.
