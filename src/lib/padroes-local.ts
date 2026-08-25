@@ -93,14 +93,28 @@ export function limparAlternativa(texto: string) {
 
 export function separarQuestoes(texto: string): QuestaoBruta[] {
   const limpo = limpar(limparRodapes(texto));
-  const partes = limpo.split(/(?=(?:QUEST[ÃA]O\s*)?\b\d{1,3}\s*[-—.)]\s)/gi);
+  // Candidatos a início de questão: só valem se a numeração for sequencial
+  // (ou vier escrito "QUESTÃO n"), o que evita cortar em números do enunciado.
+  const reCab = /(QUEST[ÃA]O\s*)?\b(\d{1,3})\s*[-—.)]\s/gi;
+  const inicios: { numero: number; inicio: number; fim: number }[] = [];
+  let c: RegExpExecArray | null;
+  let esperado = 0;
+  while ((c = reCab.exec(limpo))) {
+    const numero = Number(c[2]);
+    const explicito = Boolean(c[1]);
+    const primeiro = inicios.length === 0 && numero <= 2;
+    if (!explicito && !primeiro && numero !== esperado + 1) continue;
+    inicios.push({ numero, inicio: c.index, fim: c.index + c[0].length });
+    esperado = numero;
+  }
+
   const questoes: QuestaoBruta[] = [];
 
-  for (const parte of partes) {
-    const cab = parte.match(/^(?:QUEST[ÃA]O\s*)?(\d{1,3})\s*[-—.)]\s*/i);
-    if (!cab) continue;
-    const numero = Number(cab[1]);
-    const corpo = parte.slice(cab[0].length);
+  for (let idx = 0; idx < inicios.length; idx++) {
+    const cab = inicios[idx]!;
+    const numero = cab.numero;
+    const corpo = limpo.slice(cab.fim, inicios[idx + 1]?.inicio ?? limpo.length);
+
 
     const alternativas: Alt[] = [];
     const reAlt = /(?:^|\s)\(?([A-Ea-e])\)?\s*[-—.)]?\s+(?=[A-Za-zÀ-ú"“(])/g;
