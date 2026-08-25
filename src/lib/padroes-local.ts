@@ -16,6 +16,19 @@ function limpar(t: string) {
   return t.replace(/\[\[p:\d+\]\]/g, " ").replace(/[ \t]+/g, " ").trim();
 }
 
+/** Gabarito em formatos "1-A", "1) B", "01 C", "1. D". */
+export function extrairGabarito(texto: string): Record<number, string> {
+  const mapa: Record<number, string> = {};
+  const re = /\b(\d{1,3})\s*[-—.)]?\s*([A-Ea-e])\b(?![a-zà-ú])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(texto))) {
+    const n = Number(m[1]);
+    if (n > 0 && n < 400) mapa[n] = String(m[2]).toUpperCase();
+  }
+  return mapa;
+}
+
+
 /** Lixo típico de cabeçalho/rodapé de caderno de prova. */
 const RODAPE_PADROES: RegExp[] = [
   /p[áa]g(?:ina)?\.?\s*\d+(?:\s*(?:de|\/)\s*\d+)?/gi,
@@ -23,15 +36,16 @@ const RODAPE_PADROES: RegExp[] = [
   /https?:\/\/[^\s]+/gi,
   /[\w.+-]+@[\w-]+\.[\w.]+/gi,
   /CNPJ[^\s]*\s*[\d./-]+/gi,
-  /caderno\s+de\s+(?:prova|quest[õo]es)[^.]{0,60}/gi,
-  /folha\s+de\s+respostas?[^.]{0,40}/gi,
-  /nome\s+do\s+candidato\s*:?[^.]{0,60}/gi,
-  /(?:n[ºo]\.?\s*de\s*)?inscri[çc][ãa]o\s*:?\s*[\d.-]*/gi,
-  /concurso\s+p[úu]blico[^.]{0,80}/gi,
+  /caderno\s+de\s+(?:prova|quest[õo]es)(?:\s+tipo\s*\d+)?/gi,
+  /folha\s+de\s+respostas?/gi,
+  /nome\s+do\s+candidato\s*:?/gi,
+  /(?:n[ºo]\.?\s*de\s*)?inscri[çc][ãa]o\s*:\s*[\d.-]*/gi,
+  /concurso\s+p[úu]blico(?:\s+(?:para|de|do|da)\s+[^\s]+){0,3}/gi,
   /(?:^|\s)rascunho(?:\s|$)/gi,
   /reserv(?:a|ado)\s+para\s+rascunho/gi,
   /boa\s+prova!?/gi,
-  /instru[çc][õo]es\s+gerais[^.]{0,60}/gi,
+  /instru[çc][õo]es\s+gerais/gi,
+
 ];
 
 /**
@@ -74,19 +88,44 @@ export function limparAlternativa(texto: string) {
   t = t.split(
     /\s(?=(?:QUEST[ÃA]O\s*\d{1,3}|GABARITO|COMENT[ÁA]RIO|TEXTO\s+\d|[A-ZÀ-Ú]{4,}(?:\s+[A-ZÀ-Ú]{2,}){2,}\s))/,
   )[0]!;
+  // Sobras de cabeçalho grudadas no fim (sigla/ano, traço de rodapé, nº solto).
+  t = t
+    .replace(/\s+[A-ZÀ-Ú]{2,}[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]*(?:\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]+){0,4}\s*[—–]\s*$/, "")
+    .replace(/\s+(?:19|20)\d{2}\s*[—–-]?\s*$/, "");
   return t.replace(/\s+/g, " ").replace(/[\s.;,-]+$/, (m) => (m.includes(".") ? "." : "")).trim();
+
 }
 
 export function separarQuestoes(texto: string): QuestaoBruta[] {
   const limpo = limpar(limparRodapes(texto));
-  const partes = limpo.split(/(?=(?:QUEST[ÃA]O\s*)?\b\d{1,3}\s*[-—.)]\s)/gi);
+  // Candidatos a início de questão: número em início de bloco/frase e com
+  // numeração sequencial (ou escrito "QUESTÃO n"). Evita cortar em números
+  // que aparecem no meio do enunciado ou das alternativas.
+  const reCab = /(QUEST[ÃA]O\s*)?\b(\d{1,3})\s*[-—.)]\s+(?=[A-ZÀ-Ú"“(])/g;
+  const inicios: { numero: number; inicio: number; fim: number }[] = [];
+  let c: RegExpExecArray | null;
+  let esperado = 0;
+  while ((c = reCab.exec(limpo))) {
+    const numero = Number(c[2]);
+    const explicito = Boolean(c[1]);
+    const antes = limpo.slice(Math.max(0, c.index - 3), c.index);
+    // Início de linha, de texto, ou logo após o fim de uma frase.
+    const noInicio = c.index === 0 || /[\n.?!:;—–]\s*$/.test(antes);
+    if (!explicito && !noInicio) continue;
+    const primeiro = inicios.length === 0 && numero <= 2;
+    if (!explicito && !primeiro && numero !== esperado + 1) continue;
+    inicios.push({ numero, inicio: c.index, fim: c.index + c[0].length });
+    esperado = numero;
+  }
+
+
   const questoes: QuestaoBruta[] = [];
 
-  for (const parte of partes) {
-    const cab = parte.match(/^(?:QUEST[ÃA]O\s*)?(\d{1,3})\s*[-—.)]\s*/i);
-    if (!cab) continue;
-    const numero = Number(cab[1]);
-    const corpo = parte.slice(cab[0].length);
+  for (let idx = 0; idx < inicios.length; idx++) {
+    const cab = inicios[idx]!;
+    const numero = cab.numero;
+    const corpo = limpo.slice(cab.fim, inicios[idx + 1]?.inicio ?? limpo.length);
+
 
     const alternativas: Alt[] = [];
     const reAlt = /(?:^|\s)\(?([A-Ea-e])\)?\s*[-—.)]?\s+(?=[A-Za-zÀ-ú"“(])/g;
