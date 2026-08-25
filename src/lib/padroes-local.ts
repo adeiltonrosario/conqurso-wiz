@@ -88,7 +88,12 @@ export function limparAlternativa(texto: string) {
   t = t.split(
     /\s(?=(?:QUEST[ÃA]O\s*\d{1,3}|GABARITO|COMENT[ÁA]RIO|TEXTO\s+\d|[A-ZÀ-Ú]{4,}(?:\s+[A-ZÀ-Ú]{2,}){2,}\s))/,
   )[0]!;
+  // Sobras de cabeçalho grudadas no fim (sigla/ano, traço de rodapé, nº solto).
+  t = t
+    .replace(/\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ][A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]*(?:\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]+){0,4}\s*[—–]\s*$/, "")
+    .replace(/\s+(?:19|20)\d{2}\s*[—–-]?\s*$/, "");
   return t.replace(/\s+/g, " ").replace(/[\s.;,-]+$/, (m) => (m.includes(".") ? "." : "")).trim();
+
 }
 
 export function separarQuestoes(texto: string): QuestaoBruta[] {
