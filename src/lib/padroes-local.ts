@@ -90,7 +90,7 @@ export function limparAlternativa(texto: string) {
   )[0]!;
   // Sobras de cabeçalho grudadas no fim (sigla/ano, traço de rodapé, nº solto).
   t = t
-    .replace(/\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ][A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]*(?:\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]+){0,4}\s*[—–]\s*$/, "")
+    .replace(/\s+[A-ZÀ-Ú]{2,}[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]*(?:\s+[A-Z0-9ÀÁÂÃÉÍÓÔÕÚÇ.\/-]+){0,4}\s*[—–]\s*$/, "")
     .replace(/\s+(?:19|20)\d{2}\s*[—–-]?\s*$/, "");
   return t.replace(/\s+/g, " ").replace(/[\s.;,-]+$/, (m) => (m.includes(".") ? "." : "")).trim();
 
