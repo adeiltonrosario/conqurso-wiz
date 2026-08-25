@@ -93,20 +93,26 @@ export function limparAlternativa(texto: string) {
 
 export function separarQuestoes(texto: string): QuestaoBruta[] {
   const limpo = limpar(limparRodapes(texto));
-  // Candidatos a início de questão: só valem se a numeração for sequencial
-  // (ou vier escrito "QUESTÃO n"), o que evita cortar em números do enunciado.
-  const reCab = /(QUEST[ÃA]O\s*)?\b(\d{1,3})\s*[-—.)]\s/gi;
+  // Candidatos a início de questão: número em início de bloco/frase e com
+  // numeração sequencial (ou escrito "QUESTÃO n"). Evita cortar em números
+  // que aparecem no meio do enunciado ou das alternativas.
+  const reCab = /(QUEST[ÃA]O\s*)?\b(\d{1,3})\s*[-—.)]\s+(?=[A-ZÀ-Ú"“(])/g;
   const inicios: { numero: number; inicio: number; fim: number }[] = [];
   let c: RegExpExecArray | null;
   let esperado = 0;
   while ((c = reCab.exec(limpo))) {
     const numero = Number(c[2]);
     const explicito = Boolean(c[1]);
+    const antes = limpo.slice(Math.max(0, c.index - 3), c.index);
+    // Início de linha, de texto, ou logo após o fim de uma frase.
+    const noInicio = c.index === 0 || /[\n.?!:;—–]\s*$/.test(antes);
+    if (!explicito && !noInicio) continue;
     const primeiro = inicios.length === 0 && numero <= 2;
     if (!explicito && !primeiro && numero !== esperado + 1) continue;
     inicios.push({ numero, inicio: c.index, fim: c.index + c[0].length });
     esperado = numero;
   }
+
 
   const questoes: QuestaoBruta[] = [];
 
