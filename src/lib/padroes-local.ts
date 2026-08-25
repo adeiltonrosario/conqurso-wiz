@@ -36,15 +36,16 @@ const RODAPE_PADROES: RegExp[] = [
   /https?:\/\/[^\s]+/gi,
   /[\w.+-]+@[\w-]+\.[\w.]+/gi,
   /CNPJ[^\s]*\s*[\d./-]+/gi,
-  /caderno\s+de\s+(?:prova|quest[õo]es)[^.]{0,60}/gi,
-  /folha\s+de\s+respostas?[^.]{0,40}/gi,
-  /nome\s+do\s+candidato\s*:?[^.]{0,60}/gi,
-  /(?:n[ºo]\.?\s*de\s*)?inscri[çc][ãa]o\s*:?\s*[\d.-]*/gi,
-  /concurso\s+p[úu]blico[^.]{0,80}/gi,
+  /caderno\s+de\s+(?:prova|quest[õo]es)(?:\s+tipo\s*\d+)?/gi,
+  /folha\s+de\s+respostas?/gi,
+  /nome\s+do\s+candidato\s*:?/gi,
+  /(?:n[ºo]\.?\s*de\s*)?inscri[çc][ãa]o\s*:\s*[\d.-]*/gi,
+  /concurso\s+p[úu]blico(?:\s+(?:para|de|do|da)\s+[^\s]+){0,3}/gi,
   /(?:^|\s)rascunho(?:\s|$)/gi,
   /reserv(?:a|ado)\s+para\s+rascunho/gi,
   /boa\s+prova!?/gi,
-  /instru[çc][õo]es\s+gerais[^.]{0,60}/gi,
+  /instru[çc][õo]es\s+gerais/gi,
+
 ];
 
 /**
