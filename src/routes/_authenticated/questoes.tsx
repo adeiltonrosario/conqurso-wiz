@@ -79,9 +79,12 @@ function CartaoQuestao({
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
   const [minha, setMinha] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<Questao>(questao);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
   const explicarIA = useServerFn(explicarQuestao);
+
 
   const explicacaoIA = useMutation({
     mutationFn: () =>
@@ -124,6 +127,163 @@ function CartaoQuestao({
     });
   }
 
+  function abrirEditor() {
+    setRascunho(questao);
+    setEditando(true);
+  }
+
+  function alterarAlternativa(letra: string, campo: "texto" | "explicacao", valor: string) {
+    setRascunho((r) => ({
+      ...r,
+      alternativas: r.alternativas.map((a) => (a.letra === letra ? { ...a, [campo]: valor } : a)),
+    }));
+  }
+
+  if (editando && onAtualizar) {
+    return (
+      <article className="space-y-3 rounded-xl border border-primary bg-card p-4 shadow-card">
+        <h3 className="font-display text-sm font-bold">Editando a questão {numero}</h3>
+
+        <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+          Cabeçalho (título)
+          <Input
+            value={rascunho.titulo ?? ""}
+            onChange={(e) => setRascunho((r) => ({ ...r, titulo: e.target.value.slice(0, 200) }))}
+            placeholder="Matéria · Assunto · Banca · Ano"
+          />
+        </label>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+            Matéria
+            <Input
+              value={rascunho.materia ?? ""}
+              onChange={(e) => setRascunho((r) => ({ ...r, materia: e.target.value.slice(0, 120) }))}
+            />
+          </label>
+          <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+            Assunto
+            <Input
+              value={rascunho.assunto ?? ""}
+              onChange={(e) => setRascunho((r) => ({ ...r, assunto: e.target.value.slice(0, 160) }))}
+            />
+          </label>
+          <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+            Banca
+            <Input
+              value={rascunho.banca ?? ""}
+              onChange={(e) => setRascunho((r) => ({ ...r, banca: e.target.value.slice(0, 60) }))}
+            />
+          </label>
+          <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+            Ano
+            <Input
+              inputMode="numeric"
+              value={rascunho.ano ? String(rascunho.ano) : ""}
+              onChange={(e) =>
+                setRascunho((r) => {
+                  const n = Number(e.target.value.replace(/\D/g, "").slice(0, 4));
+                  return { ...r, ano: n || undefined };
+                })
+              }
+            />
+          </label>
+        </div>
+
+        <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+          Enunciado
+          <Textarea
+            rows={6}
+            value={rascunho.enunciado}
+            onChange={(e) => setRascunho((r) => ({ ...r, enunciado: e.target.value.slice(0, 6000) }))}
+          />
+        </label>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">
+            Alternativas — clique na letra para definir o gabarito
+          </p>
+          {rascunho.alternativas.map((a) => (
+            <div
+              key={a.letra}
+              className={`space-y-2 rounded-lg border p-2 ${
+                a.correta ? "border-mark-blue bg-mark-blue-soft/30" : "border-border"
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRascunho((r) => ({
+                      ...r,
+                      alternativas: r.alternativas.map((x) => ({
+                        ...x,
+                        correta: x.letra === a.letra,
+                      })),
+                    }))
+                  }
+                  className={`mt-1 size-7 shrink-0 rounded-full border text-xs font-bold ${
+                    a.correta
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {a.letra}
+                </button>
+                <Textarea
+                  rows={2}
+                  value={a.texto}
+                  onChange={(e) => alterarAlternativa(a.letra, "texto", e.target.value.slice(0, 2000))}
+                  placeholder={`Texto da alternativa ${a.letra}`}
+                />
+              </div>
+              <Textarea
+                rows={2}
+                value={a.explicacao ?? ""}
+                onChange={(e) =>
+                  alterarAlternativa(a.letra, "explicacao", e.target.value.slice(0, 2000))
+                }
+                placeholder={`Explicação da alternativa ${a.letra}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+          Explicação geral / gabarito comentado
+          <Textarea
+            rows={4}
+            value={rascunho.explicacao ?? ""}
+            onChange={(e) => setRascunho((r) => ({ ...r, explicacao: e.target.value.slice(0, 4000) }))}
+          />
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            disabled={rascunho.enunciado.trim().length < 3}
+            onClick={() => {
+              const limpo: Questao = {
+                ...rascunho,
+                enunciado: rascunho.enunciado.trim(),
+                titulo: rascunho.titulo?.trim() || undefined,
+              };
+              onAtualizar(limpo);
+              setEditando(false);
+              setEscolha(null);
+              toast.success("Questão salva.");
+            }}
+          >
+            <Save className="mr-2 size-3.5" /> Salvar alterações
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setEditando(false)}>
+            Cancelar
+          </Button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="mb-2 text-xs font-semibold text-muted-foreground">
@@ -141,7 +301,13 @@ function CartaoQuestao({
               sem gabarito
             </span>
           )}
+          {onAtualizar && (
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={abrirEditor}>
+              <Pencil className="mr-1 size-3" /> Editar e salvar
+            </Button>
+          )}
         </div>
+
 
         <Relevancia
           materia={questao.materia}
