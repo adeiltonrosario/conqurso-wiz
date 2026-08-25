@@ -16,6 +16,19 @@ function limpar(t: string) {
   return t.replace(/\[\[p:\d+\]\]/g, " ").replace(/[ \t]+/g, " ").trim();
 }
 
+/** Gabarito em formatos "1-A", "1) B", "01 C", "1. D". */
+export function extrairGabarito(texto: string): Record<number, string> {
+  const mapa: Record<number, string> = {};
+  const re = /\b(\d{1,3})\s*[-—.)]?\s*([A-Ea-e])\b(?![a-zà-ú])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(texto))) {
+    const n = Number(m[1]);
+    if (n > 0 && n < 400) mapa[n] = String(m[2]).toUpperCase();
+  }
+  return mapa;
+}
+
+
 /** Lixo típico de cabeçalho/rodapé de caderno de prova. */
 const RODAPE_PADROES: RegExp[] = [
   /p[áa]g(?:ina)?\.?\s*\d+(?:\s*(?:de|\/)\s*\d+)?/gi,
