@@ -285,6 +285,10 @@ function QuestoesPage() {
   const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
   const semMaterias = materias.length === 0;
 
+  const extraidas = acervo.extraidas;
+  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
+  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
+
   const mutation = useMutation({
     mutationFn: () =>
       gerar({
@@ -316,9 +320,6 @@ function QuestoesPage() {
     },
   });
 
-  const extraidas = acervo.extraidas;
-  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
-  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
 
   const [assuntoSel, setAssuntoSel] = useState<string | null>(busca.assunto ?? null);
 
