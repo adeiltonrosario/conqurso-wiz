@@ -357,7 +357,7 @@ function CartaoQuestao({
         </div>
       )}
 
-      {onAtualizar && (
+      {onAtualizar && !editando && (
         <div className="mt-3 space-y-2 rounded-lg border border-dashed border-border p-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="font-semibold">Gabarito correto:</span>
