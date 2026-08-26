@@ -336,8 +336,10 @@ function CartaoQuestao({
           );
         })}
       </ul>
+      )}
 
-      {respondida && (
+      {!editando && respondida && (
+
         <div className="mt-3 rounded-lg bg-secondary p-3 text-sm">
           <p className="font-semibold text-primary">
             {correta ? `Gabarito: ${correta.letra}` : "Gabarito não informado nesta prova"}
