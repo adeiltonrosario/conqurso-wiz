@@ -169,7 +169,13 @@ function CartaoQuestao({
               sem gabarito
             </span>
           )}
+          {onAtualizar && !editando && (
+            <Button size="sm" variant="outline" className="ml-auto h-7 gap-1.5 px-2 text-[11px]" onClick={abrirEdicao}>
+              <Pencil className="size-3.5" /> Editar
+            </Button>
+          )}
         </div>
+
 
         <Relevancia
           materia={questao.materia}
