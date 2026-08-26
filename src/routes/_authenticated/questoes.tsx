@@ -79,9 +79,37 @@ function CartaoQuestao({
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
   const [minha, setMinha] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<Questao>(questao);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
   const explicarIA = useServerFn(explicarQuestao);
+
+  const LETRAS = "ABCDEFGH";
+  const rascunhoValido =
+    rascunho.enunciado.trim().length > 3 &&
+    rascunho.alternativas.filter((a) => a.texto.trim().length > 0).length >= 2;
+
+  function abrirEdicao() {
+    setRascunho(questao);
+    setEditando(true);
+  }
+
+  function salvarEdicao() {
+    const alternativas = rascunho.alternativas
+      .filter((a) => a.texto.trim().length > 0)
+      .map((a, i) => ({ ...a, letra: LETRAS[i] ?? a.letra, texto: a.texto.trim() }));
+    onAtualizar?.({
+      ...questao,
+      enunciado: rascunho.enunciado.trim(),
+      explicacao: rascunho.explicacao ?? "",
+      alternativas,
+    });
+    setEditando(false);
+    setEscolha(null);
+    toast.success("Questão salva.");
+  }
+
 
   const explicacaoIA = useMutation({
     mutationFn: () =>
