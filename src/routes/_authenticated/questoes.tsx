@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+
 import { AppShell } from "@/components/AppShell";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
@@ -79,9 +80,37 @@ function CartaoQuestao({
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
   const [minha, setMinha] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<Questao>(questao);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
   const explicarIA = useServerFn(explicarQuestao);
+
+  const LETRAS = "ABCDEFGH";
+  const rascunhoValido =
+    rascunho.enunciado.trim().length > 3 &&
+    rascunho.alternativas.filter((a) => a.texto.trim().length > 0).length >= 2;
+
+  function abrirEdicao() {
+    setRascunho(questao);
+    setEditando(true);
+  }
+
+  function salvarEdicao() {
+    const alternativas = rascunho.alternativas
+      .filter((a) => a.texto.trim().length > 0)
+      .map((a, i) => ({ ...a, letra: LETRAS[i] ?? a.letra, texto: a.texto.trim() }));
+    onAtualizar?.({
+      ...questao,
+      enunciado: rascunho.enunciado.trim(),
+      explicacao: rascunho.explicacao ?? "",
+      alternativas,
+    });
+    setEditando(false);
+    setEscolha(null);
+    toast.success("Questão salva.");
+  }
+
 
   const explicacaoIA = useMutation({
     mutationFn: () =>
@@ -141,7 +170,13 @@ function CartaoQuestao({
               sem gabarito
             </span>
           )}
+          {onAtualizar && !editando && (
+            <Button size="sm" variant="outline" className="ml-auto h-7 gap-1.5 px-2 text-[11px]" onClick={abrirEdicao}>
+              <Pencil className="size-3.5" /> Editar
+            </Button>
+          )}
         </div>
+
 
         <Relevancia
           materia={questao.materia}
@@ -151,12 +186,124 @@ function CartaoQuestao({
         />
       </header>
 
+      {editando && (
+        <div className="space-y-3 rounded-lg border border-primary/40 bg-secondary/40 p-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Enunciado</label>
+            <Textarea
+              rows={6}
+              value={rascunho.enunciado}
+              onChange={(e) => setRascunho({ ...rascunho, enunciado: e.target.value })}
+            />
+          </div>
 
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Alternativas (marque o gabarito na letra)
+            </span>
+            {rascunho.alternativas.map((a, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRascunho({
+                      ...rascunho,
+                      alternativas: rascunho.alternativas.map((x, j) => ({ ...x, correta: i === j })),
+                    })
+                  }
+                  className={`mt-1 size-7 shrink-0 rounded-full border text-[11px] font-bold ${
+                    a.correta
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {LETRAS[i] ?? a.letra}
+                </button>
+                <Textarea
+                  rows={2}
+                  value={a.texto}
+                  onChange={(e) =>
+                    setRascunho({
+                      ...rascunho,
+                      alternativas: rascunho.alternativas.map((x, j) =>
+                        i === j ? { ...x, texto: e.target.value } : x,
+                      ),
+                    })
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-1 shrink-0 px-2"
+                  onClick={() =>
+                    setRascunho({
+                      ...rascunho,
+                      alternativas: rascunho.alternativas.filter((_, j) => j !== i),
+                    })
+                  }
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={rascunho.alternativas.length >= 8}
+              onClick={() =>
+                setRascunho({
+                  ...rascunho,
+                  alternativas: [
+                    ...rascunho.alternativas,
+                    {
+                      letra: LETRAS[rascunho.alternativas.length] ?? "?",
+                      texto: "",
+                      correta: false,
+                      explicacao: "",
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus className="mr-1.5 size-3.5" /> Adicionar alternativa
+            </Button>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Explicação (opcional)</label>
+            <Textarea
+              rows={3}
+              value={rascunho.explicacao ?? ""}
+              onChange={(e) => setRascunho({ ...rascunho, explicacao: e.target.value })}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" disabled={!rascunhoValido} onClick={salvarEdicao}>
+              Salvar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditando(false)}>
+              Cancelar
+            </Button>
+            {!rascunhoValido && (
+              <span className="text-[11px] text-muted-foreground">
+                Preencha o enunciado e ao menos 2 alternativas.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!editando && (
       <p className="text-[15px] leading-relaxed">
         <Marcado texto={questao.enunciado} />
       </p>
+      )}
 
+
+      {!editando && (
       <ul className="mt-3 space-y-2">
+
         {questao.alternativas.map((a) => {
           const escolhida = escolha === a.letra;
           const estado = !respondida
@@ -190,8 +337,10 @@ function CartaoQuestao({
           );
         })}
       </ul>
+      )}
 
-      {respondida && (
+      {!editando && respondida && (
+
         <div className="mt-3 rounded-lg bg-secondary p-3 text-sm">
           <p className="font-semibold text-primary">
             {correta ? `Gabarito: ${correta.letra}` : "Gabarito não informado nesta prova"}
@@ -209,7 +358,7 @@ function CartaoQuestao({
         </div>
       )}
 
-      {onAtualizar && (
+      {onAtualizar && !editando && (
         <div className="mt-3 space-y-2 rounded-lg border border-dashed border-border p-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="font-semibold">Gabarito correto:</span>
@@ -353,12 +502,15 @@ function QuestoesPage() {
     [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
     null;
 
+  const queryClient = useQueryClient();
+
   const atualizarExtraida = (q: Questao) => {
     atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
-    void salvar({ data: { questoes: [q] } }).catch(() =>
-      toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."),
-    );
+    void salvar({ data: { questoes: [q] } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
+      .catch(() => toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."));
   };
+
 
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
   const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
