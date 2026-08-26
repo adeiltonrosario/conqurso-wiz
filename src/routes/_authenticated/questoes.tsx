@@ -502,12 +502,15 @@ function QuestoesPage() {
     [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
     null;
 
+  const queryClient = useQueryClient();
+
   const atualizarExtraida = (q: Questao) => {
     atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
-    void salvar({ data: { questoes: [q] } }).catch(() =>
-      toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."),
-    );
+    void salvar({ data: { questoes: [q] } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
+      .catch(() => toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."));
   };
+
 
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
   const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
