@@ -300,7 +300,9 @@ function CartaoQuestao({
       )}
 
 
+      {!editando && (
       <ul className="mt-3 space-y-2">
+
         {questao.alternativas.map((a) => {
           const escolhida = escolha === a.letra;
           const estado = !respondida
