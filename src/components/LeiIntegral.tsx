@@ -316,6 +316,9 @@ export function LeiIntegralPainel({
 
   const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
 
+  const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
+  const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
+
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
     return brutos
@@ -323,13 +326,14 @@ export function LeiIntegralPainel({
       .filter(({ artigo }) => {
         if (!combina(artigo, termo)) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
+        if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (limites) {
           const n = numeroArtigo(artigo);
           if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
         }
         return true;
       });
-  }, [brutos, termo, faixa, soMarcados, marcados]);
+  }, [brutos, termo, faixa, soMarcados, marcados, soFavoritos, chavesFavoritas, baseLegal]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
