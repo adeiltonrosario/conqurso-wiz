@@ -333,6 +333,26 @@ function LeisPage() {
         }}
       />
 
+      <FavoritosPainel
+        gerando={reforco.isPending}
+        onGerarQuestoes={(trechos) => {
+          const base =
+            leitura ??
+            registrarLeitura({
+              materia: materiaAtiva,
+              capitulo: capitulo || "Artigos favoritados",
+              baseLegal: "Favoritos",
+              resumo: trechos.join("\n\n"),
+            });
+          definirFocos(base.id, trechos);
+          const alvo = { ...base, focos: trechos };
+          setLeitura(alvo);
+          reforco.mutate(alvo);
+        }}
+      />
+
+
+
       {selecionados.length > 0 && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
           <p className="text-xs text-muted-foreground">
