@@ -226,8 +226,10 @@ export function LeiIntegralPainel({
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
+  const [soFavoritos, setSoFavoritos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
   const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
+  const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
   const [leiPdfSel, setLeiPdfSel] = useState("");
