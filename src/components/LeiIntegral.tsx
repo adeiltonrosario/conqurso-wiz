@@ -591,17 +591,43 @@ export function LeiIntegralPainel({
                                       : "border-border/70"
                                 }`}
                               >
-                                <label className="flex cursor-pointer items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={marcado}
-                                    onChange={() => onAlternarMarcado(trecho)}
-                                    className="size-4 accent-primary"
-                                  />
-                                  <span className="text-xs font-bold text-primary">
-                                    {a.referencia}
-                                  </span>
-                                </label>
+                                <div className="flex items-center justify-between gap-2">
+                                  <label className="flex cursor-pointer items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={marcado}
+                                      onChange={() => onAlternarMarcado(trecho)}
+                                      className="size-4 accent-primary"
+                                    />
+                                    <span className="text-xs font-bold text-primary">
+                                      {a.referencia}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    aria-label={
+                                      ehFavorito(a)
+                                        ? `Remover ${a.referencia} dos favoritos`
+                                        : `Favoritar ${a.referencia}`
+                                    }
+                                    aria-pressed={ehFavorito(a)}
+                                    onClick={() =>
+                                      alternarFavorito(a, {
+                                        lei: baseLegal,
+                                        materia,
+                                        capituloEdital: capitulo,
+                                      })
+                                    }
+                                  >
+                                    <Star
+                                      className={`size-4 ${
+                                        ehFavorito(a)
+                                          ? "fill-mark-yellow text-mark-yellow"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
                                 <p className="mt-1.5 text-sm leading-relaxed">
                                   <Realce texto={a.texto} termo={termo} />
                                 </p>
