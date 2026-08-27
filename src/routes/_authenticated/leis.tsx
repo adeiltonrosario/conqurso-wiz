@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { LeiIntegralPainel } from "@/components/LeiIntegral";
+import { FavoritosPainel } from "@/components/Favoritos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
