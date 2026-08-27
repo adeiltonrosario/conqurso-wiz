@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search, Star } from "lucide-react";
+import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
