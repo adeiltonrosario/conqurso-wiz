@@ -531,16 +531,28 @@ export function LeiIntegralPainel({
               <span>
                 {artigos.length} de {brutos.length} artigo(s)
                 {marcados.length > 0 ? ` · ${marcados.length} marcado(s)` : ""}
+                {favoritos.length > 0 ? ` · ${favoritos.length} favorito(s)` : ""}
               </span>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={soMarcados}
-                  onChange={(e) => setSoMarcados(e.target.checked)}
-                  className="size-3.5 accent-primary"
-                />
-                Ver só os marcados
-              </label>
+              <span className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={soMarcados}
+                    onChange={(e) => setSoMarcados(e.target.checked)}
+                    className="size-3.5 accent-primary"
+                  />
+                  Ver só os marcados
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={soFavoritos}
+                    onChange={(e) => setSoFavoritos(e.target.checked)}
+                    className="size-3.5 accent-primary"
+                  />
+                  Ver só os favoritos (★)
+                </label>
+              </span>
             </div>
           </div>
 
