@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search, Star } from "lucide-react";
+import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -225,8 +226,10 @@ export function LeiIntegralPainel({
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
+  const [soFavoritos, setSoFavoritos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
   const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
+  const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
   const [leiPdfSel, setLeiPdfSel] = useState("");
@@ -313,6 +316,9 @@ export function LeiIntegralPainel({
 
   const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
 
+  const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
+  const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
+
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
     return brutos
@@ -320,13 +326,14 @@ export function LeiIntegralPainel({
       .filter(({ artigo }) => {
         if (!combina(artigo, termo)) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
+        if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (limites) {
           const n = numeroArtigo(artigo);
           if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
         }
         return true;
       });
-  }, [brutos, termo, faixa, soMarcados, marcados]);
+  }, [brutos, termo, faixa, soMarcados, marcados, soFavoritos, chavesFavoritas, baseLegal]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
@@ -524,16 +531,28 @@ export function LeiIntegralPainel({
               <span>
                 {artigos.length} de {brutos.length} artigo(s)
                 {marcados.length > 0 ? ` · ${marcados.length} marcado(s)` : ""}
+                {favoritos.length > 0 ? ` · ${favoritos.length} favorito(s)` : ""}
               </span>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={soMarcados}
-                  onChange={(e) => setSoMarcados(e.target.checked)}
-                  className="size-3.5 accent-primary"
-                />
-                Ver só os marcados
-              </label>
+              <span className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={soMarcados}
+                    onChange={(e) => setSoMarcados(e.target.checked)}
+                    className="size-3.5 accent-primary"
+                  />
+                  Ver só os marcados
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={soFavoritos}
+                    onChange={(e) => setSoFavoritos(e.target.checked)}
+                    className="size-3.5 accent-primary"
+                  />
+                  Ver só os favoritos (★)
+                </label>
+              </span>
             </div>
           </div>
 
@@ -572,17 +591,43 @@ export function LeiIntegralPainel({
                                       : "border-border/70"
                                 }`}
                               >
-                                <label className="flex cursor-pointer items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={marcado}
-                                    onChange={() => onAlternarMarcado(trecho)}
-                                    className="size-4 accent-primary"
-                                  />
-                                  <span className="text-xs font-bold text-primary">
-                                    {a.referencia}
-                                  </span>
-                                </label>
+                                <div className="flex items-center justify-between gap-2">
+                                  <label className="flex cursor-pointer items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={marcado}
+                                      onChange={() => onAlternarMarcado(trecho)}
+                                      className="size-4 accent-primary"
+                                    />
+                                    <span className="text-xs font-bold text-primary">
+                                      {a.referencia}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    aria-label={
+                                      ehFavorito(a)
+                                        ? `Remover ${a.referencia} dos favoritos`
+                                        : `Favoritar ${a.referencia}`
+                                    }
+                                    aria-pressed={ehFavorito(a)}
+                                    onClick={() =>
+                                      alternarFavorito(a, {
+                                        lei: baseLegal,
+                                        materia,
+                                        capituloEdital: capitulo,
+                                      })
+                                    }
+                                  >
+                                    <Star
+                                      className={`size-4 ${
+                                        ehFavorito(a)
+                                          ? "fill-mark-yellow text-mark-yellow"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
                                 <p className="mt-1.5 text-sm leading-relaxed">
                                   <Realce texto={a.texto} termo={termo} />
                                 </p>
