@@ -374,8 +374,10 @@ export function LeiIntegralPainel({
       {fonte === "pdf" ? (
         pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-            Nenhum PDF de lei anexado. Envie o Vade Mecum em “Inclusão → Upload de PDF para leis”.
+            Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
+            Texto de leis (Vade Mecum)”.
           </p>
+
         ) : (
           <div className="space-y-2">
             <select
