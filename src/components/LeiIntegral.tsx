@@ -383,7 +383,7 @@ export function LeiIntegralPainel({
             <select
               value={arquivoAtivo}
               onChange={(e) => setArquivo(e.target.value)}
-              aria-label="PDF de lei anexado"
+              aria-label="Lei salva (PDF ou texto colado)"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               {pdfsLei.map((p) => (
