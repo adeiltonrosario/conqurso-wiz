@@ -453,7 +453,15 @@ function InclusaoPage() {
             onChange={(e) => atualizar({ leis: e.target.value.slice(0, 20000) })}
             placeholder="Cole aqui artigos, súmulas ou dispositivos legais…"
           />
+          <Button variant="outline" className="w-full" onClick={extrairLeiColada}>
+            <ListPlus className="mr-2 size-4" /> Extrair e limpar
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            A lei fica salva no sistema e aparece em “Leis → Texto Integral” para leitura, busca e
+            marcação — sem gastar IA.
+          </p>
         </div>
+
 
         <UploadCampo
           label="Upload de PDF para leis"
