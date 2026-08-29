@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
+import { FileUp, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
@@ -24,7 +24,9 @@ import {
   type QuestaoCadastrada,
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
+import { lerVadeMecum } from "@/lib/vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+
 import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
 import {
   removerQuestoesDaProva,
@@ -303,6 +305,49 @@ function InclusaoPage() {
     );
   };
 
+  /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
+  const extrairLeiColada = () => {
+    const texto = acervo.leis.trim();
+    if (texto.length < 100) {
+      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
+      return;
+    }
+
+    const leis = lerVadeMecum(texto);
+    const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
+    if (!artigos) {
+      toast.warning(
+        "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
+      );
+      return;
+    }
+
+    const titulo = leis[0]?.nome?.trim() || "Texto colado";
+    const data = new Date().toLocaleDateString("pt-BR");
+    const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
+    let nome = `${titulo} — ${data}`;
+    let n = 2;
+    while (jaUsados.has(nome)) nome = `${titulo} — ${data} (${n++})`;
+
+    void salvarTextoAnexo(nome, texto);
+    atualizar({
+      leis: "",
+      provas: [
+        ...acervo.provas,
+        {
+          nome: marcarComoLei(nome),
+          texto: texto.slice(0, LIMITE_TRECHO_IA),
+          chars: texto.length,
+        },
+      ],
+    });
+    toast.success(
+      `${titulo} — ${artigos} artigo(s) salvos para leitura em Leis. Cole a próxima parte.`,
+    );
+  };
+
+
+
 
   return (
     <AppShell
@@ -453,7 +498,15 @@ function InclusaoPage() {
             onChange={(e) => atualizar({ leis: e.target.value.slice(0, 20000) })}
             placeholder="Cole aqui artigos, súmulas ou dispositivos legais…"
           />
+          <Button variant="outline" className="w-full" onClick={extrairLeiColada}>
+            <ListPlus className="mr-2 size-4" /> Extrair e limpar
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            A lei fica salva no sistema e aparece em “Leis → Texto Integral” para leitura, busca e
+            marcação — sem gastar IA.
+          </p>
         </div>
+
 
         <UploadCampo
           label="Upload de PDF para leis"
