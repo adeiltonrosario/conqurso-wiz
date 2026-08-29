@@ -305,6 +305,49 @@ function InclusaoPage() {
     );
   };
 
+  /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
+  const extrairLeiColada = () => {
+    const texto = acervo.leis.trim();
+    if (texto.length < 100) {
+      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
+      return;
+    }
+
+    const leis = lerVadeMecum(texto);
+    const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
+    if (!artigos) {
+      toast.warning(
+        "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
+      );
+      return;
+    }
+
+    const titulo = leis[0]?.nome?.trim() || "Texto colado";
+    const data = new Date().toLocaleDateString("pt-BR");
+    const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
+    let nome = `${titulo} — ${data}`;
+    let n = 2;
+    while (jaUsados.has(nome)) nome = `${titulo} — ${data} (${n++})`;
+
+    void salvarTextoAnexo(nome, texto);
+    atualizar({
+      leis: "",
+      provas: [
+        ...acervo.provas,
+        {
+          nome: marcarComoLei(nome),
+          texto: texto.slice(0, LIMITE_TRECHO_IA),
+          chars: texto.length,
+        },
+      ],
+    });
+    toast.success(
+      `${titulo} — ${artigos} artigo(s) salvos para leitura em Leis. Cole a próxima parte.`,
+    );
+  };
+
+
+
 
   return (
     <AppShell
