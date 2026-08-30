@@ -5,16 +5,34 @@
 import type { Questao } from "./ai.functions";
 import type { Acervo, QuestaoCadastrada } from "./acervo";
 import { grupoDaMateria, questaoPermitida, type EditalEstado } from "./edital";
-import { questoesDaMateria, temGabarito } from "./questoes-pdf";
+import {
+  classificarQuestao,
+  NAO_CLASSIFICADA,
+  questoesDaMateria,
+  temGabarito,
+  tituloDaQuestao,
+} from "./questoes-pdf";
 
 /** Converte uma questão cadastrada à mão no acervo para o formato padrão. */
 export function daCadastrada(edital: EditalEstado, q: QuestaoCadastrada): Questao {
-  const materia = q.assunto || "Não classificada";
+  const achado = classificarQuestao(
+    edital,
+    `${q.assunto} ${q.enunciado} ${q.alternativas.join(" ")}`,
+  );
+  const materia = achado?.materia ?? NAO_CLASSIFICADA;
+  const assunto = achado?.assunto;
   return {
     id: `acervo:${q.id}`,
     banca: q.banca,
-    grupo: grupoDaMateria(edital, materia),
+    grupo:
+      materia === NAO_CLASSIFICADA ? "Conhecimento Geral" : grupoDaMateria(edital, materia),
     materia,
+    ...(assunto ? { assunto } : {}),
+    titulo: tituloDaQuestao({
+      materia,
+      ...(assunto ? { assunto } : {}),
+      banca: q.banca,
+    }),
     origem: "Cadastrada no acervo",
     enunciado: q.enunciado,
     alternativas: q.alternativas.map((texto, i) => {

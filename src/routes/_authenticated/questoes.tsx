@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 
@@ -36,6 +36,7 @@ import {
 import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
+import { daCadastrada } from "@/lib/prova-local";
 import { BancaAtual } from "@/components/BancaAtual";
 
 
@@ -434,7 +435,17 @@ function QuestoesPage() {
   const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
   const semMaterias = materias.length === 0;
 
-  const extraidas = acervo.extraidas;
+  // Banco local: questões dos PDFs + questões cadastradas à mão no acervo,
+  // ambas classificadas por matéria/assunto do edital (sem IA).
+  const extraidas = useMemo(() => {
+    const mapa = new Map<string, Questao>();
+    for (const q of acervo.extraidas) mapa.set(q.id, q);
+    for (const q of acervo.questoes) {
+      const convertida = daCadastrada(edital, q);
+      if (!mapa.has(convertida.id)) mapa.set(convertida.id, convertida);
+    }
+    return Array.from(mapa.values());
+  }, [acervo.extraidas, acervo.questoes, edital]);
   const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
   const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
 
@@ -505,7 +516,13 @@ function QuestoesPage() {
   const queryClient = useQueryClient();
 
   const atualizarExtraida = (q: Questao) => {
-    atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
+    const atuais = lerAcervo().extraidas;
+    // Questões vindas do acervo cadastrado ainda não estão no banco local:
+    // ao editar, passam a viver nele (é a versão que vale a partir de agora).
+    const proximas = atuais.some((x) => x.id === q.id)
+      ? atuais.map((x) => (x.id === q.id ? q : x))
+      : [...atuais, q];
+    atualizar({ extraidas: proximas });
     void salvar({ data: { questoes: [q] } })
       .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
       .catch(() => toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."));

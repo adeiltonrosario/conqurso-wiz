@@ -65,6 +65,14 @@ function classificar(indice: Classificador, texto: string) {
   return melhor;
 }
 
+/**
+ * Classifica um texto qualquer (enunciado + alternativas + assunto digitado)
+ * nas matérias/assuntos do edital ativo. Sem IA.
+ */
+export function classificarQuestao(edital: EditalEstado, texto: string) {
+  return classificar(classificadorDoEdital(edital), texto);
+}
+
 /** Comentários/justificativas que a própria prova traz depois das alternativas. */
 function comentariosDaProva(texto: string) {
   const mapa: Record<number, string> = {};
