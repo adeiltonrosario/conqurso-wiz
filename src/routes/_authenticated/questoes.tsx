@@ -435,7 +435,17 @@ function QuestoesPage() {
   const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
   const semMaterias = materias.length === 0;
 
-  const extraidas = acervo.extraidas;
+  // Banco local: questões dos PDFs + questões cadastradas à mão no acervo,
+  // ambas classificadas por matéria/assunto do edital (sem IA).
+  const extraidas = useMemo(() => {
+    const mapa = new Map<string, Questao>();
+    for (const q of acervo.extraidas) mapa.set(q.id, q);
+    for (const q of acervo.questoes) {
+      const convertida = daCadastrada(edital, q);
+      if (!mapa.has(convertida.id)) mapa.set(convertida.id, convertida);
+    }
+    return Array.from(mapa.values());
+  }, [acervo.extraidas, acervo.questoes, edital]);
   const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
   const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
 
