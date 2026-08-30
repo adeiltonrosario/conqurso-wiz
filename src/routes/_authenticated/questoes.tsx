@@ -516,7 +516,13 @@ function QuestoesPage() {
   const queryClient = useQueryClient();
 
   const atualizarExtraida = (q: Questao) => {
-    atualizar({ extraidas: lerAcervo().extraidas.map((x) => (x.id === q.id ? q : x)) });
+    const atuais = lerAcervo().extraidas;
+    // Questões vindas do acervo cadastrado ainda não estão no banco local:
+    // ao editar, passam a viver nele (é a versão que vale a partir de agora).
+    const proximas = atuais.some((x) => x.id === q.id)
+      ? atuais.map((x) => (x.id === q.id ? q : x))
+      : [...atuais, q];
+    atualizar({ extraidas: proximas });
     void salvar({ data: { questoes: [q] } })
       .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
       .catch(() => toast.error("Não deu para salvar na nuvem agora; ficou salva no aparelho."));
