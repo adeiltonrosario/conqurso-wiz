@@ -36,6 +36,7 @@ import {
 import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
+import { daCadastrada } from "@/lib/prova-local";
 import { BancaAtual } from "@/components/BancaAtual";
 
 
