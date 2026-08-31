@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileUp, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -40,8 +40,11 @@ import {
   ehDoEdital,
   grupoDaMateria,
   materiaPermitida,
+  materiasAtivas,
+  relevanciaNaDisciplina,
   todasAsMaterias,
   topicoPermitido,
+  topicosPorRelevancia,
   useEdital,
 } from "@/lib/edital";
 
