@@ -206,6 +206,27 @@ function InclusaoPage() {
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
 
+  /** Assuntos do Detalhamento do edital para a matéria selecionada. */
+  const assuntosDaMateria = useMemo(() => {
+    const achada = materiasAtivas(edital).find(
+      (m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase(),
+    );
+    if (!achada) return [];
+    return topicosPorRelevancia(achada).map((t) => ({
+      topico: t,
+      relevancia: relevanciaNaDisciplina(achada, t),
+    }));
+  }, [edital, materia]);
+
+  // Trocou de matéria: limpa o assunto que não pertence mais à lista.
+  useEffect(() => {
+    if (!assunto) return;
+    if (assuntosDaMateria.length && !assuntosDaMateria.some((a) => a.topico === assunto)) {
+      setAssunto("");
+    }
+  }, [assunto, assuntosDaMateria]);
+
+
   const simulado = useMutation({
     mutationFn: async () =>
       gerar({
