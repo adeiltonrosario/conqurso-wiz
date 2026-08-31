@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileUp, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -40,8 +40,11 @@ import {
   ehDoEdital,
   grupoDaMateria,
   materiaPermitida,
+  materiasAtivas,
+  relevanciaNaDisciplina,
   todasAsMaterias,
   topicoPermitido,
+  topicosPorRelevancia,
   useEdital,
 } from "@/lib/edital";
 
@@ -202,6 +205,27 @@ function InclusaoPage() {
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
+
+  /** Assuntos do Detalhamento do edital para a matéria selecionada. */
+  const assuntosDaMateria = useMemo(() => {
+    const achada = materiasAtivas(edital).find(
+      (m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase(),
+    );
+    if (!achada) return [];
+    return topicosPorRelevancia(achada).map((t) => ({
+      topico: t,
+      relevancia: relevanciaNaDisciplina(achada, t),
+    }));
+  }, [edital, materia]);
+
+  // Trocou de matéria: limpa o assunto que não pertence mais à lista.
+  useEffect(() => {
+    if (!assunto) return;
+    if (assuntosDaMateria.length && !assuntosDaMateria.some((a) => a.topico === assunto)) {
+      setAssunto("");
+    }
+  }, [assunto, assuntosDaMateria]);
+
 
   const simulado = useMutation({
     mutationFn: async () =>
@@ -398,13 +422,36 @@ function InclusaoPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assunto">Assunto</Label>
-          <Input
-            id="assunto"
-            value={assunto}
-            onChange={(e) => setAssunto(e.target.value.slice(0, 80))}
-            placeholder="Ex.: Concordância verbal"
-          />
+          <Label htmlFor="assunto">Assunto (detalhamento do edital)</Label>
+          {assuntosDaMateria.length ? (
+            <select
+              id="assunto"
+              value={assunto}
+              onChange={(e) => setAssunto(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Sem assunto específico</option>
+              {assuntosDaMateria.map((a) => (
+                <option key={a.topico} value={a.topico}>
+                  {a.topico}
+                  {a.relevancia == null ? "" : ` — ${a.relevancia}%`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <Input
+                id="assunto"
+                value={assunto}
+                onChange={(e) => setAssunto(e.target.value.slice(0, 80))}
+                placeholder="Ex.: Concordância verbal"
+              />
+              <p className="text-xs text-muted-foreground">
+                Nenhum assunto detalhado para esta matéria — digite livremente.
+              </p>
+            </>
+          )}
+
           <p className="text-xs text-muted-foreground">
             A banca usada é a prevista na Trilha: <strong>{banca}</strong>.
           </p>
