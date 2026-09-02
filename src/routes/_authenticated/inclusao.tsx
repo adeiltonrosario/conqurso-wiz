@@ -87,8 +87,11 @@ function UploadCampo({
   arquivos: ArquivoAnexo[];
   onAdd: (anexos: ArquivoAnexo[]) => void;
   onRemove: (nome: string) => void;
-  /** Recebe o texto integral logo após a leitura (usado para extrair questões sem IA). */
-  onArquivoLido?: (nome: string, texto: string) => void;
+  /**
+   * Recebe o texto integral logo após a leitura (usado para extrair questões sem IA).
+   * Retornar "descartar" impede que o arquivo entre na lista (ex.: PDF só de gabarito).
+   */
+  onArquivoLido?: (nome: string, texto: string) => void | "descartar";
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
@@ -106,13 +109,17 @@ function UploadCampo({
         }
         // Texto integral no IndexedDB; no acervo fica só o trecho de contexto da IA.
         await salvarTextoAnexo(file.name, texto);
+        const resultado = texto ? onArquivoLido?.(file.name, texto) : undefined;
+        if (resultado === "descartar") {
+          await removerTextoAnexo(file.name);
+          continue;
+        }
         anexos.push({
           nome: file.name,
           texto: texto.slice(0, LIMITE_TRECHO_IA),
           chars: texto.length,
           paginas,
         });
-        if (texto) onArquivoLido?.(file.name, texto);
       } catch {
         toast.error(`Falha ao ler “${file.name}”.`);
         anexos.push({ nome: file.name, texto: "", chars: 0 });
