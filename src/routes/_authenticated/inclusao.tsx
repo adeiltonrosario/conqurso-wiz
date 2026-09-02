@@ -795,46 +795,8 @@ function InclusaoPage() {
         />
 
         <div className="space-y-3">
-          <UploadCampo
-            label="Provas anteriores e gabaritos (PDF)"
-            ajuda="Anexe o PDF da prova: as questões são extraídas sem gastar IA. O gabarito é anexado dentro do cartão da prova, então nunca cai na prova errada."
-            arquivos={[]}
-            onAdd={(anexos) => atualizar({ provas: [...lerAcervo().provas, ...anexos] })}
-            onRemove={() => {}}
-            onArquivoLido={extrairDaProva}
-          />
+          <IncluirProva lendo={incluindoProva} onIncluir={(p, g) => void incluirProva(p, g)} />
 
-          {gabaritoPendente && (
-            <div className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
-              <p className="text-xs font-semibold">
-                “{gabaritoPendente.nome}” é um gabarito ({Object.keys(gabaritoPendente.gabarito).length}{" "}
-                respostas). A qual prova pertence?
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {provas.map((p) => (
-                  <Button
-                    key={p.nome}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      vincularGabarito(p.nome, gabaritoPendente.nome, gabaritoPendente.gabarito)
-                    }
-                  >
-                    {p.nome}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setGabaritoPendente(null)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
 
           {provas.map((p) => {
             const daProva = acervo.extraidas.filter((q) => q.prova === p.nome);
