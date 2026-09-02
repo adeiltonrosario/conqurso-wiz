@@ -1,14 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Eye, Layers, RotateCcw, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Check, Eye, Layers, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { CardForm } from "@/components/CardForm";
+import { ImagemCard } from "@/components/ImagemCard";
 import { useAcervo } from "@/lib/acervo";
-import { useEdital } from "@/lib/edital";
+import { useEdital, materiasAtivas } from "@/lib/edital";
 import { bancoLocal } from "@/lib/prova-local";
 import { temGabarito } from "@/lib/questoes-pdf";
 import { registrarResposta } from "@/lib/revisao";
+import { listarCards, salvarCard, removerCard } from "@/lib/cards.functions";
+import {
+  cardParaQuestao,
+  lerCards,
+  removerImagemDoCard,
+  salvarCardsLocal,
+  temImagem,
+  type CardProprio,
+} from "@/lib/cards";
 import type { Questao } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/flashcards")({
@@ -18,12 +32,12 @@ export const Route = createFileRoute("/_authenticated/flashcards")({
       {
         name: "description",
         content:
-          "Revise suas questões em formato de flash card, escolhendo a matéria do edital e marcando acertos e erros.",
+          "Crie seus próprios flash cards com pergunta, resposta e imagem, e revise por matéria marcando acertos e erros.",
       },
       { property: "og:title", content: "Flash cards por matéria" },
       {
         property: "og:description",
-        content: "Revisão rápida em flash cards, filtrada pela matéria do edital.",
+        content: "Cards próprios com imagem e revisão rápida filtrada pela matéria do edital.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -35,21 +49,75 @@ export const Route = createFileRoute("/_authenticated/flashcards")({
 function respostaCerta(q: Questao) {
   const certa = q.alternativas.find((a) => a.correta);
   if (!certa) return null;
-  return `${certa.letra}) ${certa.texto}`;
+  return certa.letra === "A" && q.alternativas.length === 1
+    ? certa.texto
+    : `${certa.letra}) ${certa.texto}`;
 }
 
 function FlashcardsPage() {
   const { edital } = useEdital();
   const { acervo } = useAcervo();
+  const queryClient = useQueryClient();
+  const buscarCards = useServerFn(listarCards);
+  const gravarCard = useServerFn(salvarCard);
+  const apagarCard = useServerFn(removerCard);
+
   const [materia, setMateria] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
   const [virado, setVirado] = useState(false);
   const [feitos, setFeitos] = useState(0);
   const [acertos, setAcertos] = useState(0);
+  const [emEdicao, setEmEdicao] = useState<CardProprio | null>(null);
+  const [criando, setCriando] = useState(false);
 
-  const banco = useMemo(
-    () => bancoLocal(edital, acervo).filter(temGabarito),
-    [edital, acervo],
+  const cardsQuery = useQuery({
+    queryKey: ["cards"],
+    queryFn: () => buscarCards(),
+    initialData: () => (lerCards().length ? lerCards() : undefined),
+  });
+
+  const meusCards = cardsQuery.data ?? [];
+
+  useEffect(() => {
+    if (cardsQuery.data) salvarCardsLocal(cardsQuery.data);
+  }, [cardsQuery.data]);
+
+  const salvarMut = useMutation({
+    mutationFn: (card: CardProprio) => gravarCard({ data: { card } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cards"] });
+      setCriando(false);
+      setEmEdicao(null);
+      toast.success("Card salvo");
+    },
+    onError: () => toast.error("Não foi possível salvar o card. Tente novamente."),
+  });
+
+  const removerMut = useMutation({
+    mutationFn: async (card: CardProprio) => {
+      await apagarCard({ data: { id: card.id } });
+      if (card.imagemPath) await removerImagemDoCard(card.imagemPath);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cards"] });
+      toast.success("Card excluído");
+    },
+    onError: () => toast.error("Não foi possível excluir o card."),
+  });
+
+  const materiasEdital = useMemo(
+    () => [...new Set(materiasAtivas(edital).map((m) => m.nome.trim()).filter(Boolean))],
+    [edital],
+  );
+
+  const banco = useMemo(() => {
+    const questoes = bancoLocal(edital, acervo).filter(temGabarito);
+    return [...meusCards.map(cardParaQuestao), ...questoes];
+  }, [edital, acervo, meusCards]);
+
+  const mapaCards = useMemo(
+    () => new Map(meusCards.map((c) => [`card:${c.id}`, c] as const)),
+    [meusCards],
   );
 
   const materias = useMemo(() => {
@@ -69,6 +137,7 @@ function FlashcardsPage() {
   }, [materia]);
 
   const atual = cartoes[indice];
+  const cardAtual = atual ? mapaCards.get(atual.id) : undefined;
 
   function responder(acertou: boolean) {
     if (!atual) return;
@@ -89,8 +158,79 @@ function FlashcardsPage() {
   return (
     <AppShell
       titulo="Flash cards"
-      descricao="Revisão rápida: escolha a matéria, leia a pergunta, vire o cartão e marque se acertou."
+      descricao="Crie seus cards com pergunta, resposta e imagem, ou revise as questões do seu acervo por matéria."
     >
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Layers className="size-4 text-primary" />
+            Meus cards ({meusCards.length})
+          </div>
+          {!criando && !emEdicao ? (
+            <Button size="sm" onClick={() => setCriando(true)}>
+              <Plus className="size-4" /> Novo card
+            </Button>
+          ) : null}
+        </div>
+
+        {criando ? (
+          <CardForm
+            materias={materiasEdital}
+            salvando={salvarMut.isPending}
+            onSalvar={(c) => salvarMut.mutate(c)}
+            onCancelar={() => setCriando(false)}
+          />
+        ) : null}
+
+        {emEdicao ? (
+          <CardForm
+            key={emEdicao.id}
+            inicial={emEdicao}
+            materias={materiasEdital}
+            salvando={salvarMut.isPending}
+            onSalvar={(c) => salvarMut.mutate(c)}
+            onCancelar={() => setEmEdicao(null)}
+          />
+        ) : null}
+
+        {meusCards.length ? (
+          <ul className="space-y-2">
+            {meusCards.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{c.pergunta}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {[c.materia || "Sem matéria", c.assunto].filter(Boolean).join(" · ")}
+                    {temImagem(c) ? " · com imagem" : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => setEmEdicao(c)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => removerMut.mutate(c)}
+                    disabled={removerMut.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : !criando ? (
+          <p className="text-xs text-muted-foreground">
+            Você ainda não criou cards. Toque em <strong>Novo card</strong> para incluir pergunta,
+            resposta e imagem.
+          </p>
+        ) : null}
+      </section>
+
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Layers className="size-4 text-primary" />
@@ -127,8 +267,8 @@ function FlashcardsPage() {
 
       {!atual ? (
         <section className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhum flash card por aqui ainda. Inclua questões em <strong>Incluir</strong> ou anexe
-          provas com gabarito para gerar os cartões automaticamente.
+          Nenhum flash card por aqui ainda. Crie um card acima, inclua questões em{" "}
+          <strong>Incluir</strong> ou anexe provas com gabarito.
         </section>
       ) : (
         <section className="space-y-3">
@@ -159,6 +299,7 @@ function FlashcardsPage() {
                 {atual.explicacao ? (
                   <p className="text-xs text-muted-foreground">{atual.explicacao}</p>
                 ) : null}
+                {cardAtual ? <ImagemCard card={cardAtual} /> : null}
               </div>
             ) : (
               <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
