@@ -27,7 +27,12 @@ import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { lerVadeMecum } from "@/lib/vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 
-import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
+import {
+  aplicarGabaritoNaProva,
+  extrairQuestoesDePdf,
+  limparGabarito,
+  temGabarito,
+} from "@/lib/questoes-pdf";
 import {
   removerQuestoesDaProva,
   salvarQuestoesExtraidas,
@@ -82,8 +87,11 @@ function UploadCampo({
   arquivos: ArquivoAnexo[];
   onAdd: (anexos: ArquivoAnexo[]) => void;
   onRemove: (nome: string) => void;
-  /** Recebe o texto integral logo após a leitura (usado para extrair questões sem IA). */
-  onArquivoLido?: (nome: string, texto: string) => void;
+  /**
+   * Recebe o texto integral logo após a leitura (usado para extrair questões sem IA).
+   * Retornar "descartar" impede que o arquivo entre na lista (ex.: PDF só de gabarito).
+   */
+  onArquivoLido?: (nome: string, texto: string) => void | "descartar";
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
@@ -101,13 +109,17 @@ function UploadCampo({
         }
         // Texto integral no IndexedDB; no acervo fica só o trecho de contexto da IA.
         await salvarTextoAnexo(file.name, texto);
+        const resultado = texto ? onArquivoLido?.(file.name, texto) : undefined;
+        if (resultado === "descartar") {
+          await removerTextoAnexo(file.name);
+          continue;
+        }
         anexos.push({
           nome: file.name,
           texto: texto.slice(0, LIMITE_TRECHO_IA),
           chars: texto.length,
           paginas,
         });
-        if (texto) onArquivoLido?.(file.name, texto);
       } catch {
         toast.error(`Falha ao ler “${file.name}”.`);
         anexos.push({ nome: file.name, texto: "", chars: 0 });
@@ -205,6 +217,12 @@ function InclusaoPage() {
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
+  /** Gabarito solto lido de um PDF, aguardando o usuário dizer a qual prova pertence. */
+  const [gabaritoPendente, setGabaritoPendente] = useState<{
+    nome: string;
+    gabarito: Record<number, string>;
+  } | null>(null);
+  const [lendoGabarito, setLendoGabarito] = useState<string | null>(null);
 
   /** Assuntos do Detalhamento do edital para a matéria selecionada. */
   const assuntosDaMateria = useMemo(() => {
@@ -294,24 +312,79 @@ function InclusaoPage() {
     );
   };
 
+  /** Aplica um gabarito já lido a UMA prova específica (sem adivinhar). */
+  const vincularGabarito = (
+    prova: string,
+    nomeGabarito: string,
+    gabarito: Record<number, string>,
+  ) => {
+    const atual = lerAcervo();
+    if (!Object.keys(gabarito).length) {
+      toast.warning(`Nenhuma resposta reconhecida em “${nomeGabarito}”.`);
+      return;
+    }
+    const res = aplicarGabaritoNaProva(atual.extraidas, gabarito, prova);
+    atualizar({
+      extraidas: res.questoes,
+      provas: atual.provas.map((a) => (a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a)),
+    });
+    salvarNoBanco(res.questoes.filter((q) => q.prova === prova));
+    setGabaritoPendente(null);
+    toast.success(
+      `Gabarito de “${nomeGabarito}” aplicado a ${res.aplicadas} questão(ões) de “${prova}”.`,
+    );
+    if (res.naoCasadas.length) {
+      toast.warning(
+        `${res.naoCasadas.length} resposta(s) não correspondem às questões desta prova. Confira se o gabarito é o certo.`,
+      );
+    }
+  };
+
+  /** Remove o vínculo do gabarito e zera as respostas daquela prova. */
+  const removerGabarito = (prova: string) => {
+    const atual = lerAcervo();
+    const questoes = limparGabarito(atual.extraidas, prova);
+    atualizar({
+      extraidas: questoes,
+      provas: atual.provas.map((a) =>
+        a.nome === prova ? { nome: a.nome, texto: a.texto, chars: a.chars, ...(a.paginas ? { paginas: a.paginas } : {}) } : a,
+      ),
+    });
+    salvarNoBanco(questoes.filter((q) => q.prova === prova));
+    toast.success(`Gabarito removido de “${prova}”.`);
+  };
+
+  /** Lê o PDF de gabarito escolhido dentro do cartão de uma prova. */
+  const lerGabaritoDaProva = async (prova: string, file: File) => {
+    setLendoGabarito(prova);
+    try {
+      const { texto } = await extrairTextoPdf(file);
+      if (!texto) {
+        toast.warning(`Não foi possível ler “${file.name}” (PDF escaneado).`);
+        return;
+      }
+      const res = extrairQuestoesDePdf(file.name, texto, edital, banca);
+      vincularGabarito(prova, file.name, res.gabarito);
+    } catch {
+      toast.error(`Falha ao ler “${file.name}”.`);
+    } finally {
+      setLendoGabarito(null);
+    }
+  };
+
   /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
-  const extrairDaProva = (nome: string, texto: string) => {
+  const extrairDaProva = (nome: string, texto: string): void | "descartar" => {
     const res = extrairQuestoesDePdf(nome, texto, edital, banca);
 
     if (res.soGabarito) {
-      const atual = lerAcervo().extraidas;
-      if (!atual.length) {
+      const provasSalvas = provasAnteriores(lerAcervo()).filter((p) => p.nome !== nome);
+      if (!provasSalvas.length) {
         toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
-        return;
+        return "descartar";
       }
-      const ultima = atual[atual.length - 1]?.prova;
-      const atualizadas = aplicarGabarito(atual, res.gabarito, ultima);
-      atualizar({ extraidas: atualizadas });
-      salvarNoBanco(atualizadas.filter((q) => !ultima || q.prova === ultima));
-      toast.success(
-        `Gabarito de “${nome}” aplicado a ${Object.keys(res.gabarito).length} questão(ões) da prova ${ultima ?? ""}.`,
-      );
-      return;
+      setGabaritoPendente({ nome, gabarito: res.gabarito });
+      toast.info(`“${nome}” é um gabarito. Escolha a qual prova ele pertence.`);
+      return "descartar";
     }
 
     if (!res.questoes.length) {
@@ -328,6 +401,7 @@ function InclusaoPage() {
       `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) e salvas no seu banco, sem gastar IA.`,
     );
   };
+
 
   /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
   const extrairLeiColada = () => {
@@ -580,20 +654,124 @@ function InclusaoPage() {
           }
         />
 
-        <UploadCampo
-          label="Provas anteriores por banca (PDF)"
-          ajuda="O texto é lido e as questões são extraídas automaticamente, sem gastar IA. Pode anexar também o PDF só do gabarito."
-          arquivos={provas}
-          onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
-          onRemove={(nome) => {
-            atualizar({
-              provas: acervo.provas.filter((a) => a.nome !== nome),
-              extraidas: acervo.extraidas.filter((q) => q.prova !== nome),
-            });
-            void removerBanco({ data: { prova: nome } }).catch(() => {});
-          }}
-          onArquivoLido={extrairDaProva}
-        />
+        <div className="space-y-3">
+          <UploadCampo
+            label="Provas anteriores e gabaritos (PDF)"
+            ajuda="Anexe o PDF da prova: as questões são extraídas sem gastar IA. O gabarito é anexado dentro do cartão da prova, então nunca cai na prova errada."
+            arquivos={[]}
+            onAdd={(anexos) => atualizar({ provas: [...lerAcervo().provas, ...anexos] })}
+            onRemove={() => {}}
+            onArquivoLido={extrairDaProva}
+          />
+
+          {gabaritoPendente && (
+            <div className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-xs font-semibold">
+                “{gabaritoPendente.nome}” é um gabarito ({Object.keys(gabaritoPendente.gabarito).length}{" "}
+                respostas). A qual prova pertence?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {provas.map((p) => (
+                  <Button
+                    key={p.nome}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      vincularGabarito(p.nome, gabaritoPendente.nome, gabaritoPendente.gabarito)
+                    }
+                  >
+                    {p.nome}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setGabaritoPendente(null)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {provas.map((p) => {
+            const daProva = acervo.extraidas.filter((q) => q.prova === p.nome);
+            const comGab = daProva.filter(temGabarito).length;
+            return (
+              <div key={p.nome} className="space-y-2 rounded-lg border border-border bg-secondary/40 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">{p.nome}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {daProva.length} questão(ões) · {comGab} com gabarito
+                      {daProva.length - comGab > 0 ? ` · ${daProva.length - comGab} sem` : ""}
+                      {p.chars ? "" : " · sem texto lido — reanexe o PDF"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remover prova ${p.nome}`}
+                    onClick={() => {
+                      void removerTextoAnexo(p.nome);
+                      atualizar({
+                        provas: acervo.provas.filter((a) => a.nome !== p.nome),
+                        extraidas: acervo.extraidas.filter((q) => q.prova !== p.nome),
+                      });
+                      void removerBanco({ data: { prova: p.nome } }).catch(() => {});
+                    }}
+                  >
+                    <Trash2 className="size-3.5 text-destructive" />
+                  </button>
+                </div>
+
+                {p.gabaritoNome ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[11px]">
+                    <span className="min-w-0 flex-1 truncate">
+                      Gabarito: {p.gabaritoNome}
+                      <span className="ml-2 font-semibold text-primary">
+                        {comGab} resposta(s) aplicada(s)
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="text-destructive"
+                      onClick={() => removerGabarito(p.nome)}
+                    >
+                      remover
+                    </button>
+                  </div>
+                ) : (
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void lerGabaritoDaProva(p.nome, file);
+                      }}
+                    />
+                    <span className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] font-semibold">
+                      {lendoGabarito === p.nome ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" /> Lendo o gabarito…
+                        </>
+                      ) : (
+                        <>
+                          <FileUp className="size-3.5" /> Anexar gabarito desta prova
+                        </>
+                      )}
+                    </span>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
 
         <UploadCampo
           label="Upload de edital (PDF)"

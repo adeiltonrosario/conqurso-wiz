@@ -20,6 +20,8 @@ export type ArquivoAnexo = {
   texto: string;
   chars: number;
   paginas?: number;
+  /** Nome do PDF de gabarito vinculado a esta prova (quando houver). */
+  gabaritoNome?: string;
 };
 
 
@@ -60,6 +62,7 @@ function normalizarAnexos(valor: unknown): ArquivoAnexo[] {
           texto,
           chars: typeof a.chars === "number" ? a.chars : texto.length,
           ...(typeof a.paginas === "number" ? { paginas: a.paginas } : {}),
+          ...(typeof a.gabaritoNome === "string" ? { gabaritoNome: a.gabaritoNome } : {}),
         };
       }
       return null;

@@ -212,6 +212,60 @@ export function aplicarGabarito(
   });
 }
 
+export type ResultadoGabarito = {
+  questoes: Questao[];
+  /** Quantas questões da prova receberam resposta. */
+  aplicadas: number;
+  /** Números do gabarito que não existem nessa prova (provável gabarito trocado). */
+  naoCasadas: number[];
+};
+
+/**
+ * Aplica o gabarito somente às questões da prova indicada, informando o que
+ * casou e o que não casou (sem adivinhar a prova).
+ */
+export function aplicarGabaritoNaProva(
+  questoes: Questao[],
+  gabarito: Record<number, string>,
+  prova: string,
+): ResultadoGabarito {
+  const numeros = new Set(
+    questoes.filter((q) => q.prova === prova && q.numero).map((q) => q.numero as number),
+  );
+  const naoCasadas = Object.keys(gabarito)
+    .map((n) => Number(n))
+    .filter((n) => !numeros.has(n));
+
+  let aplicadas = 0;
+  const atualizadas = questoes.map((q) => {
+    if (q.prova !== prova) return q;
+    const letra = q.numero ? gabarito[q.numero] : undefined;
+    if (!letra) return q;
+    aplicadas++;
+    return {
+      ...q,
+      alternativas: q.alternativas.map((a) => ({
+        ...a,
+        correta:
+          a.letra === letra ||
+          (letra === "C" && a.letra === "Certo") ||
+          (letra === "E" && a.letra === "Errado"),
+      })),
+    };
+  });
+
+  return { questoes: atualizadas, aplicadas, naoCasadas };
+}
+
+/** Zera as respostas das questões de uma prova (mantendo enunciado e alternativas). */
+export function limparGabarito(questoes: Questao[], prova: string): Questao[] {
+  return questoes.map((q) =>
+    q.prova === prova
+      ? { ...q, alternativas: q.alternativas.map((a) => ({ ...a, correta: false })) }
+      : q,
+  );
+}
+
 export function temGabarito(q: Questao) {
   return q.alternativas.some((a) => a.correta);
 }
