@@ -373,20 +373,18 @@ function InclusaoPage() {
   };
 
   /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
-  const extrairDaProva = (nome: string, texto: string) => {
+  const extrairDaProva = (nome: string, texto: string): void | "descartar" => {
     const res = extrairQuestoesDePdf(nome, texto, edital, banca);
 
     if (res.soGabarito) {
       const provasSalvas = provasAnteriores(lerAcervo()).filter((p) => p.nome !== nome);
-      atualizar({ provas: lerAcervo().provas.filter((a) => a.nome !== nome) });
-      void removerTextoAnexo(nome);
       if (!provasSalvas.length) {
         toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
-        return;
+        return "descartar";
       }
       setGabaritoPendente({ nome, gabarito: res.gabarito });
       toast.info(`“${nome}” é um gabarito. Escolha a qual prova ele pertence.`);
-      return;
+      return "descartar";
     }
 
     if (!res.questoes.length) {
