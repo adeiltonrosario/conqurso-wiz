@@ -199,6 +199,117 @@ function UploadCampo({
   );
 }
 
+/** Inclusão de prova e gabarito no MESMO passo — evita gabarito na prova errada. */
+function IncluirProva({
+  lendo,
+  onIncluir,
+}: {
+  lendo: boolean;
+  onIncluir: (prova: File, gabarito: File | null) => void;
+}) {
+  const refProva = useRef<HTMLInputElement>(null);
+  const refGab = useRef<HTMLInputElement>(null);
+  const [prova, setProva] = useState<File | null>(null);
+  const [gabarito, setGabarito] = useState<File | null>(null);
+
+  const campo = (
+    titulo: string,
+    arquivo: File | null,
+    ref: React.RefObject<HTMLInputElement | null>,
+    limpar: () => void,
+    opcional?: boolean,
+  ) => (
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+        {opcional && <span className="ml-1 font-normal normal-case">(opcional)</span>}
+      </p>
+      {arquivo ? (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs">
+          <span className="min-w-0 flex-1 truncate">{arquivo.name}</span>
+          <button type="button" onClick={limpar} aria-label={`Remover ${arquivo.name}`}>
+            <Trash2 className="size-3.5 text-destructive" />
+          </button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={lendo}
+          onClick={() => ref.current?.click()}
+        >
+          <FileUp className="mr-2 size-3.5" /> Selecionar PDF
+        </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-card p-3">
+      <div>
+        <Label>Incluir prova anterior (PDF)</Label>
+        <p className="text-xs text-muted-foreground">
+          Escolha a prova e, no mesmo passo, o gabarito dela. As questões são extraídas sem gastar
+          IA e o gabarito é aplicado só a esta prova.
+        </p>
+      </div>
+
+      <input
+        ref={refProva}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          e.target.value = "";
+          setProva(f);
+        }}
+      />
+      <input
+        ref={refGab}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          e.target.value = "";
+          setGabarito(f);
+        }}
+      />
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {campo("Prova", prova, refProva, () => setProva(null))}
+        {campo("Gabarito", gabarito, refGab, () => setGabarito(null), true)}
+      </div>
+
+      <Button
+        type="button"
+        className="w-full"
+        disabled={!prova || lendo}
+        onClick={() => {
+          if (!prova) return;
+          onIncluir(prova, gabarito);
+          setProva(null);
+          setGabarito(null);
+        }}
+      >
+        {lendo ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" /> Lendo os PDFs…
+          </>
+        ) : (
+          <>
+            <ListPlus className="mr-2 size-4" /> Incluir prova e gabarito
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+
 function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
