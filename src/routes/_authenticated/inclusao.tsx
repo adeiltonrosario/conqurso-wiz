@@ -27,7 +27,12 @@ import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { lerVadeMecum } from "@/lib/vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 
-import { aplicarGabarito, extrairQuestoesDePdf } from "@/lib/questoes-pdf";
+import {
+  aplicarGabaritoNaProva,
+  extrairQuestoesDePdf,
+  limparGabarito,
+  temGabarito,
+} from "@/lib/questoes-pdf";
 import {
   removerQuestoesDaProva,
   salvarQuestoesExtraidas,
