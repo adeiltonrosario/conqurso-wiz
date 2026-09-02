@@ -328,12 +328,9 @@ function InclusaoPage() {
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
-  /** Gabarito solto lido de um PDF, aguardando o usuário dizer a qual prova pertence. */
-  const [gabaritoPendente, setGabaritoPendente] = useState<{
-    nome: string;
-    gabarito: Record<number, string>;
-  } | null>(null);
+  const [incluindoProva, setIncluindoProva] = useState(false);
   const [lendoGabarito, setLendoGabarito] = useState<string | null>(null);
+
 
   /** Assuntos do Detalhamento do edital para a matéria selecionada. */
   const assuntosDaMateria = useMemo(() => {
