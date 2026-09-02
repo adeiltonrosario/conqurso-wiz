@@ -726,47 +726,53 @@ function InclusaoPage() {
                   </button>
                 </div>
 
-                {p.gabaritoNome ? (
-                  <div className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[11px]">
-                    <span className="min-w-0 flex-1 truncate">
-                      Gabarito: {p.gabaritoNome}
-                      <span className="ml-2 font-semibold text-primary">
-                        {comGab} resposta(s) aplicada(s)
+                <div className="space-y-1.5 border-t border-border pt-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Gabarito desta prova
+                  </p>
+                  {p.gabaritoNome ? (
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[11px]">
+                      <span className="min-w-0 flex-1 truncate">
+                        {p.gabaritoNome}
+                        <span className="ml-2 font-semibold text-primary">
+                          {comGab} resposta(s) aplicada(s)
+                        </span>
                       </span>
-                    </span>
-                    <button
-                      type="button"
-                      className="text-destructive"
-                      onClick={() => removerGabarito(p.nome)}
-                    >
-                      remover
-                    </button>
-                  </div>
-                ) : (
-                  <label className="block">
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) void lerGabaritoDaProva(p.nome, file);
-                      }}
-                    />
-                    <span className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] font-semibold">
-                      {lendoGabarito === p.nome ? (
-                        <>
-                          <Loader2 className="size-3.5 animate-spin" /> Lendo o gabarito…
-                        </>
-                      ) : (
-                        <>
-                          <FileUp className="size-3.5" /> Anexar gabarito desta prova
-                        </>
-                      )}
-                    </span>
-                  </label>
-                )}
+                      <button
+                        type="button"
+                        className="text-destructive"
+                        onClick={() => removerGabarito(p.nome)}
+                      >
+                        remover
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) void lerGabaritoDaProva(p.nome, file);
+                        }}
+                      />
+                      <span className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] font-semibold">
+                        {lendoGabarito === p.nome ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" /> Lendo o gabarito…
+                          </>
+                        ) : (
+                          <>
+                            <FileUp className="size-3.5" /> Anexar gabarito desta prova
+                          </>
+                        )}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
               </div>
             );
           })}
