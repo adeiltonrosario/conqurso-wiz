@@ -20,6 +20,8 @@ export type ArquivoAnexo = {
   texto: string;
   chars: number;
   paginas?: number;
+  /** Nome do PDF de gabarito vinculado a esta prova (quando houver). */
+  gabaritoNome?: string;
 };
 
 
