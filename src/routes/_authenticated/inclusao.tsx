@@ -199,6 +199,117 @@ function UploadCampo({
   );
 }
 
+/** Inclusão de prova e gabarito no MESMO passo — evita gabarito na prova errada. */
+function IncluirProva({
+  lendo,
+  onIncluir,
+}: {
+  lendo: boolean;
+  onIncluir: (prova: File, gabarito: File | null) => void;
+}) {
+  const refProva = useRef<HTMLInputElement>(null);
+  const refGab = useRef<HTMLInputElement>(null);
+  const [prova, setProva] = useState<File | null>(null);
+  const [gabarito, setGabarito] = useState<File | null>(null);
+
+  const campo = (
+    titulo: string,
+    arquivo: File | null,
+    ref: React.RefObject<HTMLInputElement | null>,
+    limpar: () => void,
+    opcional?: boolean,
+  ) => (
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+        {opcional && <span className="ml-1 font-normal normal-case">(opcional)</span>}
+      </p>
+      {arquivo ? (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs">
+          <span className="min-w-0 flex-1 truncate">{arquivo.name}</span>
+          <button type="button" onClick={limpar} aria-label={`Remover ${arquivo.name}`}>
+            <Trash2 className="size-3.5 text-destructive" />
+          </button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={lendo}
+          onClick={() => ref.current?.click()}
+        >
+          <FileUp className="mr-2 size-3.5" /> Selecionar PDF
+        </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-card p-3">
+      <div>
+        <Label>Incluir prova anterior (PDF)</Label>
+        <p className="text-xs text-muted-foreground">
+          Escolha a prova e, no mesmo passo, o gabarito dela. As questões são extraídas sem gastar
+          IA e o gabarito é aplicado só a esta prova.
+        </p>
+      </div>
+
+      <input
+        ref={refProva}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          e.target.value = "";
+          setProva(f);
+        }}
+      />
+      <input
+        ref={refGab}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          e.target.value = "";
+          setGabarito(f);
+        }}
+      />
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {campo("Prova", prova, refProva, () => setProva(null))}
+        {campo("Gabarito", gabarito, refGab, () => setGabarito(null), true)}
+      </div>
+
+      <Button
+        type="button"
+        className="w-full"
+        disabled={!prova || lendo}
+        onClick={() => {
+          if (!prova) return;
+          onIncluir(prova, gabarito);
+          setProva(null);
+          setGabarito(null);
+        }}
+      >
+        {lendo ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" /> Lendo os PDFs…
+          </>
+        ) : (
+          <>
+            <ListPlus className="mr-2 size-4" /> Incluir prova e gabarito
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+
 function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
@@ -217,12 +328,9 @@ function InclusaoPage() {
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
-  /** Gabarito solto lido de um PDF, aguardando o usuário dizer a qual prova pertence. */
-  const [gabaritoPendente, setGabaritoPendente] = useState<{
-    nome: string;
-    gabarito: Record<number, string>;
-  } | null>(null);
+  const [incluindoProva, setIncluindoProva] = useState(false);
   const [lendoGabarito, setLendoGabarito] = useState<string | null>(null);
+
 
   /** Assuntos do Detalhamento do edital para a matéria selecionada. */
   const assuntosDaMateria = useMemo(() => {
@@ -329,7 +437,7 @@ function InclusaoPage() {
       provas: atual.provas.map((a) => (a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a)),
     });
     salvarNoBanco(res.questoes.filter((q) => q.prova === prova));
-    setGabaritoPendente(null);
+    
     toast.success(
       `Gabarito de “${nomeGabarito}” aplicado a ${res.aplicadas} questão(ões) de “${prova}”.`,
     );
@@ -372,35 +480,67 @@ function InclusaoPage() {
     }
   };
 
-  /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
-  const extrairDaProva = (nome: string, texto: string): void | "descartar" => {
-    const res = extrairQuestoesDePdf(nome, texto, edital, banca);
-
-    if (res.soGabarito) {
-      const provasSalvas = provasAnteriores(lerAcervo()).filter((p) => p.nome !== nome);
-      if (!provasSalvas.length) {
-        toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
-        return "descartar";
+  /** Inclui prova + gabarito juntos: extrai as questões (sem IA) e aplica o gabarito à prova. */
+  const incluirProva = async (arquivoProva: File, arquivoGabarito: File | null) => {
+    setIncluindoProva(true);
+    try {
+      const nome = arquivoProva.name;
+      const { texto, paginas } = await extrairTextoPdf(arquivoProva);
+      if (!texto) {
+        toast.warning(
+          `Não foi possível ler o texto de “${nome}” (PDF escaneado). Use a Análise de padrões com imagem.`,
+        );
+        return;
       }
-      setGabaritoPendente({ nome, gabarito: res.gabarito });
-      toast.info(`“${nome}” é um gabarito. Escolha a qual prova ele pertence.`);
-      return "descartar";
-    }
 
-    if (!res.questoes.length) {
-      toast.warning(
-        `Nenhuma questão reconhecida em “${nome}”. Se o PDF for escaneado, use a Análise de padrões com imagem.`,
-      );
-      return;
-    }
+      const res = extrairQuestoesDePdf(nome, texto, edital, banca);
+      if (res.soGabarito) {
+        toast.error(
+          `“${nome}” parece ser só o gabarito. Coloque-o no campo “Gabarito” e escolha o PDF da prova.`,
+        );
+        return;
+      }
 
-    const restantes = lerAcervo().extraidas.filter((q) => q.prova !== nome);
-    atualizar({ extraidas: [...restantes, ...res.questoes] });
-    salvarNoBanco(res.questoes);
-    toast.success(
-      `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) e salvas no seu banco, sem gastar IA.`,
-    );
+      await salvarTextoAnexo(nome, texto);
+      const atual = lerAcervo();
+      const anexo: ArquivoAnexo = {
+        nome,
+        texto: texto.slice(0, LIMITE_TRECHO_IA),
+        chars: texto.length,
+        ...(paginas ? { paginas } : {}),
+      };
+      atualizar({
+        provas: [...atual.provas.filter((a) => a.nome !== nome), anexo],
+        extraidas: [...atual.extraidas.filter((q) => q.prova !== nome), ...res.questoes],
+      });
+
+      if (!res.questoes.length) {
+        toast.warning(
+          `Nenhuma questão reconhecida em “${nome}”. Se o PDF for escaneado, use a Análise de padrões com imagem.`,
+        );
+      } else {
+        salvarNoBanco(res.questoes);
+        toast.success(
+          `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito), sem gastar IA.`,
+        );
+      }
+
+      if (arquivoGabarito) {
+        const lido = await extrairTextoPdf(arquivoGabarito);
+        if (!lido.texto) {
+          toast.warning(`Não foi possível ler “${arquivoGabarito.name}” (PDF escaneado).`);
+          return;
+        }
+        const gab = extrairQuestoesDePdf(arquivoGabarito.name, lido.texto, edital, banca);
+        vincularGabarito(nome, arquivoGabarito.name, gab.gabarito);
+      }
+    } catch {
+      toast.error("Falha ao ler os PDFs escolhidos.");
+    } finally {
+      setIncluindoProva(false);
+    }
   };
+
 
 
   /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
@@ -655,46 +795,8 @@ function InclusaoPage() {
         />
 
         <div className="space-y-3">
-          <UploadCampo
-            label="Provas anteriores e gabaritos (PDF)"
-            ajuda="Anexe o PDF da prova: as questões são extraídas sem gastar IA. O gabarito é anexado dentro do cartão da prova, então nunca cai na prova errada."
-            arquivos={[]}
-            onAdd={(anexos) => atualizar({ provas: [...lerAcervo().provas, ...anexos] })}
-            onRemove={() => {}}
-            onArquivoLido={extrairDaProva}
-          />
+          <IncluirProva lendo={incluindoProva} onIncluir={(p, g) => void incluirProva(p, g)} />
 
-          {gabaritoPendente && (
-            <div className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
-              <p className="text-xs font-semibold">
-                “{gabaritoPendente.nome}” é um gabarito ({Object.keys(gabaritoPendente.gabarito).length}{" "}
-                respostas). A qual prova pertence?
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {provas.map((p) => (
-                  <Button
-                    key={p.nome}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      vincularGabarito(p.nome, gabaritoPendente.nome, gabaritoPendente.gabarito)
-                    }
-                  >
-                    {p.nome}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setGabaritoPendente(null)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
 
           {provas.map((p) => {
             const daProva = acervo.extraidas.filter((q) => q.prova === p.nome);
