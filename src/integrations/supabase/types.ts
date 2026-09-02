@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      cards_estudo: {
+        Row: {
+          assunto: string | null
+          atualizado_em: string
+          criado_em: string
+          explicacao: string | null
+          id: string
+          imagem_path: string | null
+          imagem_url: string | null
+          materia: string | null
+          pergunta: string
+          resposta: string
+          user_id: string
+        }
+        Insert: {
+          assunto?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          explicacao?: string | null
+          id?: string
+          imagem_path?: string | null
+          imagem_url?: string | null
+          materia?: string | null
+          pergunta: string
+          resposta: string
+          user_id: string
+        }
+        Update: {
+          assunto?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          explicacao?: string | null
+          id?: string
+          imagem_path?: string | null
+          imagem_url?: string | null
+          materia?: string | null
+          pergunta?: string
+          resposta?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       estado_estudo: {
         Row: {
           atualizado_em: string
