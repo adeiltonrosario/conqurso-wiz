@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as AuthenticatedAnalisePadroesRouteImport } from './routes/_authenticated/analise-padroes'
+import { Route as AuthenticatedFlashcardsRouteImport } from './routes/_authenticated/flashcards'
 import { Route as AuthenticatedInclusaoRouteImport } from './routes/_authenticated/inclusao'
 import { Route as AuthenticatedLeisRouteImport } from './routes/_authenticated/leis'
 import { Route as AuthenticatedProvaInterativaRouteImport } from './routes/_authenticated/prova-interativa'
@@ -47,6 +48,11 @@ const AuthenticatedAnalisePadroesRoute =
     path: '/analise-padroes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFlashcardsRoute = AuthenticatedFlashcardsRouteImport.update({
+  id: '/flashcards',
+  path: '/flashcards',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInclusaoRoute = AuthenticatedInclusaoRouteImport.update({
   id: '/inclusao',
   path: '/inclusao',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/flashcards': typeof AuthenticatedFlashcardsRoute
   '/inclusao': typeof AuthenticatedInclusaoRoute
   '/leis': typeof AuthenticatedLeisRoute
   '/prova-interativa': typeof AuthenticatedProvaInterativaRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/flashcards': typeof AuthenticatedFlashcardsRoute
   '/inclusao': typeof AuthenticatedInclusaoRoute
   '/leis': typeof AuthenticatedLeisRoute
   '/prova-interativa': typeof AuthenticatedProvaInterativaRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_authenticated/analise-padroes': typeof AuthenticatedAnalisePadroesRoute
+  '/_authenticated/flashcards': typeof AuthenticatedFlashcardsRoute
   '/_authenticated/inclusao': typeof AuthenticatedInclusaoRoute
   '/_authenticated/leis': typeof AuthenticatedLeisRoute
   '/_authenticated/prova-interativa': typeof AuthenticatedProvaInterativaRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/redefinir-senha'
     | '/analise-padroes'
+    | '/flashcards'
     | '/inclusao'
     | '/leis'
     | '/prova-interativa'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/redefinir-senha'
     | '/analise-padroes'
+    | '/flashcards'
     | '/inclusao'
     | '/leis'
     | '/prova-interativa'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/redefinir-senha'
     | '/_authenticated/analise-padroes'
+    | '/_authenticated/flashcards'
     | '/_authenticated/inclusao'
     | '/_authenticated/leis'
     | '/_authenticated/prova-interativa'
@@ -210,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: '/analise-padroes'
       fullPath: '/analise-padroes'
       preLoaderRoute: typeof AuthenticatedAnalisePadroesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/flashcards': {
+      id: '/_authenticated/flashcards'
+      path: '/flashcards'
+      fullPath: '/flashcards'
+      preLoaderRoute: typeof AuthenticatedFlashcardsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inclusao': {
@@ -266,6 +285,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisePadroesRoute: typeof AuthenticatedAnalisePadroesRoute
+  AuthenticatedFlashcardsRoute: typeof AuthenticatedFlashcardsRoute
   AuthenticatedInclusaoRoute: typeof AuthenticatedInclusaoRoute
   AuthenticatedLeisRoute: typeof AuthenticatedLeisRoute
   AuthenticatedProvaInterativaRoute: typeof AuthenticatedProvaInterativaRoute
@@ -277,6 +297,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalisePadroesRoute: AuthenticatedAnalisePadroesRoute,
+  AuthenticatedFlashcardsRoute: AuthenticatedFlashcardsRoute,
   AuthenticatedInclusaoRoute: AuthenticatedInclusaoRoute,
   AuthenticatedLeisRoute: AuthenticatedLeisRoute,
   AuthenticatedProvaInterativaRoute: AuthenticatedProvaInterativaRoute,

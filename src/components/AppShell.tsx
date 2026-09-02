@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, LogIn, LogOut } from "lucide-react";
+import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, Layers, LogIn, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { limparEstadoLocal } from "@/lib/sync";
@@ -13,6 +13,7 @@ const NAV = [
   { to: "/inclusao", label: "Incluir", icon: FilePlus2 },
   { to: "/analise-padroes", label: "Padrões", icon: ScanSearch },
   { to: "/questoes", label: "Questões", icon: ListChecks },
+  { to: "/flashcards", label: "Cards", icon: Layers },
   { to: "/revisao", label: "Revisão", icon: Brain },
   { to: "/prova-interativa", label: "Prova", icon: FileText },
 ] as const;
