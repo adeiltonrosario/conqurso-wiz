@@ -437,7 +437,7 @@ function InclusaoPage() {
       provas: atual.provas.map((a) => (a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a)),
     });
     salvarNoBanco(res.questoes.filter((q) => q.prova === prova));
-    setGabaritoPendente(null);
+    
     toast.success(
       `Gabarito de “${nomeGabarito}” aplicado a ${res.aplicadas} questão(ões) de “${prova}”.`,
     );
