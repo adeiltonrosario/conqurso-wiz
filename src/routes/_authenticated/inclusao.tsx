@@ -294,23 +294,80 @@ function InclusaoPage() {
     );
   };
 
+  /** Aplica um gabarito já lido a UMA prova específica (sem adivinhar). */
+  const vincularGabarito = (
+    prova: string,
+    nomeGabarito: string,
+    gabarito: Record<number, string>,
+  ) => {
+    const atual = lerAcervo();
+    if (!Object.keys(gabarito).length) {
+      toast.warning(`Nenhuma resposta reconhecida em “${nomeGabarito}”.`);
+      return;
+    }
+    const res = aplicarGabaritoNaProva(atual.extraidas, gabarito, prova);
+    atualizar({
+      extraidas: res.questoes,
+      provas: atual.provas.map((a) => (a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a)),
+    });
+    salvarNoBanco(res.questoes.filter((q) => q.prova === prova));
+    setGabaritoPendente(null);
+    toast.success(
+      `Gabarito de “${nomeGabarito}” aplicado a ${res.aplicadas} questão(ões) de “${prova}”.`,
+    );
+    if (res.naoCasadas.length) {
+      toast.warning(
+        `${res.naoCasadas.length} resposta(s) não correspondem às questões desta prova. Confira se o gabarito é o certo.`,
+      );
+    }
+  };
+
+  /** Remove o vínculo do gabarito e zera as respostas daquela prova. */
+  const removerGabarito = (prova: string) => {
+    const atual = lerAcervo();
+    const questoes = limparGabarito(atual.extraidas, prova);
+    atualizar({
+      extraidas: questoes,
+      provas: atual.provas.map((a) =>
+        a.nome === prova ? { nome: a.nome, texto: a.texto, chars: a.chars, ...(a.paginas ? { paginas: a.paginas } : {}) } : a,
+      ),
+    });
+    salvarNoBanco(questoes.filter((q) => q.prova === prova));
+    toast.success(`Gabarito removido de “${prova}”.`);
+  };
+
+  /** Lê o PDF de gabarito escolhido dentro do cartão de uma prova. */
+  const lerGabaritoDaProva = async (prova: string, file: File) => {
+    setLendoGabarito(prova);
+    try {
+      const { texto } = await extrairTextoPdf(file);
+      if (!texto) {
+        toast.warning(`Não foi possível ler “${file.name}” (PDF escaneado).`);
+        return;
+      }
+      const res = extrairQuestoesDePdf(file.name, texto, edital, banca);
+      vincularGabarito(prova, file.name, res.gabarito);
+    } catch {
+      toast.error(`Falha ao ler “${file.name}”.`);
+    } finally {
+      setLendoGabarito(null);
+    }
+  };
+
   /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
   const extrairDaProva = (nome: string, texto: string) => {
     const res = extrairQuestoesDePdf(nome, texto, edital, banca);
 
     if (res.soGabarito) {
-      const atual = lerAcervo().extraidas;
-      if (!atual.length) {
+      const provasSalvas = provasAnteriores(lerAcervo()).filter((p) => p.nome !== nome);
+      atualizar({ provas: lerAcervo().provas.filter((a) => a.nome !== nome) });
+      void removerTextoAnexo(nome);
+      if (!provasSalvas.length) {
         toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
         return;
       }
-      const ultima = atual[atual.length - 1]?.prova;
-      const atualizadas = aplicarGabarito(atual, res.gabarito, ultima);
-      atualizar({ extraidas: atualizadas });
-      salvarNoBanco(atualizadas.filter((q) => !ultima || q.prova === ultima));
-      toast.success(
-        `Gabarito de “${nome}” aplicado a ${Object.keys(res.gabarito).length} questão(ões) da prova ${ultima ?? ""}.`,
-      );
+      setGabaritoPendente({ nome, gabarito: res.gabarito });
+      toast.info(`“${nome}” é um gabarito. Escolha a qual prova ele pertence.`);
       return;
     }
 
@@ -328,6 +385,7 @@ function InclusaoPage() {
       `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) e salvas no seu banco, sem gastar IA.`,
     );
   };
+
 
   /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
   const extrairLeiColada = () => {
