@@ -13,6 +13,7 @@ const NAV = [
   { to: "/inclusao", label: "Incluir", icon: FilePlus2 },
   { to: "/analise-padroes", label: "Padrões", icon: ScanSearch },
   { to: "/questoes", label: "Questões", icon: ListChecks },
+  { to: "/flashcards", label: "Cards", icon: Layers },
   { to: "/revisao", label: "Revisão", icon: Brain },
   { to: "/prova-interativa", label: "Prova", icon: FileText },
 ] as const;
