@@ -649,20 +649,124 @@ function InclusaoPage() {
           }
         />
 
-        <UploadCampo
-          label="Provas anteriores por banca (PDF)"
-          ajuda="O texto é lido e as questões são extraídas automaticamente, sem gastar IA. Pode anexar também o PDF só do gabarito."
-          arquivos={provas}
-          onAdd={(anexos) => atualizar({ provas: [...acervo.provas, ...anexos] })}
-          onRemove={(nome) => {
-            atualizar({
-              provas: acervo.provas.filter((a) => a.nome !== nome),
-              extraidas: acervo.extraidas.filter((q) => q.prova !== nome),
-            });
-            void removerBanco({ data: { prova: nome } }).catch(() => {});
-          }}
-          onArquivoLido={extrairDaProva}
-        />
+        <div className="space-y-3">
+          <UploadCampo
+            label="Provas anteriores e gabaritos (PDF)"
+            ajuda="Anexe o PDF da prova: as questões são extraídas sem gastar IA. O gabarito é anexado dentro do cartão da prova, então nunca cai na prova errada."
+            arquivos={[]}
+            onAdd={(anexos) => atualizar({ provas: [...lerAcervo().provas, ...anexos] })}
+            onRemove={() => {}}
+            onArquivoLido={extrairDaProva}
+          />
+
+          {gabaritoPendente && (
+            <div className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-xs font-semibold">
+                “{gabaritoPendente.nome}” é um gabarito ({Object.keys(gabaritoPendente.gabarito).length}{" "}
+                respostas). A qual prova pertence?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {provas.map((p) => (
+                  <Button
+                    key={p.nome}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      vincularGabarito(p.nome, gabaritoPendente.nome, gabaritoPendente.gabarito)
+                    }
+                  >
+                    {p.nome}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setGabaritoPendente(null)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {provas.map((p) => {
+            const daProva = acervo.extraidas.filter((q) => q.prova === p.nome);
+            const comGab = daProva.filter(temGabarito).length;
+            return (
+              <div key={p.nome} className="space-y-2 rounded-lg border border-border bg-secondary/40 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">{p.nome}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {daProva.length} questão(ões) · {comGab} com gabarito
+                      {daProva.length - comGab > 0 ? ` · ${daProva.length - comGab} sem` : ""}
+                      {p.chars ? "" : " · sem texto lido — reanexe o PDF"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remover prova ${p.nome}`}
+                    onClick={() => {
+                      void removerTextoAnexo(p.nome);
+                      atualizar({
+                        provas: acervo.provas.filter((a) => a.nome !== p.nome),
+                        extraidas: acervo.extraidas.filter((q) => q.prova !== p.nome),
+                      });
+                      void removerBanco({ data: { prova: p.nome } }).catch(() => {});
+                    }}
+                  >
+                    <Trash2 className="size-3.5 text-destructive" />
+                  </button>
+                </div>
+
+                {p.gabaritoNome ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[11px]">
+                    <span className="min-w-0 flex-1 truncate">
+                      Gabarito: {p.gabaritoNome}
+                      <span className="ml-2 font-semibold text-primary">
+                        {comGab} resposta(s) aplicada(s)
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="text-destructive"
+                      onClick={() => removerGabarito(p.nome)}
+                    >
+                      remover
+                    </button>
+                  </div>
+                ) : (
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void lerGabaritoDaProva(p.nome, file);
+                      }}
+                    />
+                    <span className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] font-semibold">
+                      {lendoGabarito === p.nome ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" /> Lendo o gabarito…
+                        </>
+                      ) : (
+                        <>
+                          <FileUp className="size-3.5" /> Anexar gabarito desta prova
+                        </>
+                      )}
+                    </span>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
 
         <UploadCampo
           label="Upload de edital (PDF)"
