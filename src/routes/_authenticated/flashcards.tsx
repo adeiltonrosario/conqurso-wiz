@@ -116,7 +116,7 @@ function FlashcardsPage() {
   }, [edital, acervo, meusCards]);
 
   const mapaCards = useMemo(
-    () => new Map(meusCards.map((c) => [`card:${c.id}`, c] as const)),
+    () => new Map<string, CardProprio>(meusCards.map((c) => [`card:${c.id}`, c])),
     [meusCards],
   );
 
