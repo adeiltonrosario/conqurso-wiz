@@ -483,35 +483,67 @@ function InclusaoPage() {
     }
   };
 
-  /** Extração automática das questões do PDF da prova — sem IA, sem crédito. */
-  const extrairDaProva = (nome: string, texto: string): void | "descartar" => {
-    const res = extrairQuestoesDePdf(nome, texto, edital, banca);
-
-    if (res.soGabarito) {
-      const provasSalvas = provasAnteriores(lerAcervo()).filter((p) => p.nome !== nome);
-      if (!provasSalvas.length) {
-        toast.warning(`“${nome}” parece ser só o gabarito. Anexe primeiro o PDF da prova.`);
-        return "descartar";
+  /** Inclui prova + gabarito juntos: extrai as questões (sem IA) e aplica o gabarito à prova. */
+  const incluirProva = async (arquivoProva: File, arquivoGabarito: File | null) => {
+    setIncluindoProva(true);
+    try {
+      const nome = arquivoProva.name;
+      const { texto, paginas } = await extrairTextoPdf(arquivoProva);
+      if (!texto) {
+        toast.warning(
+          `Não foi possível ler o texto de “${nome}” (PDF escaneado). Use a Análise de padrões com imagem.`,
+        );
+        return;
       }
-      setGabaritoPendente({ nome, gabarito: res.gabarito });
-      toast.info(`“${nome}” é um gabarito. Escolha a qual prova ele pertence.`);
-      return "descartar";
-    }
 
-    if (!res.questoes.length) {
-      toast.warning(
-        `Nenhuma questão reconhecida em “${nome}”. Se o PDF for escaneado, use a Análise de padrões com imagem.`,
-      );
-      return;
-    }
+      const res = extrairQuestoesDePdf(nome, texto, edital, banca);
+      if (res.soGabarito) {
+        toast.error(
+          `“${nome}” parece ser só o gabarito. Coloque-o no campo “Gabarito” e escolha o PDF da prova.`,
+        );
+        return;
+      }
 
-    const restantes = lerAcervo().extraidas.filter((q) => q.prova !== nome);
-    atualizar({ extraidas: [...restantes, ...res.questoes] });
-    salvarNoBanco(res.questoes);
-    toast.success(
-      `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito) e salvas no seu banco, sem gastar IA.`,
-    );
+      await salvarTextoAnexo(nome, texto);
+      const atual = lerAcervo();
+      const anexo: ArquivoAnexo = {
+        nome,
+        texto: texto.slice(0, LIMITE_TRECHO_IA),
+        chars: texto.length,
+        ...(paginas ? { paginas } : {}),
+      };
+      atualizar({
+        provas: [...atual.provas.filter((a) => a.nome !== nome), anexo],
+        extraidas: [...atual.extraidas.filter((q) => q.prova !== nome), ...res.questoes],
+      });
+
+      if (!res.questoes.length) {
+        toast.warning(
+          `Nenhuma questão reconhecida em “${nome}”. Se o PDF for escaneado, use a Análise de padrões com imagem.`,
+        );
+      } else {
+        salvarNoBanco(res.questoes);
+        toast.success(
+          `${nome} — ${res.questoes.length} questão(ões) extraídas (${res.comGabarito} com gabarito), sem gastar IA.`,
+        );
+      }
+
+      if (arquivoGabarito) {
+        const lido = await extrairTextoPdf(arquivoGabarito);
+        if (!lido.texto) {
+          toast.warning(`Não foi possível ler “${arquivoGabarito.name}” (PDF escaneado).`);
+          return;
+        }
+        const gab = extrairQuestoesDePdf(arquivoGabarito.name, lido.texto, edital, banca);
+        vincularGabarito(nome, arquivoGabarito.name, gab.gabarito);
+      }
+    } catch {
+      toast.error("Falha ao ler os PDFs escolhidos.");
+    } finally {
+      setIncluindoProva(false);
+    }
   };
+
 
 
   /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
