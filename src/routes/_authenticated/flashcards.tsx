@@ -40,7 +40,7 @@ function respostaCerta(q: Questao) {
 
 function FlashcardsPage() {
   const { edital } = useEdital();
-  const acervo = useAcervo();
+  const { acervo } = useAcervo();
   const [materia, setMateria] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
   const [virado, setVirado] = useState(false);
