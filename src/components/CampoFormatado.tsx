@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties } from "react";
+import { useRef, type ClipboardEvent, type CSSProperties } from "react";
 import { Eraser } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Marcado } from "@/components/Marcado";
