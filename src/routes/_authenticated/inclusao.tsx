@@ -647,11 +647,12 @@ function InclusaoPage() {
 
         <div className="space-y-2">
           <Label htmlFor="enunciado">Enunciado</Label>
-          <Textarea
+          <CampoFormatado
             id="enunciado"
             rows={4}
+            maxLength={4000}
             value={enunciado}
-            onChange={(e) => setEnunciado(e.target.value.slice(0, 4000))}
+            onChange={(v) => setEnunciado(v.slice(0, 4000))}
             onPaste={(e) => {
               const colado = e.clipboardData.getData("text");
               if (!colado || colado.trim().length < 30) return;
