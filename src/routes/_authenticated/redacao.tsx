@@ -53,12 +53,13 @@ function BlocoEditavel({
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{titulo}</h2>
       <div className="space-y-3">
         {paragrafos.map((p, i) => (
-          <Textarea
+          <CampoFormatado
             key={i}
             value={p}
-            onChange={(e) => {
+            maxLength={2000}
+            onChange={(v) => {
               const proximo = [...paragrafos];
-              proximo[i] = e.target.value.slice(0, 2000);
+              proximo[i] = v.slice(0, 2000);
               onChange(proximo);
             }}
             rows={Math.max(3, Math.ceil(p.length / 80))}
