@@ -220,18 +220,20 @@ function CartaoQuestao({
                 >
                   {LETRAS[i] ?? a.letra}
                 </button>
-                <Textarea
-                  rows={2}
-                  value={a.texto}
-                  onChange={(e) =>
-                    setRascunho({
-                      ...rascunho,
-                      alternativas: rascunho.alternativas.map((x, j) =>
-                        i === j ? { ...x, texto: e.target.value } : x,
-                      ),
-                    })
-                  }
-                />
+                <div className="flex-1">
+                  <CampoFormatado
+                    rows={2}
+                    value={a.texto}
+                    onChange={(v) =>
+                      setRascunho({
+                        ...rascunho,
+                        alternativas: rascunho.alternativas.map((x, j) =>
+                          i === j ? { ...x, texto: v } : x,
+                        ),
+                      })
+                    }
+                  />
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
