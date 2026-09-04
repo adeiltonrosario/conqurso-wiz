@@ -191,10 +191,10 @@ function CartaoQuestao({
         <div className="space-y-3 rounded-lg border border-primary/40 bg-secondary/40 p-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Enunciado</label>
-            <Textarea
+            <CampoFormatado
               rows={6}
               value={rascunho.enunciado}
-              onChange={(e) => setRascunho({ ...rascunho, enunciado: e.target.value })}
+              onChange={(v) => setRascunho({ ...rascunho, enunciado: v })}
             />
           </div>
 
