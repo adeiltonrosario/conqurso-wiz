@@ -33,7 +33,7 @@ function semNumero(t: string) {
 /** Extrai e remove a linha de gabarito, retornando a letra/valor. */
 function extrairGabarito(texto: string): { texto: string; correta?: string } {
   const re =
-    /(?:^|\n|\s)(?:gabarito|resposta\s*correta|resposta)\s*[:\-–—]?\s*(?:letra\s*)?\(?([a-eA-E]|certo|errado)\)?\s*\.?/i;
+    /(?:^|\n|\s)(?:gabarito|resposta\s*correta|resposta)\s*[:\-–—]?\s*(?:letra\s*)?\(?(certo|errado|[a-eA-E])\b\)?\s*\.?/i;
   const m = texto.match(re);
   if (!m) return { texto };
   const bruto = String(m[1]).toLowerCase();
