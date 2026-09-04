@@ -449,6 +449,7 @@ function InclusaoPage() {
     atualizar({ questoes: [nova, ...acervo.questoes] });
     setEnunciado("");
     setAlternativas(["", "", "", "", ""]);
+    setTextoColado(null);
     toast.success("Questão cadastrada no acervo.");
   };
 
