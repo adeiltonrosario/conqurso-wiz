@@ -26,6 +26,7 @@ import {
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { lerVadeMecum } from "@/lib/vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+import { separarQuestaoColada } from "@/lib/questao-colada";
 
 import {
   aplicarGabaritoNaProva,
