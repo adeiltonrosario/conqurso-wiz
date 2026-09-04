@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { Label } from "@/components/ui/label";
 import { MODELOS_REDACAO } from "@/lib/acervo";
 import { gerarRedacao, type Redacao } from "@/lib/ai.functions";
