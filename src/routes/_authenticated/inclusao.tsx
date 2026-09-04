@@ -651,9 +651,41 @@ function InclusaoPage() {
             rows={4}
             value={enunciado}
             onChange={(e) => setEnunciado(e.target.value.slice(0, 4000))}
-            placeholder="Digite o enunciado da questão…"
+            onPaste={(e) => {
+              const colado = e.clipboardData.getData("text");
+              if (!colado || colado.trim().length < 30) return;
+              const alvo = e.currentTarget;
+              const juntado =
+                alvo.value.slice(0, alvo.selectionStart ?? 0) +
+                colado +
+                alvo.value.slice(alvo.selectionEnd ?? 0);
+              if (separarQuestaoColada(juntado)) {
+                e.preventDefault();
+                aplicarSeparacao(juntado, true);
+              }
+            }}
+            placeholder="Cole a questão inteira (enunciado + alternativas) ou digite o enunciado…"
           />
+          <p className="text-xs text-muted-foreground">
+            Cole a questão inteira — as alternativas vão para os campos certos automaticamente.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => aplicarSeparacao(enunciado, false)}
+            >
+              Separar enunciado e alternativas
+            </Button>
+            {textoColado ? (
+              <Button type="button" variant="ghost" size="sm" onClick={desfazerSeparacao}>
+                Desfazer separação
+              </Button>
+            ) : null}
+          </div>
         </div>
+
 
         <div className="space-y-2">
           <Label htmlFor="materia-questao">Matéria do edital</Label>
