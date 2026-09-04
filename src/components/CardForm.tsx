@@ -3,7 +3,7 @@ import { Image as ImageIcon, Link2, Loader2, Trash2, Upload } from "lucide-react
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { ImagemCard } from "@/components/ImagemCard";
 import { cardVazio, enviarImagemDoCard, removerImagemDoCard, type CardProprio } from "@/lib/cards";
 import { useAuth } from "@/hooks/useAuth";
