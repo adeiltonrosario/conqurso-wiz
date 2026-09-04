@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CardForm } from "@/components/CardForm";
 import { ImagemCard } from "@/components/ImagemCard";
+import { Marcado } from "@/components/Marcado";
 import { useAcervo } from "@/lib/acervo";
 import { useEdital, materiasAtivas } from "@/lib/edital";
 import { bancoLocal } from "@/lib/prova-local";
