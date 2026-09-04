@@ -274,10 +274,10 @@ function CartaoQuestao({
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Explicação (opcional)</label>
-            <Textarea
+            <CampoFormatado
               rows={3}
               value={rascunho.explicacao ?? ""}
-              onChange={(e) => setRascunho({ ...rascunho, explicacao: e.target.value })}
+              onChange={(v) => setRascunho({ ...rascunho, explicacao: v })}
             />
           </div>
 
