@@ -20,6 +20,8 @@ export function CampoFormatado({
   maxLength,
   style,
   ariaLabel,
+  id,
+  onPaste,
 }: {
   value: string;
   onChange: (valor: string) => void;
@@ -30,6 +32,8 @@ export function CampoFormatado({
   maxLength?: number;
   style?: CSSProperties;
   ariaLabel?: string;
+  id?: string;
+  onPaste?: (e: ClipboardEvent<HTMLTextAreaElement>) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
