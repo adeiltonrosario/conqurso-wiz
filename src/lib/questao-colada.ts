@@ -17,12 +17,6 @@ export type QuestaoColada = {
 
 const LETRAS = ["A", "B", "C", "D", "E"];
 
-/** Rótulo de alternativa: (A) / A) / A. / A - / Alternativa A) */
-const RE_ALT = /(?:^|\n|\s)(?:altern[ai]tiva\s*)?\(?([a-eA-E])\)|(?:^|\n)\s*(?:altern[ai]tiva\s*)?([a-eA-E])\s*[).\-–—:]\s+/g;
-
-const RE_GABARITO =
-  /gabarito|resposta(?:\s+correta)?\s*[:\-–]?\s*(?:letra\s*)?([a-eA-E]|certo|errado)/i;
-
 function limpar(t: string) {
   return t
     .replace(/\[\[p:\d+\]\]/g, " ")
