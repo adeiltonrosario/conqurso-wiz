@@ -224,8 +224,8 @@ function RedacaoPage() {
 
           {modo === "local" && (
             <p className="text-xs text-muted-foreground">
-              Texto gerado localmente. Os parágrafos acima são editáveis. Para marcar conectivos manualmente, use{" "}
-              {"{{"}azul|texto{"}}"}, {"{{"}vermelho|texto{"}}"} ou {"{{"}amarelo|texto{"}}"}.
+              Texto gerado localmente. Os parágrafos acima são editáveis: selecione um trecho e use os
+              botões de negrito e realce (amarelo, vermelho, azul).
             </p>
           )}
         </>
