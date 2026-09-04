@@ -783,15 +783,19 @@ function InclusaoPage() {
                 >
                   {letra}
                 </button>
-                <Input
-                  value={alternativas[i] ?? ""}
-                  onChange={(e) => {
-                    const proximo = [...alternativas];
-                    proximo[i] = e.target.value.slice(0, 500);
-                    setAlternativas(proximo);
-                  }}
-                  placeholder={`Alternativa ${letra}`}
-                />
+                <div className="flex-1">
+                  <CampoFormatado
+                    rows={2}
+                    maxLength={500}
+                    value={alternativas[i] ?? ""}
+                    onChange={(v) => {
+                      const proximo = [...alternativas];
+                      proximo[i] = v.slice(0, 500);
+                      setAlternativas(proximo);
+                    }}
+                    placeholder={`Alternativa ${letra}`}
+                  />
+                </div>
               </div>
             ))}
           </div>
