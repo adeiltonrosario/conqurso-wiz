@@ -381,10 +381,11 @@ function CartaoQuestao({
             ))}
           </div>
 
-          <Textarea
+          <CampoFormatado
             rows={2}
             value={minha}
-            onChange={(e) => setMinha(e.target.value.slice(0, 2000))}
+            maxLength={2000}
+            onChange={(v) => setMinha(v.slice(0, 2000))}
             placeholder="Minha explicação (sem IA)…"
           />
           <div className="flex flex-wrap gap-2">
