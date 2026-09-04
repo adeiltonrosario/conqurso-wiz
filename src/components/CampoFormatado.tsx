@@ -96,6 +96,8 @@ export function CampoFormatado({
 
       <Textarea
         ref={ref}
+        id={id}
+        onPaste={onPaste}
         value={value}
         rows={rows}
         placeholder={placeholder}
