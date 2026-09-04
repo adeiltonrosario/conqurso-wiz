@@ -329,6 +329,48 @@ function InclusaoPage() {
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
   const [correta, setCorreta] = useState("A");
+  /** Texto original colado, para desfazer a separação automática. */
+  const [textoColado, setTextoColado] = useState<string | null>(null);
+
+  /** Divide um texto colado em enunciado + alternativas + gabarito (sem IA). */
+  const aplicarSeparacao = (bruto: string, automatico: boolean) => {
+    const res = separarQuestaoColada(bruto);
+    if (!res) {
+      if (!automatico) {
+        toast.error("Não encontrei alternativas nesse texto — confira as letras (A), B) …");
+      }
+      return false;
+    }
+    setTextoColado(bruto);
+    setEnunciado(res.enunciado);
+    setFormato(res.formato);
+    if (res.formato === "multipla") {
+      setAlternativas(res.alternativas);
+      setCorreta(res.correta ?? "A");
+    } else {
+      setAlternativas(["", "", "", "", ""]);
+      setCorreta(res.correta ?? "Certo");
+    }
+    if (res.descartadas > 0) {
+      toast.warning(
+        `${res.descartadas} alternativa(s) além de E foram descartadas (o formulário aceita A a E).`,
+      );
+    } else {
+      toast.success(
+        res.formato === "certo-errado"
+          ? "Questão Certo/Errado separada."
+          : `Enunciado e ${Math.min(res.reconhecidas, 5)} alternativas separadas.`,
+      );
+    }
+    return true;
+  };
+
+  const desfazerSeparacao = () => {
+    if (!textoColado) return;
+    setEnunciado(textoColado.slice(0, 4000));
+    setAlternativas(["", "", "", "", ""]);
+    setTextoColado(null);
+  };
   const [incluindoProva, setIncluindoProva] = useState(false);
   const [lendoGabarito, setLendoGabarito] = useState<string | null>(null);
 
