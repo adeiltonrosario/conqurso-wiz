@@ -10,7 +10,7 @@ import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
 import {
   assuntosComQuestoes,
@@ -191,10 +191,10 @@ function CartaoQuestao({
         <div className="space-y-3 rounded-lg border border-primary/40 bg-secondary/40 p-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Enunciado</label>
-            <Textarea
+            <CampoFormatado
               rows={6}
               value={rascunho.enunciado}
-              onChange={(e) => setRascunho({ ...rascunho, enunciado: e.target.value })}
+              onChange={(v) => setRascunho({ ...rascunho, enunciado: v })}
             />
           </div>
 
@@ -220,18 +220,20 @@ function CartaoQuestao({
                 >
                   {LETRAS[i] ?? a.letra}
                 </button>
-                <Textarea
-                  rows={2}
-                  value={a.texto}
-                  onChange={(e) =>
-                    setRascunho({
-                      ...rascunho,
-                      alternativas: rascunho.alternativas.map((x, j) =>
-                        i === j ? { ...x, texto: e.target.value } : x,
-                      ),
-                    })
-                  }
-                />
+                <div className="flex-1">
+                  <CampoFormatado
+                    rows={2}
+                    value={a.texto}
+                    onChange={(v) =>
+                      setRascunho({
+                        ...rascunho,
+                        alternativas: rascunho.alternativas.map((x, j) =>
+                          i === j ? { ...x, texto: v } : x,
+                        ),
+                      })
+                    }
+                  />
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -272,10 +274,10 @@ function CartaoQuestao({
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Explicação (opcional)</label>
-            <Textarea
+            <CampoFormatado
               rows={3}
               value={rascunho.explicacao ?? ""}
-              onChange={(e) => setRascunho({ ...rascunho, explicacao: e.target.value })}
+              onChange={(v) => setRascunho({ ...rascunho, explicacao: v })}
             />
           </div>
 
@@ -379,10 +381,11 @@ function CartaoQuestao({
             ))}
           </div>
 
-          <Textarea
+          <CampoFormatado
             rows={2}
             value={minha}
-            onChange={(e) => setMinha(e.target.value.slice(0, 2000))}
+            maxLength={2000}
+            onChange={(v) => setMinha(v.slice(0, 2000))}
             placeholder="Minha explicação (sem IA)…"
           />
           <div className="flex flex-wrap gap-2">

@@ -3,7 +3,7 @@ import { Image as ImageIcon, Link2, Loader2, Trash2, Upload } from "lucide-react
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { ImagemCard } from "@/components/ImagemCard";
 import { cardVazio, enviarImagemDoCard, removerImagemDoCard, type CardProprio } from "@/lib/cards";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,9 +75,9 @@ export function CardForm({
     <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
       <div>
         <label className="text-xs font-semibold text-muted-foreground">Pergunta (frente)</label>
-        <Textarea
+        <CampoFormatado
           value={card.pergunta}
-          onChange={(e) => mudar({ pergunta: e.target.value })}
+          onChange={(v) => mudar({ pergunta: v })}
           placeholder="Ex.: Qual o prazo da prisão temporária em crimes hediondos?"
           rows={3}
           className="mt-1"
@@ -86,9 +86,9 @@ export function CardForm({
 
       <div>
         <label className="text-xs font-semibold text-muted-foreground">Resposta (verso)</label>
-        <Textarea
+        <CampoFormatado
           value={card.resposta}
-          onChange={(e) => mudar({ resposta: e.target.value })}
+          onChange={(v) => mudar({ resposta: v })}
           placeholder="Ex.: 30 dias, prorrogáveis por igual período."
           rows={3}
           className="mt-1"
@@ -99,9 +99,9 @@ export function CardForm({
         <label className="text-xs font-semibold text-muted-foreground">
           Explicação / observação (opcional)
         </label>
-        <Textarea
+        <CampoFormatado
           value={card.explicacao}
-          onChange={(e) => mudar({ explicacao: e.target.value })}
+          onChange={(v) => mudar({ explicacao: v })}
           rows={2}
           className="mt-1"
         />

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CardForm } from "@/components/CardForm";
 import { ImagemCard } from "@/components/ImagemCard";
+import { Marcado } from "@/components/Marcado";
 import { useAcervo } from "@/lib/acervo";
 import { useEdital, materiasAtivas } from "@/lib/edital";
 import { bancoLocal } from "@/lib/prova-local";
@@ -290,14 +291,23 @@ function FlashcardsPage() {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
               {atual.titulo ?? atual.materia}
             </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{atual.enunciado}</p>
+            <Marcado
+              texto={atual.enunciado}
+              className="mt-2 block whitespace-pre-wrap text-sm leading-relaxed"
+            />
 
             {virado ? (
               <div className="mt-4 space-y-2 rounded-xl bg-primary/5 p-3">
                 <p className="text-xs font-semibold text-primary">Resposta</p>
-                <p className="text-sm">{respostaCerta(atual) ?? "Sem gabarito"}</p>
+                <Marcado
+                  texto={respostaCerta(atual) ?? "Sem gabarito"}
+                  className="block whitespace-pre-wrap text-sm"
+                />
                 {atual.explicacao ? (
-                  <p className="text-xs text-muted-foreground">{atual.explicacao}</p>
+                  <Marcado
+                    texto={atual.explicacao}
+                    className="block whitespace-pre-wrap text-xs text-muted-foreground"
+                  />
                 ) : null}
                 {cardAtual ? <ImagemCard card={cardAtual} /> : null}
               </div>

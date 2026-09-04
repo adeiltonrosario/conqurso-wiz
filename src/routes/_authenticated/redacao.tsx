@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { Label } from "@/components/ui/label";
 import { MODELOS_REDACAO } from "@/lib/acervo";
 import { gerarRedacao, type Redacao } from "@/lib/ai.functions";
@@ -53,12 +54,13 @@ function BlocoEditavel({
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{titulo}</h2>
       <div className="space-y-3">
         {paragrafos.map((p, i) => (
-          <Textarea
+          <CampoFormatado
             key={i}
             value={p}
-            onChange={(e) => {
+            maxLength={2000}
+            onChange={(v) => {
               const proximo = [...paragrafos];
-              proximo[i] = e.target.value.slice(0, 2000);
+              proximo[i] = v.slice(0, 2000);
               onChange(proximo);
             }}
             rows={Math.max(3, Math.ceil(p.length / 80))}
@@ -223,8 +225,8 @@ function RedacaoPage() {
 
           {modo === "local" && (
             <p className="text-xs text-muted-foreground">
-              Texto gerado localmente. Os parágrafos acima são editáveis. Para marcar conectivos manualmente, use{" "}
-              {"{{"}azul|texto{"}}"}, {"{{"}vermelho|texto{"}}"} ou {"{{"}amarelo|texto{"}}"}.
+              Texto gerado localmente. Os parágrafos acima são editáveis: selecione um trecho e use os
+              botões de negrito e realce (amarelo, vermelho, azul).
             </p>
           )}
         </>
