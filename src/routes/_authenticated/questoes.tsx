@@ -10,7 +10,7 @@ import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { CampoFormatado } from "@/components/CampoFormatado";
 import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
 import {
   assuntosComQuestoes,
