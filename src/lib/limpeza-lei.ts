@@ -25,6 +25,13 @@ const RUIDO: RegExp[] = [
   /\bimpresso\s+no\s+brasil\b/gi,
   /\bISBN[\s:]*[\d-]+/gi,
   /\bp[áa]g(?:ina)?\.?\s*\d+\b/gi,
+  // frase de licença do e-book ("O conteúdo deste livro eletrônico é licenciado para ... civil e criminal")
+  /o\s+conte[úu]do\s+deste\s+livro\s+eletr[ôo]nico[\s\S]{0,400}?responsabiliza[çc][ãa]o\s+civil\s+e\s+criminal\.?/gi,
+  // sites soltos no meio do texto (ex.: gran.com.br)
+  /\b[\w-]+\.(?:com\.br|com|net|org)\b/gi,
+  // "Última Atualização: agosto/2026"
+  /[úu]ltima\s+atualiza[çc][ãa]o\s*:?\s*[\wç]+\s*\/\s*\d{4}/gi,
+  // "LEI N. 13.869, DE ... DE" incompleta no rodapé é mantida (faz parte do texto legal)
 ];
 
 /** Remove o lixo de rodapé/cabeçalho que sobra no texto extraído do PDF. */
@@ -33,7 +40,7 @@ export function limparRuidoLei(texto: string) {
   for (const re of RUIDO) saida = saida.replace(re, " ");
   return saida
     // número de página solto entre espaços
-    .replace(/\s+\d{1,4}\s+(?=[A-ZÁÉÍÓÚ§])/g, " ")
+    .replace(/\s+\d{1,4}\s+(?=[A-ZÁÉÍÓÚ§(]|$)/g, " ")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
     .trim();

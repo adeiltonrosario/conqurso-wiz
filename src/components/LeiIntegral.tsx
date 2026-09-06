@@ -18,6 +18,7 @@ import {
   alternarArtigoOculto,
   alternarParagrafoOculto,
   chaveArtigo,
+  chaveLei,
   chaveParagrafo,
   normalizarTrecho,
   ocultarTrecho,
@@ -108,13 +109,14 @@ function partirOcultos(texto: string, trechos: string[]): Pedaco[] {
 function TextoOcultavel({
   texto,
   termo,
-  chave,
+  lei,
   trechos,
   mostrarOcultos,
 }: {
   texto: string;
   termo: string;
-  chave: string;
+  /** Nome da lei: o trecho escondido vale para o arquivo inteiro. */
+  lei: string;
   trechos: string[];
   mostrarOcultos: boolean;
 }) {
@@ -143,7 +145,7 @@ function TextoOcultavel({
               type="button"
               title="Trecho oculto — toque para mostrar"
               aria-label="Mostrar trecho oculto"
-              onClick={() => reexibirTrecho(chave, p.texto)}
+              onClick={() => reexibirTrecho(lei, p.texto)}
               className="mx-0.5 rounded bg-muted px-1 text-xs align-middle text-muted-foreground"
             >
               {mostrarOcultos ? <span className="line-through opacity-70">{p.texto}</span> : "▪▪▪"}
@@ -162,7 +164,7 @@ function TextoOcultavel({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
-              ocultarTrecho(chave, selecao.texto);
+              ocultarTrecho(lei, selecao.texto);
               window.getSelection()?.removeAllRanges();
               setSelecao(null);
             }}
@@ -463,11 +465,20 @@ export function LeiIntegralPainel({
 
   const artigosOcultos = useMemo(() => new Set(ocultos.artigos), [ocultos.artigos]);
   const paragrafosOcultos = useMemo(() => new Set(ocultos.paragrafos), [ocultos.paragrafos]);
-  const trechosPorArtigo = useMemo(() => {
-    const mapa = new Map<string, string[]>();
-    for (const t of ocultos.trechos) mapa.set(t.chave, [...(mapa.get(t.chave) ?? []), t.texto]);
-    return mapa;
-  }, [ocultos.trechos]);
+  /** Trechos escondidos valem para a lei inteira (todas as ocorrências no arquivo). */
+  const trechosDaLei = useMemo(() => {
+    const chave = chaveLei(baseLegal);
+    return ocultos.trechos.filter((t) => t.lei === chave).map((t) => t.texto);
+  }, [ocultos.trechos, baseLegal]);
+
+  /** Quantas vezes cada trecho escondido aparece no texto visível da lei. */
+  const contarOcorrencias = (textos: string[]) =>
+    trechosDaLei.reduce(
+      (soma, trecho) =>
+        soma +
+        textos.reduce((n, t) => n + (trecho ? t.split(trecho).length - 1 : 0), 0),
+      0,
+    );
 
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
@@ -502,9 +513,12 @@ export function LeiIntegralPainel({
     const chaves = new Set(brutos.map((a) => chaveArtigo(baseLegal, a)));
     const arts = ocultos.artigos.filter((c) => chaves.has(c)).length;
     const paras = ocultos.paragrafos.filter((c) => chaves.has(c.split("|p:")[0] ?? "")).length;
-    const trechos = ocultos.trechos.filter((t) => chaves.has(t.chave)).length;
+    const trechos = contarOcorrencias(
+      brutos.flatMap((a) => [a.texto, ...(a.paragrafos ?? [])]),
+    );
     return { arts, paras, trechos, total: arts + paras + trechos };
-  }, [brutos, baseLegal, ocultos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brutos, baseLegal, ocultos, trechosDaLei]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
@@ -801,7 +815,6 @@ export function LeiIntegralPainel({
                             const id = idArtigo(a, indice);
                             const chave = chaveArtigo(baseLegal, a);
                             const oculto = artigosOcultos.has(chave);
-                            const trechosDoArtigo = trechosPorArtigo.get(chave) ?? [];
                             return (
                               <li
                                 key={id}
@@ -886,8 +899,8 @@ export function LeiIntegralPainel({
                                       <TextoOcultavel
                                         texto={a.texto}
                                         termo={termo}
-                                        chave={chave}
-                                        trechos={trechosDoArtigo}
+                                        lei={baseLegal}
+                                        trechos={trechosDaLei}
                                         mostrarOcultos={mostrarOcultos}
                                       />
                                     </p>
@@ -932,8 +945,8 @@ export function LeiIntegralPainel({
                                                 <TextoOcultavel
                                                   texto={p}
                                                   termo={termo}
-                                                  chave={chaveP}
-                                                  trechos={trechosPorArtigo.get(chaveP) ?? []}
+                                                  lei={baseLegal}
+                                                  trechos={trechosDaLei}
                                                   mostrarOcultos={mostrarOcultos}
                                                 />
                                               </span>
