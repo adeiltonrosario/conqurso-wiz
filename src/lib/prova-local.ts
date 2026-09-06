@@ -44,7 +44,7 @@ export function daCadastrada(edital: EditalEstado, q: QuestaoCadastrada): Questa
         explicacao: "",
       };
     }),
-    explicacao: "",
+    explicacao: q.explicacao?.trim() ?? "",
   };
 }
 
