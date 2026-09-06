@@ -792,16 +792,21 @@ export function LeiIntegralPainel({
                             const trecho = `${a.referencia} — ${a.texto}`;
                             const marcado = marcados.includes(trecho);
                             const id = idArtigo(a, indice);
+                            const chave = chaveArtigo(baseLegal, a);
+                            const oculto = artigosOcultos.has(chave);
+                            const trechosDoArtigo = trechosPorArtigo.get(chave) ?? [];
                             return (
                               <li
                                 key={id}
                                 id={id}
                                 className={`scroll-mt-24 rounded-lg border p-3 ${
-                                  marcado
-                                    ? "border-primary bg-primary/5"
-                                    : emFoco === id
-                                      ? "border-accent"
-                                      : "border-border/70"
+                                  oculto
+                                    ? "border-dashed border-border/70 opacity-60"
+                                    : marcado
+                                      ? "border-primary bg-primary/5"
+                                      : emFoco === id
+                                        ? "border-accent"
+                                        : "border-border/70"
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-2">
@@ -816,44 +821,119 @@ export function LeiIntegralPainel({
                                       {a.referencia}
                                     </span>
                                   </label>
-                                  <button
-                                    type="button"
-                                    aria-label={
-                                      ehFavorito(a)
-                                        ? `Remover ${a.referencia} dos favoritos`
-                                        : `Favoritar ${a.referencia}`
-                                    }
-                                    aria-pressed={ehFavorito(a)}
-                                    onClick={() =>
-                                      alternarFavorito(a, {
-                                        lei: baseLegal,
-                                        materia,
-                                        capituloEdital: capitulo,
-                                      })
-                                    }
-                                  >
-                                    <Star
-                                      className={`size-4 ${
+                                  <span className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      aria-label={
+                                        oculto
+                                          ? `Mostrar ${a.referencia} na leitura`
+                                          : `Ocultar ${a.referencia} da leitura`
+                                      }
+                                      aria-pressed={oculto}
+                                      onClick={() => alternarArtigoOculto(chave)}
+                                    >
+                                      {oculto ? (
+                                        <EyeOff className="size-4 text-muted-foreground" />
+                                      ) : (
+                                        <Eye className="size-4 text-muted-foreground" />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={
                                         ehFavorito(a)
-                                          ? "fill-mark-yellow text-mark-yellow"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    />
-                                  </button>
+                                          ? `Remover ${a.referencia} dos favoritos`
+                                          : `Favoritar ${a.referencia}`
+                                      }
+                                      aria-pressed={ehFavorito(a)}
+                                      onClick={() =>
+                                        alternarFavorito(a, {
+                                          lei: baseLegal,
+                                          materia,
+                                          capituloEdital: capitulo,
+                                        })
+                                      }
+                                    >
+                                      <Star
+                                        className={`size-4 ${
+                                          ehFavorito(a)
+                                            ? "fill-mark-yellow text-mark-yellow"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      />
+                                    </button>
+                                  </span>
                                 </div>
-                                <p className="mt-1.5 text-sm leading-relaxed">
-                                  <Realce texto={a.texto} termo={termo} />
-                                </p>
-                                {(a.paragrafos ?? []).length > 0 && (
-                                  <ul className="mt-2 space-y-1.5 border-l border-border/70 pl-3 text-sm leading-relaxed text-muted-foreground">
-                                    {a.paragrafos!.map((p, j) => (
-                                      <li key={j}>
-                                        <Realce texto={p} termo={termo} />
-                                      </li>
-                                    ))}
-                                  </ul>
+                                {oculto ? (
+                                  <p className="mt-1.5 text-xs italic text-muted-foreground">
+                                    {a.referencia} oculto — toque no olho para mostrar.
+                                  </p>
+                                ) : (
+                                  <>
+                                    <p className="mt-1.5 text-sm leading-relaxed">
+                                      <TextoOcultavel
+                                        texto={a.texto}
+                                        termo={termo}
+                                        chave={chave}
+                                        trechos={trechosDoArtigo}
+                                        mostrarOcultos={mostrarOcultos}
+                                      />
+                                    </p>
+                                    {(a.paragrafos ?? []).length > 0 && (
+                                      <ul className="mt-2 space-y-1.5 border-l border-border/70 pl-3 text-sm leading-relaxed text-muted-foreground">
+                                        {a.paragrafos!.map((p, j) => {
+                                          const chaveP = chaveParagrafo(chave, j);
+                                          const pOculto = paragrafosOcultos.has(chaveP);
+                                          if (pOculto && !mostrarOcultos)
+                                            return (
+                                              <li key={j} className="flex items-center gap-2">
+                                                <button
+                                                  type="button"
+                                                  aria-label="Mostrar item oculto"
+                                                  onClick={() => alternarParagrafoOculto(chaveP)}
+                                                  className="text-xs italic text-muted-foreground"
+                                                >
+                                                  ▪▪▪ item oculto — mostrar
+                                                </button>
+                                              </li>
+                                            );
+                                          return (
+                                            <li key={j} className="flex items-start gap-2">
+                                              <button
+                                                type="button"
+                                                aria-label={
+                                                  pOculto
+                                                    ? "Mostrar este item na leitura"
+                                                    : "Ocultar este item da leitura"
+                                                }
+                                                aria-pressed={pOculto}
+                                                onClick={() => alternarParagrafoOculto(chaveP)}
+                                                className="mt-0.5 shrink-0"
+                                              >
+                                                {pOculto ? (
+                                                  <EyeOff className="size-3.5 text-muted-foreground" />
+                                                ) : (
+                                                  <Eye className="size-3.5 text-muted-foreground/60" />
+                                                )}
+                                              </button>
+                                              <span className={pOculto ? "line-through opacity-60" : ""}>
+                                                <TextoOcultavel
+                                                  texto={p}
+                                                  termo={termo}
+                                                  chave={chaveP}
+                                                  trechos={trechosPorArtigo.get(chaveP) ?? []}
+                                                  mostrarOcultos={mostrarOcultos}
+                                                />
+                                              </span>
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    )}
+                                  </>
                                 )}
                               </li>
+
                             );
                           })}
                         </ol>
