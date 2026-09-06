@@ -9,7 +9,8 @@ import { chaveFavorito } from "./favoritos";
 export type Ocultos = {
   artigos: string[];
   paragrafos: string[];
-  trechos: { chave: string; texto: string }[];
+  /** Trechos livres valem para a lei inteira (todas as ocorrências no arquivo). */
+  trechos: { lei: string; texto: string }[];
 };
 
 const KEY = "concurseiro:ocultos";
@@ -34,7 +35,17 @@ export function lerOcultos(): Ocultos {
         ? o!.paragrafos.filter((c) => typeof c === "string")
         : [],
       trechos: Array.isArray(o?.trechos)
-        ? o!.trechos.filter((t) => t && typeof t.chave === "string" && typeof t.texto === "string")
+        ? o!.trechos
+            .map((t) => {
+              // Formato novo: { lei, texto }. Migração do antigo { chave, texto }:
+              // a lei é o prefixo da chave do artigo (antes do primeiro "|").
+              const legado = t as { lei?: string; chave?: string; texto?: string };
+              const lei = legado.lei ?? legado.chave?.split("|")[0];
+              return typeof lei === "string" && typeof legado.texto === "string"
+                ? { lei, texto: legado.texto }
+                : null;
+            })
+            .filter((t): t is { lei: string; texto: string } => t !== null)
         : [],
     };
   } catch {
@@ -77,19 +88,27 @@ export function alternarParagrafoOculto(chave: string) {
   return true;
 }
 
-/** Esconde um pedaço de texto selecionado dentro de um artigo. */
-export function ocultarTrecho(chave: string, texto: string) {
+/** Chave estável da lei, usada para valer o trecho no arquivo inteiro. */
+export const chaveLei = (lei: string) => lei.trim().toLowerCase();
+
+/**
+ * Esconde um pedaço de texto selecionado. Vale para a lei inteira:
+ * toda ocorrência do mesmo trecho no arquivo fica oculta.
+ */
+export function ocultarTrecho(lei: string, texto: string) {
   const limpo = normalizarTrecho(texto);
   if (limpo.length < 2) return false;
+  const chave = chaveLei(lei);
   const o = lerOcultos();
-  if (o.trechos.some((t) => t.chave === chave && t.texto === limpo)) return false;
-  salvar({ ...o, trechos: [...o.trechos, { chave, texto: limpo }] });
+  if (o.trechos.some((t) => t.lei === chave && t.texto === limpo)) return false;
+  salvar({ ...o, trechos: [...o.trechos, { lei: chave, texto: limpo }] });
   return true;
 }
 
-export function reexibirTrecho(chave: string, texto: string) {
+export function reexibirTrecho(lei: string, texto: string) {
+  const chave = chaveLei(lei);
   const o = lerOcultos();
-  salvar({ ...o, trechos: o.trechos.filter((t) => !(t.chave === chave && t.texto === texto)) });
+  salvar({ ...o, trechos: o.trechos.filter((t) => !(t.lei === chave && t.texto === texto)) });
 }
 
 /** Reexibe tudo (ou apenas o que pertence a uma lei, pelo prefixo da chave). */
