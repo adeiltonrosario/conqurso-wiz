@@ -9,6 +9,8 @@ import {
   useFavoritos,
   type ArtigoFavorito,
 } from "@/lib/favoritos";
+import { useOcultos } from "@/lib/ocultos";
+
 
 function Realce({ texto, termo }: { texto: string; termo: string }) {
   const t = termo.trim();
