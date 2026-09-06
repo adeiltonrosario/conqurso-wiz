@@ -1,0 +1,40 @@
+/**
+ * Limpeza local (sem IA) do texto legal vindo do PDF: dispositivos revogados/vetados
+ * e restos de cabeçalho/rodapé do Vade Mecum.
+ */
+
+const RE_REVOGADO = /\(\s*(revogad[oa]s?|vetad[oa]s?|suprimid[oa]s?)\b/i;
+
+/** Dispositivo marcado como revogado, vetado ou suprimido (texto tachado no PDF). */
+export function ehRevogado(texto: string) {
+  const t = (texto ?? "").trim();
+  if (!t) return false;
+  if (RE_REVOGADO.test(t)) return true;
+  // "Art. 5º Revogado." sem parênteses, quando é praticamente o texto todo.
+  return /^(revogad[oa]s?|vetad[oa]s?)\b/i.test(t) && t.length < 80;
+}
+
+const RUIDO: RegExp[] = [
+  /\[\[p:\d+\]\]/g,
+  /https?:\/\/\S+/gi,
+  /www\.\S+/gi,
+  /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/g, // CNPJ
+  /\bvade\s*mecum\b/gi,
+  /\beditora\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÁ-ú]*/g,
+  /\bsaraiva\b|\bjuspodivm\b|\brideel\b|\bforense\b|\bmanole\b/gi,
+  /\bimpresso\s+no\s+brasil\b/gi,
+  /\bISBN[\s:]*[\d-]+/gi,
+  /\bp[áa]g(?:ina)?\.?\s*\d+\b/gi,
+];
+
+/** Remove o lixo de rodapé/cabeçalho que sobra no texto extraído do PDF. */
+export function limparRuidoLei(texto: string) {
+  let saida = texto ?? "";
+  for (const re of RUIDO) saida = saida.replace(re, " ");
+  return saida
+    // número de página solto entre espaços
+    .replace(/\s+\d{1,4}\s+(?=[A-ZÁÉÍÓÚ§])/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim();
+}
