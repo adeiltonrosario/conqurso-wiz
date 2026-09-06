@@ -9,6 +9,8 @@ export type QuestaoCadastrada = {
   formato: "multipla" | "certo-errado";
   alternativas: string[];
   correta: string;
+  /** Explicação opcional escrita ao cadastrar a questão. */
+  explicacao?: string;
 };
 
 /**
