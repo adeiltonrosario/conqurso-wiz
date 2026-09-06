@@ -120,7 +120,7 @@ export function reexibirTudo(prefixo?: string) {
   salvar({
     artigos: o.artigos.filter((c) => !dentro(c)),
     paragrafos: o.paragrafos.filter((c) => !dentro(c)),
-    trechos: o.trechos.filter((t) => !dentro(t.chave)),
+    trechos: o.trechos.filter((t) => t.lei !== p),
   });
 }
 
