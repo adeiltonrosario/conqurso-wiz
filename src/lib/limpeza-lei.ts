@@ -40,7 +40,7 @@ export function limparRuidoLei(texto: string) {
   for (const re of RUIDO) saida = saida.replace(re, " ");
   return saida
     // número de página solto entre espaços
-    .replace(/\s+\d{1,4}\s+(?=[A-ZÁÉÍÓÚ§])/g, " ")
+    .replace(/\s+\d{1,4}\s+(?=[A-ZÁÉÍÓÚ§(]|$)/g, " ")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
     .trim();

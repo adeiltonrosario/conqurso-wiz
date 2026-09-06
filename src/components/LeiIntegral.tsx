@@ -108,13 +108,14 @@ function partirOcultos(texto: string, trechos: string[]): Pedaco[] {
 function TextoOcultavel({
   texto,
   termo,
-  chave,
+  lei,
   trechos,
   mostrarOcultos,
 }: {
   texto: string;
   termo: string;
-  chave: string;
+  /** Nome da lei: o trecho escondido vale para o arquivo inteiro. */
+  lei: string;
   trechos: string[];
   mostrarOcultos: boolean;
 }) {
@@ -143,7 +144,7 @@ function TextoOcultavel({
               type="button"
               title="Trecho oculto — toque para mostrar"
               aria-label="Mostrar trecho oculto"
-              onClick={() => reexibirTrecho(chave, p.texto)}
+              onClick={() => reexibirTrecho(lei, p.texto)}
               className="mx-0.5 rounded bg-muted px-1 text-xs align-middle text-muted-foreground"
             >
               {mostrarOcultos ? <span className="line-through opacity-70">{p.texto}</span> : "▪▪▪"}
@@ -162,7 +163,7 @@ function TextoOcultavel({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
-              ocultarTrecho(chave, selecao.texto);
+              ocultarTrecho(lei, selecao.texto);
               window.getSelection()?.removeAllRanges();
               setSelecao(null);
             }}
