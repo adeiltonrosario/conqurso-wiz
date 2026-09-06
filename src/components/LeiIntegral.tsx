@@ -2,8 +2,30 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search, Star } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  List,
+  Loader2,
+  ScrollText,
+  Search,
+  Star,
+} from "lucide-react";
 import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
+import {
+  alternarArtigoOculto,
+  alternarParagrafoOculto,
+  chaveArtigo,
+  chaveParagrafo,
+  normalizarTrecho,
+  ocultarTrecho,
+  reexibirTrecho,
+  reexibirTudo,
+  useOcultos,
+} from "@/lib/ocultos";
+import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,6 +74,108 @@ function Realce({ texto, termo }: { texto: string; termo: string }) {
   );
 }
 
+type Pedaco = { texto: string; oculto: boolean };
+
+/** Quebra o texto nos trechos que o candidato escondeu. */
+function partirOcultos(texto: string, trechos: string[]): Pedaco[] {
+  let pedacos: Pedaco[] = [{ texto, oculto: false }];
+  for (const trecho of [...trechos].sort((a, b) => b.length - a.length)) {
+    const proximos: Pedaco[] = [];
+    for (const p of pedacos) {
+      if (p.oculto) {
+        proximos.push(p);
+        continue;
+      }
+      let resto = p.texto;
+      let i = resto.indexOf(trecho);
+      while (i >= 0) {
+        if (i > 0) proximos.push({ texto: resto.slice(0, i), oculto: false });
+        proximos.push({ texto: trecho, oculto: true });
+        resto = resto.slice(i + trecho.length);
+        i = resto.indexOf(trecho);
+      }
+      if (resto) proximos.push({ texto: resto, oculto: false });
+    }
+    pedacos = proximos;
+  }
+  return pedacos;
+}
+
+/**
+ * Texto legal com realce da busca, trechos escondidos e ação "Ocultar" ao
+ * selecionar um pedaço com o dedo ou com o mouse.
+ */
+function TextoOcultavel({
+  texto,
+  termo,
+  chave,
+  trechos,
+  mostrarOcultos,
+}: {
+  texto: string;
+  termo: string;
+  chave: string;
+  trechos: string[];
+  mostrarOcultos: boolean;
+}) {
+  const [selecao, setSelecao] = useState<{ texto: string; x: number; y: number } | null>(null);
+
+  const capturar = () => {
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const bruto = normalizarTrecho(sel?.toString() ?? "");
+    if (!sel || sel.isCollapsed || bruto.length < 2 || !texto.includes(bruto)) {
+      setSelecao(null);
+      return;
+    }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    setSelecao({ texto: bruto, x: r.left + r.width / 2, y: r.top });
+  };
+
+  const pedacos = partirOcultos(texto, trechos);
+
+  return (
+    <>
+      <span onMouseUp={capturar} onTouchEnd={capturar}>
+        {pedacos.map((p, i) =>
+          p.oculto ? (
+            <button
+              key={i}
+              type="button"
+              title="Trecho oculto — toque para mostrar"
+              aria-label="Mostrar trecho oculto"
+              onClick={() => reexibirTrecho(chave, p.texto)}
+              className="mx-0.5 rounded bg-muted px-1 text-xs align-middle text-muted-foreground"
+            >
+              {mostrarOcultos ? <span className="line-through opacity-70">{p.texto}</span> : "▪▪▪"}
+            </button>
+          ) : (
+            <Realce key={i} texto={p.texto} termo={termo} />
+          ),
+        )}
+      </span>
+      {selecao && (
+        <span
+          className="fixed z-50 -translate-x-1/2 -translate-y-full"
+          style={{ left: selecao.x, top: selecao.y - 6 }}
+        >
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              ocultarTrecho(chave, selecao.texto);
+              window.getSelection()?.removeAllRanges();
+              setSelecao(null);
+            }}
+            className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow-lg"
+          >
+            <EyeOff className="size-3" /> Ocultar
+          </button>
+        </span>
+      )}
+    </>
+  );
+}
+
 function combina(a: ArtigoIntegral, termo: string) {
   const t = termo.trim().toLowerCase();
   if (t.length < 2) return true;
@@ -60,6 +184,8 @@ function combina(a: ArtigoIntegral, termo: string) {
 
 const idArtigo = (a: ArtigoIntegral, i: number) =>
   `art-${i}-${a.referencia.replace(/[^\w]+/g, "-").toLowerCase()}`;
+
+
 
 type Indexado = { artigo: ArtigoIntegral; indice: number };
 type NoSecao = { nome: string; artigos: Indexado[] };
@@ -238,6 +364,10 @@ export function LeiIntegralPainel({
   const [itemMapa, setItemMapa] = useState("");
   const { edital } = useEdital();
   const [soDoEdital, setSoDoEdital] = useState(true);
+  const [limparPdf, setLimparPdf] = useState(true);
+  const [mostrarOcultos, setMostrarOcultos] = useState(false);
+  const { ocultos } = useOcultos();
+
 
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
@@ -307,17 +437,37 @@ export function LeiIntegralPainel({
   const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
-    if (fonte === "pdf") {
-      const lista = leiPdfAtiva?.artigos ?? [];
-      return soCapitulo && capitulo.trim().length > 2 ? artigosDoCapitulo(lista, capitulo) : lista;
-    }
-    return lei?.artigos ?? [];
-  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo]);
+    const base =
+      fonte === "pdf"
+        ? soCapitulo && capitulo.trim().length > 2
+          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+          : (leiPdfAtiva?.artigos ?? [])
+        : (lei?.artigos ?? []);
+    if (!limparPdf) return base;
+    // Sem revogados/vetados e sem lixo de rodapé do PDF.
+    return base
+      .filter((a) => !ehRevogado(a.texto))
+      .map((a) => ({
+        ...a,
+        texto: limparRuidoLei(a.texto),
+        paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
+      }))
+      .filter((a) => a.texto.trim().length > 2);
+  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
+
 
   const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
+
+  const artigosOcultos = useMemo(() => new Set(ocultos.artigos), [ocultos.artigos]);
+  const paragrafosOcultos = useMemo(() => new Set(ocultos.paragrafos), [ocultos.paragrafos]);
+  const trechosPorArtigo = useMemo(() => {
+    const mapa = new Map<string, string[]>();
+    for (const t of ocultos.trechos) mapa.set(t.chave, [...(mapa.get(t.chave) ?? []), t.texto]);
+    return mapa;
+  }, [ocultos.trechos]);
 
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
@@ -325,6 +475,7 @@ export function LeiIntegralPainel({
       .map((artigo, indice) => ({ artigo, indice }))
       .filter(({ artigo }) => {
         if (!combina(artigo, termo)) return false;
+        if (!mostrarOcultos && artigosOcultos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (limites) {
@@ -333,9 +484,30 @@ export function LeiIntegralPainel({
         }
         return true;
       });
-  }, [brutos, termo, faixa, soMarcados, marcados, soFavoritos, chavesFavoritas, baseLegal]);
+  }, [
+    brutos,
+    termo,
+    faixa,
+    soMarcados,
+    marcados,
+    soFavoritos,
+    chavesFavoritas,
+    baseLegal,
+    mostrarOcultos,
+    artigosOcultos,
+  ]);
+
+  /** Quantos itens desta lei estão escondidos (para o contador e o "reexibir tudo"). */
+  const totalOcultosDaLei = useMemo(() => {
+    const chaves = new Set(brutos.map((a) => chaveArtigo(baseLegal, a)));
+    const arts = ocultos.artigos.filter((c) => chaves.has(c)).length;
+    const paras = ocultos.paragrafos.filter((c) => chaves.has(c.split("|p:")[0] ?? "")).length;
+    const trechos = ocultos.trechos.filter((t) => chaves.has(t.chave)).length;
+    return { arts, paras, trechos, total: arts + paras + trechos };
+  }, [brutos, baseLegal, ocultos]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
+
 
   const irPara = (id: string) => {
     setEmFoco(id);
@@ -529,11 +701,25 @@ export function LeiIntegralPainel({
                 Restringir ao capítulo “{capitulo}”
               </label>
             )}
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={limparPdf}
+                onChange={(e) => setLimparPdf(e.target.checked)}
+                className="size-3.5 accent-primary"
+              />
+              Esconder revogados e rodapés do PDF
+            </label>
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
                 {artigos.length} de {brutos.length} artigo(s)
                 {marcados.length > 0 ? ` · ${marcados.length} marcado(s)` : ""}
                 {favoritos.length > 0 ? ` · ${favoritos.length} favorito(s)` : ""}
+                {totalOcultosDaLei.total > 0
+                  ? ` · ${totalOcultosDaLei.arts} artigo(s) e ${
+                      totalOcultosDaLei.paras + totalOcultosDaLei.trechos
+                    } trecho(s) oculto(s)`
+                  : ""}
               </span>
               <span className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-1.5">
@@ -556,6 +742,38 @@ export function LeiIntegralPainel({
                 </label>
               </span>
             </div>
+            {totalOcultosDaLei.total > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMostrarOcultos((v) => !v)}
+                >
+                  {mostrarOcultos ? (
+                    <>
+                      <EyeOff className="mr-1.5 size-3.5" /> Voltar a esconder
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="mr-1.5 size-3.5" /> Mostrar o que está oculto
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    reexibirTudo(baseLegal);
+                    toast.success("Tudo o que estava oculto voltou para a leitura.");
+                  }}
+                >
+                  Reexibir tudo
+                </Button>
+              </div>
+            )}
+
           </div>
 
           {artigos.length > 0 && <Sumario arvore={arvore} marcados={marcados} onIr={irPara} />}
@@ -581,16 +799,21 @@ export function LeiIntegralPainel({
                             const trecho = `${a.referencia} — ${a.texto}`;
                             const marcado = marcados.includes(trecho);
                             const id = idArtigo(a, indice);
+                            const chave = chaveArtigo(baseLegal, a);
+                            const oculto = artigosOcultos.has(chave);
+                            const trechosDoArtigo = trechosPorArtigo.get(chave) ?? [];
                             return (
                               <li
                                 key={id}
                                 id={id}
                                 className={`scroll-mt-24 rounded-lg border p-3 ${
-                                  marcado
-                                    ? "border-primary bg-primary/5"
-                                    : emFoco === id
-                                      ? "border-accent"
-                                      : "border-border/70"
+                                  oculto
+                                    ? "border-dashed border-border/70 opacity-60"
+                                    : marcado
+                                      ? "border-primary bg-primary/5"
+                                      : emFoco === id
+                                        ? "border-accent"
+                                        : "border-border/70"
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-2">
@@ -605,44 +828,124 @@ export function LeiIntegralPainel({
                                       {a.referencia}
                                     </span>
                                   </label>
-                                  <button
-                                    type="button"
-                                    aria-label={
-                                      ehFavorito(a)
-                                        ? `Remover ${a.referencia} dos favoritos`
-                                        : `Favoritar ${a.referencia}`
-                                    }
-                                    aria-pressed={ehFavorito(a)}
-                                    onClick={() =>
-                                      alternarFavorito(a, {
-                                        lei: baseLegal,
-                                        materia,
-                                        capituloEdital: capitulo,
-                                      })
-                                    }
-                                  >
-                                    <Star
-                                      className={`size-4 ${
+                                  <span className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      aria-label={
+                                        oculto
+                                          ? `Mostrar ${a.referencia} na leitura`
+                                          : `Ocultar ${a.referencia} da leitura`
+                                      }
+                                      aria-pressed={oculto}
+                                      onClick={() => {
+                                        // Artigo escondido também sai da marcação para questões.
+                                        if (!oculto && marcado) onAlternarMarcado(trecho);
+                                        alternarArtigoOculto(chave);
+                                      }}
+                                    >
+
+                                      {oculto ? (
+                                        <EyeOff className="size-4 text-muted-foreground" />
+                                      ) : (
+                                        <Eye className="size-4 text-muted-foreground" />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={
                                         ehFavorito(a)
-                                          ? "fill-mark-yellow text-mark-yellow"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    />
-                                  </button>
+                                          ? `Remover ${a.referencia} dos favoritos`
+                                          : `Favoritar ${a.referencia}`
+                                      }
+                                      aria-pressed={ehFavorito(a)}
+                                      onClick={() =>
+                                        alternarFavorito(a, {
+                                          lei: baseLegal,
+                                          materia,
+                                          capituloEdital: capitulo,
+                                        })
+                                      }
+                                    >
+                                      <Star
+                                        className={`size-4 ${
+                                          ehFavorito(a)
+                                            ? "fill-mark-yellow text-mark-yellow"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      />
+                                    </button>
+                                  </span>
                                 </div>
-                                <p className="mt-1.5 text-sm leading-relaxed">
-                                  <Realce texto={a.texto} termo={termo} />
-                                </p>
-                                {(a.paragrafos ?? []).length > 0 && (
-                                  <ul className="mt-2 space-y-1.5 border-l border-border/70 pl-3 text-sm leading-relaxed text-muted-foreground">
-                                    {a.paragrafos!.map((p, j) => (
-                                      <li key={j}>
-                                        <Realce texto={p} termo={termo} />
-                                      </li>
-                                    ))}
-                                  </ul>
+                                {oculto ? (
+                                  <p className="mt-1.5 text-xs italic text-muted-foreground">
+                                    {a.referencia} oculto — toque no olho para mostrar.
+                                  </p>
+                                ) : (
+                                  <>
+                                    <p className="mt-1.5 text-sm leading-relaxed">
+                                      <TextoOcultavel
+                                        texto={a.texto}
+                                        termo={termo}
+                                        chave={chave}
+                                        trechos={trechosDoArtigo}
+                                        mostrarOcultos={mostrarOcultos}
+                                      />
+                                    </p>
+                                    {(a.paragrafos ?? []).length > 0 && (
+                                      <ul className="mt-2 space-y-1.5 border-l border-border/70 pl-3 text-sm leading-relaxed text-muted-foreground">
+                                        {a.paragrafos!.map((p, j) => {
+                                          const chaveP = chaveParagrafo(chave, j);
+                                          const pOculto = paragrafosOcultos.has(chaveP);
+                                          if (pOculto && !mostrarOcultos)
+                                            return (
+                                              <li key={j} className="flex items-center gap-2">
+                                                <button
+                                                  type="button"
+                                                  aria-label="Mostrar item oculto"
+                                                  onClick={() => alternarParagrafoOculto(chaveP)}
+                                                  className="text-xs italic text-muted-foreground"
+                                                >
+                                                  ▪▪▪ item oculto — mostrar
+                                                </button>
+                                              </li>
+                                            );
+                                          return (
+                                            <li key={j} className="flex items-start gap-2">
+                                              <button
+                                                type="button"
+                                                aria-label={
+                                                  pOculto
+                                                    ? "Mostrar este item na leitura"
+                                                    : "Ocultar este item da leitura"
+                                                }
+                                                aria-pressed={pOculto}
+                                                onClick={() => alternarParagrafoOculto(chaveP)}
+                                                className="mt-0.5 shrink-0"
+                                              >
+                                                {pOculto ? (
+                                                  <EyeOff className="size-3.5 text-muted-foreground" />
+                                                ) : (
+                                                  <Eye className="size-3.5 text-muted-foreground/60" />
+                                                )}
+                                              </button>
+                                              <span className={pOculto ? "line-through opacity-60" : ""}>
+                                                <TextoOcultavel
+                                                  texto={p}
+                                                  termo={termo}
+                                                  chave={chaveP}
+                                                  trechos={trechosPorArtigo.get(chaveP) ?? []}
+                                                  mostrarOcultos={mostrarOcultos}
+                                                />
+                                              </span>
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    )}
+                                  </>
                                 )}
                               </li>
+
                             );
                           })}
                         </ol>

@@ -9,6 +9,8 @@ import {
   useFavoritos,
   type ArtigoFavorito,
 } from "@/lib/favoritos";
+import { useOcultos } from "@/lib/ocultos";
+
 
 function Realce({ texto, termo }: { texto: string; termo: string }) {
   const t = termo.trim();
@@ -51,13 +53,20 @@ export function FavoritosPainel({
   podeGerar?: boolean;
 }) {
   const { favoritos } = useFavoritos();
+  const { ocultos } = useOcultos();
   const [termo, setTermo] = useState("");
   const [fechados, setFechados] = useState<string[]>([]);
 
-  const filtrados = useMemo(() => favoritos.filter((f) => combina(f, termo)), [favoritos, termo]);
+  const ocultados = useMemo(() => new Set(ocultos.artigos), [ocultos.artigos]);
+  const visiveis = useMemo(
+    () => favoritos.filter((f) => !ocultados.has(f.chave)),
+    [favoritos, ocultados],
+  );
+  const filtrados = useMemo(() => visiveis.filter((f) => combina(f, termo)), [visiveis, termo]);
   const grupos = useMemo(() => agruparFavoritos(filtrados), [filtrados]);
 
-  if (!favoritos.length) return null;
+  if (!visiveis.length) return null;
+
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
@@ -66,7 +75,7 @@ export function FavoritosPainel({
           <Star className="size-4 fill-mark-yellow text-mark-yellow" /> Meus favoritos
         </h2>
         <p className="text-xs text-muted-foreground">
-          {favoritos.length} artigo(s) favoritado(s) — leitura literal com lei, título, capítulo e
+          {visiveis.length} artigo(s) favoritado(s) — leitura literal com lei, título, capítulo e
           seção, sem precisar carregar o PDF.
         </p>
       </header>
