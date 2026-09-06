@@ -2,8 +2,30 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, List, Loader2, ScrollText, Search, Star } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  List,
+  Loader2,
+  ScrollText,
+  Search,
+  Star,
+} from "lucide-react";
 import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
+import {
+  alternarArtigoOculto,
+  alternarParagrafoOculto,
+  chaveArtigo,
+  chaveParagrafo,
+  normalizarTrecho,
+  ocultarTrecho,
+  reexibirTrecho,
+  reexibirTudo,
+  useOcultos,
+} from "@/lib/ocultos";
+import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,14 +74,111 @@ function Realce({ texto, termo }: { texto: string; termo: string }) {
   );
 }
 
-function combina(a: ArtigoIntegral, termo: string) {
-  const t = termo.trim().toLowerCase();
-  if (t.length < 2) return true;
-  return `${a.referencia} ${a.texto} ${(a.paragrafos ?? []).join(" ")}`.toLowerCase().includes(t);
+type Pedaco = { texto: string; oculto: boolean };
+
+/** Quebra o texto nos trechos que o candidato escondeu. */
+function partirOcultos(texto: string, trechos: string[]): Pedaco[] {
+  let pedacos: Pedaco[] = [{ texto, oculto: false }];
+  for (const trecho of [...trechos].sort((a, b) => b.length - a.length)) {
+    const proximos: Pedaco[] = [];
+    for (const p of pedacos) {
+      if (p.oculto) {
+        proximos.push(p);
+        continue;
+      }
+      let resto = p.texto;
+      let i = resto.indexOf(trecho);
+      while (i >= 0) {
+        if (i > 0) proximos.push({ texto: resto.slice(0, i), oculto: false });
+        proximos.push({ texto: trecho, oculto: true });
+        resto = resto.slice(i + trecho.length);
+        i = resto.indexOf(trecho);
+      }
+      if (resto) proximos.push({ texto: resto, oculto: false });
+    }
+    pedacos = proximos;
+  }
+  return pedacos;
+}
+
+/**
+ * Texto legal com realce da busca, trechos escondidos e ação "Ocultar" ao
+ * selecionar um pedaço com o dedo ou com o mouse.
+ */
+function TextoOcultavel({
+  texto,
+  termo,
+  chave,
+  trechos,
+  mostrarOcultos,
+}: {
+  texto: string;
+  termo: string;
+  chave: string;
+  trechos: string[];
+  mostrarOcultos: boolean;
+}) {
+  const [selecao, setSelecao] = useState<{ texto: string; x: number; y: number } | null>(null);
+
+  const capturar = () => {
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const bruto = normalizarTrecho(sel?.toString() ?? "");
+    if (!sel || sel.isCollapsed || bruto.length < 2 || !texto.includes(bruto)) {
+      setSelecao(null);
+      return;
+    }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    setSelecao({ texto: bruto, x: r.left + r.width / 2, y: r.top });
+  };
+
+  const pedacos = partirOcultos(texto, trechos);
+
+  return (
+    <>
+      <span onMouseUp={capturar} onTouchEnd={capturar}>
+        {pedacos.map((p, i) =>
+          p.oculto ? (
+            <button
+              key={i}
+              type="button"
+              title="Trecho oculto — toque para mostrar"
+              aria-label="Mostrar trecho oculto"
+              onClick={() => reexibirTrecho(chave, p.texto)}
+              className="mx-0.5 rounded bg-muted px-1 text-xs align-middle text-muted-foreground"
+            >
+              {mostrarOcultos ? <span className="line-through opacity-70">{p.texto}</span> : "▪▪▪"}
+            </button>
+          ) : (
+            <Realce key={i} texto={p.texto} termo={termo} />
+          ),
+        )}
+      </span>
+      {selecao && (
+        <span
+          className="fixed z-50 -translate-x-1/2 -translate-y-full"
+          style={{ left: selecao.x, top: selecao.y - 6 }}
+        >
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              ocultarTrecho(chave, selecao.texto);
+              window.getSelection()?.removeAllRanges();
+              setSelecao(null);
+            }}
+            className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow-lg"
+          >
+            <EyeOff className="size-3" /> Ocultar
+          </button>
+        </span>
+      )}
+    </>
+  );
 }
 
 const idArtigo = (a: ArtigoIntegral, i: number) =>
   `art-${i}-${a.referencia.replace(/[^\w]+/g, "-").toLowerCase()}`;
+
 
 type Indexado = { artigo: ArtigoIntegral; indice: number };
 type NoSecao = { nome: string; artigos: Indexado[] };
