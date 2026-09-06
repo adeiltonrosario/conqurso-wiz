@@ -830,8 +830,13 @@ export function LeiIntegralPainel({
                                           : `Ocultar ${a.referencia} da leitura`
                                       }
                                       aria-pressed={oculto}
-                                      onClick={() => alternarArtigoOculto(chave)}
+                                      onClick={() => {
+                                        // Artigo escondido também sai da marcação para questões.
+                                        if (!oculto && marcado) onAlternarMarcado(trecho);
+                                        alternarArtigoOculto(chave);
+                                      }}
                                     >
+
                                       {oculto ? (
                                         <EyeOff className="size-4 text-muted-foreground" />
                                       ) : (

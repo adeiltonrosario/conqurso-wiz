@@ -75,7 +75,7 @@ export function FavoritosPainel({
           <Star className="size-4 fill-mark-yellow text-mark-yellow" /> Meus favoritos
         </h2>
         <p className="text-xs text-muted-foreground">
-          {favoritos.length} artigo(s) favoritado(s) — leitura literal com lei, título, capítulo e
+          {visiveis.length} artigo(s) favoritado(s) — leitura literal com lei, título, capítulo e
           seção, sem precisar carregar o PDF.
         </p>
       </header>
