@@ -326,6 +326,7 @@ function InclusaoPage() {
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : (MATERIAS[0] ?? "");
   const semMaterias = MATERIAS.length === 0;
   const [enunciado, setEnunciado] = useState("");
+  const [explicacao, setExplicacao] = useState("");
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
@@ -446,10 +447,12 @@ function InclusaoPage() {
       formato,
       alternativas: formato === "multipla" ? alternativas : ["Certo", "Errado"],
       correta,
+      ...(explicacao.trim() ? { explicacao: explicacao.trim() } : {}),
     };
     atualizar({ questoes: [nova, ...acervo.questoes] });
     setEnunciado("");
     setAlternativas(["", "", "", "", ""]);
+    setExplicacao("");
     setTextoColado(null);
     toast.success("Questão cadastrada no acervo.");
   };
@@ -818,6 +821,18 @@ function InclusaoPage() {
             ))}
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="explicacao-questao">Explicação (opcional)</Label>
+          <CampoFormatado
+            id="explicacao-questao"
+            rows={3}
+            maxLength={2000}
+            value={explicacao}
+            onChange={setExplicacao}
+            placeholder="Escreva a explicação da questão — ela fica salva junto e aparece na aba Questões…"
+          />
+        </div>
 
         <Button className="w-full" onClick={salvarQuestao}>
           <Plus className="mr-2 size-4" /> Adicionar ao acervo
