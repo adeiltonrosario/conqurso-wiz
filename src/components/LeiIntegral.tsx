@@ -176,8 +176,15 @@ function TextoOcultavel({
   );
 }
 
+function combina(a: ArtigoIntegral, termo: string) {
+  const t = termo.trim().toLowerCase();
+  if (t.length < 2) return true;
+  return `${a.referencia} ${a.texto} ${(a.paragrafos ?? []).join(" ")}`.toLowerCase().includes(t);
+}
+
 const idArtigo = (a: ArtigoIntegral, i: number) =>
   `art-${i}-${a.referencia.replace(/[^\w]+/g, "-").toLowerCase()}`;
+
 
 
 type Indexado = { artigo: ArtigoIntegral; indice: number };
