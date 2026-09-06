@@ -694,11 +694,25 @@ export function LeiIntegralPainel({
                 Restringir ao capítulo “{capitulo}”
               </label>
             )}
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={limparPdf}
+                onChange={(e) => setLimparPdf(e.target.checked)}
+                className="size-3.5 accent-primary"
+              />
+              Esconder revogados e rodapés do PDF
+            </label>
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
                 {artigos.length} de {brutos.length} artigo(s)
                 {marcados.length > 0 ? ` · ${marcados.length} marcado(s)` : ""}
                 {favoritos.length > 0 ? ` · ${favoritos.length} favorito(s)` : ""}
+                {totalOcultosDaLei.total > 0
+                  ? ` · ${totalOcultosDaLei.arts} artigo(s) e ${
+                      totalOcultosDaLei.paras + totalOcultosDaLei.trechos
+                    } trecho(s) oculto(s)`
+                  : ""}
               </span>
               <span className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-1.5">
@@ -721,6 +735,38 @@ export function LeiIntegralPainel({
                 </label>
               </span>
             </div>
+            {totalOcultosDaLei.total > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMostrarOcultos((v) => !v)}
+                >
+                  {mostrarOcultos ? (
+                    <>
+                      <EyeOff className="mr-1.5 size-3.5" /> Voltar a esconder
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="mr-1.5 size-3.5" /> Mostrar o que está oculto
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    reexibirTudo(baseLegal);
+                    toast.success("Tudo o que estava oculto voltou para a leitura.");
+                  }}
+                >
+                  Reexibir tudo
+                </Button>
+              </div>
+            )}
+
           </div>
 
           {artigos.length > 0 && <Sumario arvore={arvore} marcados={marcados} onIr={irPara} />}
