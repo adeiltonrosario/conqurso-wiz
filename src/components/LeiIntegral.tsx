@@ -357,6 +357,10 @@ export function LeiIntegralPainel({
   const [itemMapa, setItemMapa] = useState("");
   const { edital } = useEdital();
   const [soDoEdital, setSoDoEdital] = useState(true);
+  const [limparPdf, setLimparPdf] = useState(true);
+  const [mostrarOcultos, setMostrarOcultos] = useState(false);
+  const { ocultos } = useOcultos();
+
 
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
