@@ -430,12 +430,24 @@ export function LeiIntegralPainel({
   const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
-    if (fonte === "pdf") {
-      const lista = leiPdfAtiva?.artigos ?? [];
-      return soCapitulo && capitulo.trim().length > 2 ? artigosDoCapitulo(lista, capitulo) : lista;
-    }
-    return lei?.artigos ?? [];
-  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo]);
+    const base =
+      fonte === "pdf"
+        ? soCapitulo && capitulo.trim().length > 2
+          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+          : (leiPdfAtiva?.artigos ?? [])
+        : (lei?.artigos ?? []);
+    if (!limparPdf) return base;
+    // Sem revogados/vetados e sem lixo de rodapé do PDF.
+    return base
+      .filter((a) => !ehRevogado(a.texto))
+      .map((a) => ({
+        ...a,
+        texto: limparRuidoLei(a.texto),
+        paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
+      }))
+      .filter((a) => a.texto.trim().length > 2);
+  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
+
 
   const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
 
