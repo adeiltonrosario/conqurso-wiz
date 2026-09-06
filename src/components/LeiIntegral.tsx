@@ -18,6 +18,7 @@ import {
   alternarArtigoOculto,
   alternarParagrafoOculto,
   chaveArtigo,
+  chaveLei,
   chaveParagrafo,
   normalizarTrecho,
   ocultarTrecho,
@@ -464,11 +465,20 @@ export function LeiIntegralPainel({
 
   const artigosOcultos = useMemo(() => new Set(ocultos.artigos), [ocultos.artigos]);
   const paragrafosOcultos = useMemo(() => new Set(ocultos.paragrafos), [ocultos.paragrafos]);
-  const trechosPorArtigo = useMemo(() => {
-    const mapa = new Map<string, string[]>();
-    for (const t of ocultos.trechos) mapa.set(t.chave, [...(mapa.get(t.chave) ?? []), t.texto]);
-    return mapa;
-  }, [ocultos.trechos]);
+  /** Trechos escondidos valem para a lei inteira (todas as ocorrências no arquivo). */
+  const trechosDaLei = useMemo(() => {
+    const chave = chaveLei(baseLegal);
+    return ocultos.trechos.filter((t) => t.lei === chave).map((t) => t.texto);
+  }, [ocultos.trechos, baseLegal]);
+
+  /** Quantas vezes cada trecho escondido aparece no texto visível da lei. */
+  const contarOcorrencias = (textos: string[]) =>
+    trechosDaLei.reduce(
+      (soma, trecho) =>
+        soma +
+        textos.reduce((n, t) => n + (trecho ? t.split(trecho).length - 1 : 0), 0),
+      0,
+    );
 
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
