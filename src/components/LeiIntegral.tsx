@@ -513,9 +513,12 @@ export function LeiIntegralPainel({
     const chaves = new Set(brutos.map((a) => chaveArtigo(baseLegal, a)));
     const arts = ocultos.artigos.filter((c) => chaves.has(c)).length;
     const paras = ocultos.paragrafos.filter((c) => chaves.has(c.split("|p:")[0] ?? "")).length;
-    const trechos = ocultos.trechos.filter((t) => chaves.has(t.chave)).length;
+    const trechos = contarOcorrencias(
+      brutos.flatMap((a) => [a.texto, ...(a.paragrafos ?? [])]),
+    );
     return { arts, paras, trechos, total: arts + paras + trechos };
-  }, [brutos, baseLegal, ocultos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brutos, baseLegal, ocultos, trechosDaLei]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
@@ -812,7 +815,6 @@ export function LeiIntegralPainel({
                             const id = idArtigo(a, indice);
                             const chave = chaveArtigo(baseLegal, a);
                             const oculto = artigosOcultos.has(chave);
-                            const trechosDoArtigo = trechosPorArtigo.get(chave) ?? [];
                             return (
                               <li
                                 key={id}
@@ -897,8 +899,8 @@ export function LeiIntegralPainel({
                                       <TextoOcultavel
                                         texto={a.texto}
                                         termo={termo}
-                                        chave={chave}
-                                        trechos={trechosDoArtigo}
+                                        lei={baseLegal}
+                                        trechos={trechosDaLei}
                                         mostrarOcultos={mostrarOcultos}
                                       />
                                     </p>
@@ -943,8 +945,8 @@ export function LeiIntegralPainel({
                                                 <TextoOcultavel
                                                   texto={p}
                                                   termo={termo}
-                                                  chave={chaveP}
-                                                  trechos={trechosPorArtigo.get(chaveP) ?? []}
+                                                  lei={baseLegal}
+                                                  trechos={trechosDaLei}
                                                   mostrarOcultos={mostrarOcultos}
                                                 />
                                               </span>
