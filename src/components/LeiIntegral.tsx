@@ -454,12 +454,21 @@ export function LeiIntegralPainel({
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
 
+  const artigosOcultos = useMemo(() => new Set(ocultos.artigos), [ocultos.artigos]);
+  const paragrafosOcultos = useMemo(() => new Set(ocultos.paragrafos), [ocultos.paragrafos]);
+  const trechosPorArtigo = useMemo(() => {
+    const mapa = new Map<string, string[]>();
+    for (const t of ocultos.trechos) mapa.set(t.chave, [...(mapa.get(t.chave) ?? []), t.texto]);
+    return mapa;
+  }, [ocultos.trechos]);
+
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
     return brutos
       .map((artigo, indice) => ({ artigo, indice }))
       .filter(({ artigo }) => {
         if (!combina(artigo, termo)) return false;
+        if (!mostrarOcultos && artigosOcultos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (limites) {
@@ -468,9 +477,30 @@ export function LeiIntegralPainel({
         }
         return true;
       });
-  }, [brutos, termo, faixa, soMarcados, marcados, soFavoritos, chavesFavoritas, baseLegal]);
+  }, [
+    brutos,
+    termo,
+    faixa,
+    soMarcados,
+    marcados,
+    soFavoritos,
+    chavesFavoritas,
+    baseLegal,
+    mostrarOcultos,
+    artigosOcultos,
+  ]);
+
+  /** Quantos itens desta lei estão escondidos (para o contador e o "reexibir tudo"). */
+  const totalOcultosDaLei = useMemo(() => {
+    const chaves = new Set(brutos.map((a) => chaveArtigo(baseLegal, a)));
+    const arts = ocultos.artigos.filter((c) => chaves.has(c)).length;
+    const paras = ocultos.paragrafos.filter((c) => chaves.has(c.split("|p:")[0] ?? "")).length;
+    const trechos = ocultos.trechos.filter((t) => chaves.has(t.chave)).length;
+    return { arts, paras, trechos, total: arts + paras + trechos };
+  }, [brutos, baseLegal, ocultos]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
+
 
   const irPara = (id: string) => {
     setEmFoco(id);
