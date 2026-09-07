@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, Plus, Star, Trash2, XCircle } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/questoes-pdf";
 import {
   listarQuestoesExtraidas,
+  removerQuestao,
   salvarQuestoesExtraidas,
 } from "@/lib/questoes-banco.functions";
 import {
@@ -71,12 +72,18 @@ function CartaoQuestao({
   questao,
   numero,
   onAtualizar,
+  onExcluir,
+  onFavoritar,
   contexto,
 }: {
   questao: Questao;
   numero: number;
   /** Presente só nas questões extraídas de PDF (gabarito e explicação editáveis). */
   onAtualizar?: (q: Questao) => void;
+  /** Exclui a questão do aparelho e da conta. */
+  onExcluir?: (q: Questao) => void;
+  /** Marca/desmarca a estrela de estudo direcionado. */
+  onFavoritar?: (q: Questao) => void;
   contexto?: string | null;
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
@@ -171,10 +178,42 @@ function CartaoQuestao({
               sem gabarito
             </span>
           )}
-          {onAtualizar && !editando && (
-            <Button size="sm" variant="outline" className="ml-auto h-7 gap-1.5 px-2 text-[11px]" onClick={abrirEdicao}>
-              <Pencil className="size-3.5" /> Editar
-            </Button>
+          {!editando && (onFavoritar || onAtualizar || onExcluir) && (
+            <span className="ml-auto flex items-center gap-1.5">
+              {onFavoritar && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 px-2 text-[11px]"
+                  aria-pressed={!!questao.favorita}
+                  aria-label={questao.favorita ? "Remover dos favoritos" : "Favoritar questão"}
+                  onClick={() => onFavoritar(questao)}
+                >
+                  <Star
+                    className={`size-3.5 ${questao.favorita ? "fill-mark-yellow text-mark-yellow" : ""}`}
+                  />
+                  {questao.favorita ? "Favorita" : "Favoritar"}
+                </Button>
+              )}
+              {onAtualizar && (
+                <Button size="sm" variant="outline" className="h-7 gap-1.5 px-2 text-[11px]" onClick={abrirEdicao}>
+                  <Pencil className="size-3.5" /> Editar
+                </Button>
+              )}
+              {onExcluir && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 px-2 text-[11px] text-destructive"
+                  aria-label="Excluir questão"
+                  onClick={() => {
+                    if (window.confirm("Excluir esta questão?")) onExcluir(questao);
+                  }}
+                >
+                  <Trash2 className="size-3.5" /> Excluir
+                </Button>
+              )}
+            </span>
           )}
         </div>
 
