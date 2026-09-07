@@ -18,6 +18,7 @@ type LinhaQuestao = {
   alternativas: unknown;
   explicacao: string | null;
   origem: string | null;
+  favorita: boolean | null;
 };
 
 function anoDoNome(nome: string | null) {
@@ -46,6 +47,7 @@ function paraQuestao(l: LinhaQuestao): Questao {
     ...(l.origem ? { origem: l.origem } : {}),
     ...(l.prova ? { prova: l.prova } : {}),
     ...(typeof l.numero === "number" ? { numero: l.numero } : {}),
+    ...(l.favorita ? { favorita: true } : {}),
     enunciado: l.enunciado,
     alternativas,
     explicacao: l.explicacao ?? "",
@@ -67,11 +69,12 @@ function paraLinha(q: Questao, userId: string) {
     alternativas: q.alternativas ?? [],
     explicacao: q.explicacao ?? "",
     origem: q.origem ?? null,
+    favorita: q.favorita ?? false,
   };
 }
 
 const SELECT =
-  "id, prova, numero, banca, grupo, materia, assunto, enunciado, alternativas, explicacao, origem";
+  "id, prova, numero, banca, grupo, materia, assunto, enunciado, alternativas, explicacao, origem, favorita";
 
 /** Todas as questões extraídas do usuário. */
 export const listarQuestoesExtraidas = createServerFn({ method: "GET" })
@@ -111,6 +114,20 @@ export const removerQuestoesDaProva = createServerFn({ method: "POST" })
       .delete()
       .eq("user_id", context.userId)
       .eq("prova", data.prova);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Remove uma única questão da conta do usuário. */
+export const removerQuestao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("questoes_extraidas")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
