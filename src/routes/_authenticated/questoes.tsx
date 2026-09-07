@@ -538,6 +538,9 @@ function QuestoesPage() {
   // Banco na nuvem: traz as questões salvas na conta e mantém o cache local em sincronia.
   const listar = useServerFn(listarQuestoesExtraidas);
   const salvar = useServerFn(salvarQuestoesExtraidas);
+  const remover = useServerFn(removerQuestao);
+  const [excluidas, setExcluidas] = useState<string[]>([]);
+  const [soFavoritas, setSoFavoritas] = useState(false);
   const banco = useQuery({ queryKey: ["questoes-extraidas"], queryFn: () => listar({}) });
 
   useEffect(() => {
@@ -545,11 +548,11 @@ function QuestoesPage() {
     if (!nuvem?.length) return;
     const local = lerAcervo().extraidas;
     const mapa = new Map(local.map((q) => [q.id, q]));
-    for (const q of nuvem) if (!mapa.has(q.id)) mapa.set(q.id, q);
+    for (const q of nuvem) if (!mapa.has(q.id) && !excluidas.includes(q.id)) mapa.set(q.id, q);
     const juntas = Array.from(mapa.values());
     if (juntas.length !== local.length) atualizar({ extraidas: juntas });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [banco.data]);
+  }, [banco.data, excluidas]);
 
   const contextoIA =
     [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
@@ -571,6 +574,29 @@ function QuestoesPage() {
   };
 
 
+  const excluirExtraida = (q: Questao) => {
+    const atuais = lerAcervo().extraidas;
+    atualizar({ extraidas: atuais.filter((x) => x.id !== q.id) });
+    setExcluidas((ids) => [...ids, q.id]);
+    void remover({ data: { id: q.id } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
+      .catch(() => toast.error("Não deu para excluir na nuvem agora; saiu do aparelho."));
+    toast.success("Questão excluída.", {
+      action: {
+        label: "Desfazer",
+        onClick: () => {
+          setExcluidas((ids) => ids.filter((id) => id !== q.id));
+          atualizarExtraida(q);
+        },
+      },
+    });
+  };
+
+  const favoritarExtraida = (q: Questao) => {
+    atualizarExtraida({ ...q, favorita: !q.favorita });
+    toast.success(q.favorita ? "Removida dos favoritos." : "Questão favoritada.");
+  };
+
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
   const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
   const pendentes = questoesPendentes(extraidas);
@@ -586,7 +612,9 @@ function QuestoesPage() {
   const daIA = permitidas.filter(
     (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
   );
-  const lista = fonteAtiva === "pdf" ? doPdf : daIA;
+  const totalFavoritas = doPdfNaMateria.filter((q) => q.favorita).length;
+  const base = fonteAtiva === "pdf" ? doPdf : daIA;
+  const lista = soFavoritas ? base.filter((q) => q.favorita) : base;
   const assuntos = agruparAssuntos(lista);
   const provas = provasExtraidas(extraidas);
 
@@ -727,6 +755,34 @@ function QuestoesPage() {
         </section>
       )}
 
+      {fonteAtiva === "pdf" && doPdfNaMateria.length > 0 && (
+        <section className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-card">
+          <button
+            type="button"
+            onClick={() => setSoFavoritas(false)}
+            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              !soFavoritas
+                ? "border-primary bg-primary font-semibold text-primary-foreground"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            Todas ({base.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSoFavoritas(true)}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              soFavoritas
+                ? "border-primary bg-primary font-semibold text-primary-foreground"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            <Star className={`size-3.5 ${soFavoritas ? "" : "fill-mark-yellow text-mark-yellow"}`} />
+            Só favoritas ({totalFavoritas})
+          </button>
+        </section>
+      )}
+
       <ResumoRelevancia itens={assuntos} />
 
       {lista.length === 0 ? (
@@ -745,6 +801,8 @@ function QuestoesPage() {
               questao={q}
               numero={q.numero ?? i + 1}
               onAtualizar={atualizarExtraida}
+              onExcluir={excluirExtraida}
+              onFavoritar={favoritarExtraida}
               contexto={contextoIA}
             />
           ) : (
@@ -764,7 +822,29 @@ function QuestoesPage() {
           </p>
           {pendentes.slice(0, 30).map((q) => (
             <div key={q.id} className="space-y-2 rounded-lg border border-border p-3">
-              <p className="text-xs text-muted-foreground">{q.origem}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs text-muted-foreground">{q.origem}</p>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-label={q.favorita ? "Remover dos favoritos" : "Favoritar questão"}
+                    onClick={() => favoritarExtraida(q)}
+                  >
+                    <Star
+                      className={`size-4 ${q.favorita ? "fill-mark-yellow text-mark-yellow" : "text-muted-foreground"}`}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Excluir questão"
+                    onClick={() => {
+                      if (window.confirm("Excluir esta questão?")) excluirExtraida(q);
+                    }}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </button>
+                </span>
+              </div>
               <p className="line-clamp-3 text-sm">{q.enunciado}</p>
               <div className="flex flex-wrap gap-2">
                 <select
