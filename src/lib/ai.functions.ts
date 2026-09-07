@@ -63,6 +63,8 @@ export type Questao = {
   prova?: string;
   /** Número da questão dentro da prova extraída. */
   numero?: number;
+  /** Marcada com estrela pelo candidato, para estudo direcionado. */
+  favorita?: boolean;
   enunciado: string;
   alternativas: Alternativa[];
   explicacao: string;

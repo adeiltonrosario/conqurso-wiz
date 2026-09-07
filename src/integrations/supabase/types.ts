@@ -110,6 +110,7 @@ export type Database = {
           criado_em: string
           enunciado: string
           explicacao: string | null
+          favorita: boolean
           grupo: string | null
           id: string
           materia: string | null
@@ -126,6 +127,7 @@ export type Database = {
           criado_em?: string
           enunciado: string
           explicacao?: string | null
+          favorita?: boolean
           grupo?: string | null
           id: string
           materia?: string | null
@@ -142,6 +144,7 @@ export type Database = {
           criado_em?: string
           enunciado?: string
           explicacao?: string | null
+          favorita?: boolean
           grupo?: string | null
           id?: string
           materia?: string | null
