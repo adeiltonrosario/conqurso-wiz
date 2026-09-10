@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -12,13 +13,7 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import {
-  alternarFavorito,
-  chaveFavorito,
-  desfavoritarArtigos,
-  favoritarArtigos,
-  useFavoritos,
-} from "@/lib/favoritos";
+import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
 import {
   alternarArtigoOculto,
   alternarParagrafoOculto,
@@ -35,6 +30,7 @@ import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  leiIntegral,
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
@@ -353,11 +349,14 @@ export function LeiIntegralPainel({
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
+  const buscar = useServerFn(leiIntegral);
+  const [lei, setLei] = useState<LeiIntegralTipo | null>(null);
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
+  const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
   const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
@@ -407,7 +406,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
-      
+      setLei(null);
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
         return;
@@ -425,14 +424,27 @@ export function LeiIntegralPainel({
   });
 
 
+  const mut = useMutation({
+    mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
+    onSuccess: (r) => {
+      setLei(r);
+      setLeisPdf([]);
+      onCarregado?.(r);
+      if (!(r.artigos ?? []).length) toast.error("A IA não retornou os artigos deste capítulo.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Não foi possível carregar o texto integral."),
+  });
+
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
-  const baseLegal = leiPdfAtiva?.nome ?? "";
+  const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =
-      soCapitulo && capitulo.trim().length > 2
-        ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
-        : (leiPdfAtiva?.artigos ?? []);
+      fonte === "pdf"
+        ? soCapitulo && capitulo.trim().length > 2
+          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+          : (leiPdfAtiva?.artigos ?? [])
+        : (lei?.artigos ?? []);
     if (!limparPdf) return base;
     // Sem revogados/vetados e sem lixo de rodapé do PDF.
     return base
@@ -443,10 +455,10 @@ export function LeiIntegralPainel({
         paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
       }))
       .filter((a) => a.texto.trim().length > 2);
-  }, [leiPdfAtiva, capitulo, soCapitulo, limparPdf]);
+  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
 
 
-  const carregado = leisPdf.length > 0;
+  const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
@@ -511,31 +523,6 @@ export function LeiIntegralPainel({
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
 
-  /** Chaves de favoritos que pertencem à lei aberta. */
-  const favoritosDaLei = useMemo(
-    () => favoritos.filter((f) => f.lei === (baseLegal || "Legislação anexada")).map((f) => f.chave),
-    [favoritos, baseLegal],
-  );
-
-  /** Marca todos os artigos visíveis desta lei como favoritos, com desfazer. */
-  const favoritarTodos = () => {
-    const incluidas = favoritarArtigos(brutos, {
-      lei: baseLegal,
-      materia,
-      capituloEdital: capitulo,
-    });
-    if (!incluidas.length) {
-      toast.info("Todos os artigos desta lei já estavam favoritados.");
-      return;
-    }
-    toast.success(`${incluidas.length} artigo(s) favoritados para leitura.`, {
-      action: {
-        label: "Desfazer",
-        onClick: () => desfavoritarArtigos(incluidas),
-      },
-    });
-  };
-
   const irPara = (id: string) => {
     setEmFoco(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -553,7 +540,25 @@ export function LeiIntegralPainel({
         </p>
       </header>
 
-      {pdfsLei.length === 0 ? (
+      <div className="flex gap-2">
+        {(["pdf", "ia"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFonte(f)}
+            className={`flex-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
+              fonte === f
+                ? "border-primary bg-secondary font-semibold text-primary"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {f === "pdf" ? "PDF anexado" : "IA (reserva)"}
+          </button>
+        ))}
+      </div>
+
+      {fonte === "pdf" ? (
+        pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
             Texto de leis (Vade Mecum)”.
@@ -659,7 +664,25 @@ export function LeiIntegralPainel({
               </select>
             )}
           </div>
-        )}
+        )
+      ) : (
+        <Button
+          variant={lei ? "outline" : "default"}
+          className="w-full"
+          disabled={mut.isPending || capitulo.trim().length < 3}
+          onClick={() => mut.mutate()}
+        >
+          {mut.isPending ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
+            </>
+          ) : lei ? (
+            "Recarregar texto integral"
+          ) : (
+            "Carregar texto integral dos artigos"
+          )}
+        </Button>
+      )}
 
       {carregado && (
         <>
@@ -681,7 +704,7 @@ export function LeiIntegralPainel({
               placeholder="Faixa de artigos (ex.: 312-327)"
               aria-label="Filtrar por faixa de artigos"
             />
-            {capitulo.trim().length > 2 && (
+            {fonte === "pdf" && capitulo.trim().length > 2 && (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
@@ -732,29 +755,6 @@ export function LeiIntegralPainel({
                   Ver só os favoritos (★)
                 </label>
               </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={favoritarTodos}
-                disabled={brutos.length === 0}
-              >
-                <Star className="mr-1.5 size-3.5" /> Favoritar artigos para leitura
-              </Button>
-              {favoritosDaLei.length > 0 && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    desfavoritarArtigos(favoritosDaLei);
-                    toast.success("Os favoritos desta lei foram removidos.");
-                  }}
-                >
-                  Desfavoritar todos desta lei ({favoritosDaLei.length})
-                </Button>
-              )}
             </div>
             {totalOcultosDaLei.total > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -976,6 +976,11 @@ export function LeiIntegralPainel({
             </p>
           )}
 
+          {fonte === "ia" && lei?.observacao && (
+            <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+              {lei.observacao}
+            </p>
+          )}
         </>
       )}
     </section>
