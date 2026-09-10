@@ -58,6 +58,18 @@ import {
   useEdital,
 } from "@/lib/edital";
 
+/** Extrai número/ano de uma norma do edital (ex.: "Lei n. 13.869/2019"). */
+function refDaNorma(nome: string): { numero: string; ano: number; complementar: boolean } | null {
+  const m = nome.match(/(complementar\s+)?n?[º°.\s]*\s*([\d.]{3,9})\s*(?:\/|,?\s*de\s+[^,]*?)\s*((?:19|20)\d{2})/i);
+  if (!m) return null;
+  const numero = (m[2] ?? "").replace(/\D/g, "");
+  const ano = Number(m[3]);
+  if (!numero || !ano) return null;
+  return { numero, ano, complementar: /complementar/i.test(nome) };
+}
+
+
+
 export const Route = createFileRoute("/_authenticated/inclusao")({
   head: () => ({
     meta: [
