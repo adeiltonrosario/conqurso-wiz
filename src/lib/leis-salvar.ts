@@ -44,3 +44,40 @@ export function salvarLeiNoAcervo(bruto: string, nomePreferido?: string): Result
   salvarAcervo({ ...acervo, provas });
   return { artigos, titulo: nome, nome };
 }
+
+/**
+ * Renomeia uma lei já salva, preservando o texto integral, os favoritos, os
+ * trechos ocultos e o vínculo com os links das matérias do edital.
+ * Retorna uma mensagem de erro ou `null` quando deu certo.
+ */
+export async function renomearLei(antigo: string, novo: string): Promise<string | null> {
+  const limpo = novo.trim();
+  if (!limpo) return "Digite um nome para a lei.";
+  if (limpo === antigo) return null;
+
+  const acervo = lerAcervo();
+  const alvo = antigo.toLowerCase();
+  const indice = acervo.provas.findIndex(
+    (a) => ehAnexoDeLei(a) && nomeLimpo(a).toLowerCase() === alvo,
+  );
+  if (indice < 0) return "Lei não encontrada no acervo.";
+  const existe = acervo.provas.some(
+    (a, i) => i !== indice && ehAnexoDeLei(a) && nomeLimpo(a).toLowerCase() === limpo.toLowerCase(),
+  );
+  if (existe) return "Já existe outra lei salva com esse nome.";
+
+  const texto = await lerTextoAnexo(antigo);
+  if (texto) {
+    await salvarTextoAnexo(limpo, texto);
+    await removerTextoAnexo(antigo);
+  }
+
+  salvarAcervo({
+    ...lerAcervo(),
+    provas: acervo.provas.map((a, i) => (i === indice ? { ...a, nome: marcarComoLei(limpo) } : a)),
+  });
+  renomearLeiNosFavoritos(antigo, limpo);
+  renomearLeiNosOcultos(antigo, limpo);
+  renomearAnexoNasLeis(antigo, limpo);
+  return null;
+}
