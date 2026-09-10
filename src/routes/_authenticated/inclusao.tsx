@@ -920,6 +920,7 @@ function InclusaoPage() {
             })
           }
           onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
+          onRenomear={renomearLei}
         />
 
         <UploadCampo
