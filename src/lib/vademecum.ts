@@ -23,7 +23,8 @@ const RE_MARCADOR = new RegExp(
   "gu",
 );
 
-const RE_DIVISOR = /(?=§\s*\d+[º°]?|Parágrafo\s+único|(?:^|\s)[IVXLCDM]{1,5}\s*[-–—]\s|(?:^|\s)[a-z]\)\s)/gu;
+const RE_DIVISOR =
+  /(?=§\s*\d+[º°]?|Parágrafo\s+único|(?:^|\s)[IVXLCDM]{1,5}\s*[-–—]\s|(?:^|\s)[a-z]\)\s)/gu;
 
 /** Marca inserida na extração do PDF para localizar a página de cada trecho. */
 const RE_PAGINA = /\[\[p:(\d+)\]\]/g;
@@ -55,7 +56,6 @@ function limpar(s: string) {
   return s.replace(/\s+/g, " ").trim();
 }
 
-
 /** Separa o caput dos parágrafos, incisos e alíneas, mantendo a numeração original. */
 function partirCorpo(corpo: string) {
   const partes = corpo
@@ -75,7 +75,14 @@ export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
   let capitulo = "";
   let secao = "";
 
-  type Bruto = { referencia: string; inicio: number; lei: string; titulo: string; capitulo: string; secao: string };
+  type Bruto = {
+    referencia: string;
+    inicio: number;
+    lei: string;
+    titulo: string;
+    capitulo: string;
+    secao: string;
+  };
   const brutos: Bruto[] = [];
   const cortes: number[] = [];
 
@@ -99,7 +106,9 @@ export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
       secao = limpar(g["secao"]);
     } else if (g["artigo"]) {
       brutos.push({
-        referencia: limpar(g["artigo"]).replace(/^Artigo/i, "Art.").replace(/^Art\s/i, "Art. "),
+        referencia: limpar(g["artigo"])
+          .replace(/^Artigo/i, "Art.")
+          .replace(/^Art\s/i, "Art. "),
         inicio: m.index,
         lei: leiAtual || "Legislação anexada",
         titulo,
@@ -136,7 +145,6 @@ export function lerVadeMecum(textoBruto: string): LeiDoPdf[] {
       secao: b.secao,
     });
   }
-
 
   return leis.filter((l) => l.artigos.length > 0);
 }

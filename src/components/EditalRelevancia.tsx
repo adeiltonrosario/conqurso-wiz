@@ -155,7 +155,6 @@ function LeisDaMateria({
     );
   };
 
-
   const adicionar = () => {
     const endereco = url.trim();
     if (!/^https?:\/\//i.test(endereco)) {
@@ -181,7 +180,11 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
-      const { artigos, titulo: nome, nome: anexo } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
+      const {
+        artigos,
+        titulo: nome,
+        nome: anexo,
+      } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
       if (!artigos) {
         toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
         return;
