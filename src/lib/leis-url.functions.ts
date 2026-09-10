@@ -5,6 +5,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const MAX_BYTES = 5_000_000;
 
@@ -128,6 +129,7 @@ async function baixar(url: string) {
 
 /** Baixa uma URL informada pelo candidato e devolve o texto da lei. */
 export const buscarLeiPorUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ url: urlSchema }).parse(d))
   .handler(async ({ data }) => {
     const r = await baixar(data.url);
@@ -178,6 +180,7 @@ export function candidatosPlanalto(numero: string, ano: number, complementar: bo
 
 /** Tenta achar a lei oficial no Planalto pelo número e ano. */
 export const buscarLeiOficial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
