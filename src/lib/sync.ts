@@ -90,6 +90,12 @@ export function SincronizaEstado() {
       } finally {
         aplicando.current = false;
       }
+      // Textos integrais dos PDFs: sobem para a conta uma vez por aparelho.
+      try {
+        await migrarAnexosParaNuvem();
+      } catch (erro) {
+        console.error("Falha ao migrar os textos dos anexos", erro);
+      }
     })();
 
     return () => {
