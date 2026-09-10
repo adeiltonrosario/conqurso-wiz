@@ -3,16 +3,38 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, LineChart, Loader2, Sparkles } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  LineChart,
+  Loader2,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { estimarRelevanciaEdital } from "@/lib/ai.functions";
 import {
+  comLeiAdicionada,
+  comLeiAlterada,
+  comLeiRemovida,
+  leisDaMateria,
   materiasPorRelevancia,
   relevanciaGeral,
   topicosPorRelevancia,
   useEdital,
+  type LinkLei,
   type MateriaEdital,
 } from "@/lib/edital";
+import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
+import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
+import { ehAnexoDeLei, nomeLimpo, useAcervo } from "@/lib/acervo";
 import { useRevisao, type HistoricoRevisao } from "@/lib/revisao";
 import { useTrilha } from "@/lib/trilha";
 
