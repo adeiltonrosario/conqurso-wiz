@@ -425,6 +425,7 @@ function LinhaMateria({
               </tbody>
             </table>
           )}
+          <LeisDaMateria materia={materia} onLeis={onLeis} />
         </div>
       )}
     </li>
