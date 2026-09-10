@@ -25,11 +25,8 @@ import {
   type QuestaoCadastrada,
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
-import { lerVadeMecum } from "@/lib/vademecum";
-import { limparRuidoLei } from "@/lib/limpeza-lei";
-import { buscarLeiOficial, buscarLeiPorUrl } from "@/lib/leis-url.functions";
-import { normasDoEdital, type NormaMapeada } from "@/lib/mapa-vademecum";
-import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
+import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
+import { removerTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
 
 import {
@@ -58,15 +55,6 @@ import {
   useEdital,
 } from "@/lib/edital";
 
-/** Extrai número/ano de uma norma do edital (ex.: "Lei n. 13.869/2019"). */
-function refDaNorma(nome: string): { numero: string; ano: number; complementar: boolean } | null {
-  const m = nome.match(/(complementar\s+)?n?[º°.\s]*\s*([\d.]{3,9})\s*(?:\/|,?\s*de\s+[^,]*?)\s*((?:19|20)\d{2})/i);
-  if (!m) return null;
-  const numero = (m[2] ?? "").replace(/\D/g, "");
-  const ano = Number(m[3]);
-  if (!numero || !ano) return null;
-  return { numero, ano, complementar: /complementar/i.test(nome) };
-}
 
 
 
@@ -342,20 +330,6 @@ function InclusaoPage() {
   const semMaterias = MATERIAS.length === 0;
   const [enunciado, setEnunciado] = useState("");
   const [explicacao, setExplicacao] = useState("");
-  const [urlLei, setUrlLei] = useState("");
-  const [buscandoUrl, setBuscandoUrl] = useState(false);
-  const [buscandoNorma, setBuscandoNorma] = useState<string | null>(null);
-  const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
-  const nomesDeLeisSalvas = useMemo(
-    () => acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase()),
-    [acervo.provas],
-  );
-  const leiJaSalva = (norma: string) => {
-    const ref = refDaNorma(norma);
-    const chave = ref ? `${ref.numero}` : norma.toLowerCase().slice(0, 18);
-    const alvo = ref ? [chave, chave.replace(/(\d+)(\d{3})$/, "$1.$2")] : [chave];
-    return nomesDeLeisSalvas.some((n) => alvo.some((a) => n.includes(a)));
-  };
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
@@ -620,40 +594,6 @@ function InclusaoPage() {
 
 
 
-  /** Guarda um texto de lei como item consultável em Leis → Texto Integral. */
-  const salvarLeiNoSistema = (bruto: string, tituloSugerido?: string) => {
-    const texto = limparRuidoLei(bruto).trim();
-    const leis = lerVadeMecum(texto);
-    const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
-    if (!artigos) {
-      toast.warning(
-        "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
-      );
-      return 0;
-    }
-
-    const titulo = leis[0]?.nome?.trim() || tituloSugerido?.trim() || "Texto colado";
-    const data = new Date().toLocaleDateString("pt-BR");
-    const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
-    let nome = `${titulo} — ${data}`;
-    let n = 2;
-    while (jaUsados.has(nome)) nome = `${titulo} — ${data} (${n++})`;
-
-    void salvarTextoAnexo(nome, texto);
-    atualizar({
-      provas: [
-        ...acervo.provas,
-        {
-          nome: marcarComoLei(nome),
-          texto: texto.slice(0, LIMITE_TRECHO_IA),
-          chars: texto.length,
-        },
-      ],
-    });
-    toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
-    return artigos;
-  };
-
   /** Salva o texto de lei colado e limpa o campo. */
   const extrairLeiColada = () => {
     const texto = acervo.leis.trim();
@@ -661,52 +601,17 @@ function InclusaoPage() {
       toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
       return;
     }
-    if (salvarLeiNoSistema(texto)) atualizar({ leis: "" });
-  };
-
-  /** Busca a lei em um endereço colado pelo candidato. */
-  const buscarPorUrl = async () => {
-    const url = urlLei.trim();
-    if (!/^https?:\/\//i.test(url)) {
-      toast.error("Cole o endereço completo da lei, começando com https://");
+    const { artigos, titulo } = salvarLeiNoAcervo(texto);
+    if (!artigos) {
+      toast.warning(
+        "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
+      );
       return;
     }
-    setBuscandoUrl(true);
-    try {
-      const r = await buscarLeiPorUrl({ data: { url } });
-      if (!r.ok) {
-        toast.error(r.erro);
-        return;
-      }
-      if (salvarLeiNoSistema(r.texto, r.titulo)) setUrlLei("");
-    } catch {
-      toast.error("Não foi possível acessar esse endereço.");
-    } finally {
-      setBuscandoUrl(false);
-    }
+    atualizar({ leis: "" });
+    toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
   };
 
-  /** Busca automática da lei oficial do edital no site do Planalto. */
-  const buscarNorma = async (norma: NormaMapeada) => {
-    const ref = refDaNorma(norma.norma);
-    if (!ref) {
-      toast.error("Essa norma não tem número de lei — use o campo de endereço acima.");
-      return;
-    }
-    setBuscandoNorma(norma.item);
-    try {
-      const r = await buscarLeiOficial({ data: ref });
-      if (!r.ok) {
-        toast.error(r.erro);
-        return;
-      }
-      salvarLeiNoSistema(r.texto, norma.norma);
-    } catch {
-      toast.error("Não foi possível buscar essa lei agora.");
-    } finally {
-      setBuscandoNorma(null);
-    }
-  };
 
 
 
