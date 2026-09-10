@@ -333,7 +333,6 @@ function Sumario({
 export function LeiIntegralPainel({
   materia,
   capitulo,
-  contexto,
   marcados,
   pdfsLei = [],
   onAlternarMarcado,
@@ -348,14 +347,12 @@ export function LeiIntegralPainel({
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
-  const buscar = useServerFn(leiIntegral);
-  const [lei, setLei] = useState<LeiIntegralTipo | null>(null);
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
+  const [soAssuntos, setSoAssuntos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
-  const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
   const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
