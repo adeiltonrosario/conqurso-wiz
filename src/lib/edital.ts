@@ -7,6 +7,9 @@ import { MATERIAS_ESPECIFICO, MATERIAS_GERAL } from "./acervo";
  */
 export type GrupoEdital = "Conhecimento Geral" | "Conhecimento Específico";
 
+/** Link de uma lei cadastrada pelo candidato dentro de uma matéria do edital. */
+export type LinkLei = { id: string; titulo: string; url: string };
+
 export type MateriaEdital = {
   id: string;
   nome: string;
@@ -20,6 +23,8 @@ export type MateriaEdital = {
   relevancia?: number | undefined;
   /** Relevância de cada tópico DENTRO da matéria, em %. */
   relevanciaTopicos?: Record<string, number> | undefined;
+  /** Links das leis desta matéria, informados pelo candidato. */
+  leis?: LinkLei[] | undefined;
 };
 
 
