@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { CHAVES, carregarEstado, salvarEstado, type ChaveEstado } from "./sync.functions";
+import { migrarAnexosParaNuvem } from "./anexos-store";
 
 /**
  * Sincroniza o estado de estudo (acervo, revisão, leituras e trilha) entre o
