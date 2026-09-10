@@ -702,25 +702,7 @@ export function LeiIntegralPainel({
               </select>
             )}
           </div>
-        )
-      ) : (
-        <Button
-          variant={lei ? "outline" : "default"}
-          className="w-full"
-          disabled={mut.isPending || capitulo.trim().length < 3}
-          onClick={() => mut.mutate()}
-        >
-          {mut.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
-            </>
-          ) : lei ? (
-            "Recarregar texto integral"
-          ) : (
-            "Carregar texto integral dos artigos"
-          )}
-        </Button>
-      )}
+        )}
 
       {carregado && (
         <>
@@ -742,7 +724,7 @@ export function LeiIntegralPainel({
               placeholder="Faixa de artigos (ex.: 312-327)"
               aria-label="Filtrar por faixa de artigos"
             />
-            {fonte === "pdf" && capitulo.trim().length > 2 && (
+            {capitulo.trim().length > 2 && (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
