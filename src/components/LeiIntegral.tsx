@@ -385,7 +385,40 @@ export function LeiIntegralPainel({
   const faixaAtiva = normaAtiva ? faixaDaNorma(normaAtiva.item) : null;
 
 
-  const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
+  /** Leis salvas que estão cadastradas nesta matéria (Detalhamento do edital). */
+  const leisDaMinhaMateria = useMemo(() => {
+    const alvo = materiasAtivas(edital).find(
+      (m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase(),
+    );
+    const links = alvo ? leisDaMateria(alvo) : [];
+    if (!links.length) return { nomes: [] as string[], links };
+    const nomes = pdfsLei
+      .filter((p) => {
+        const n = p.nome.trim().toLowerCase();
+        return links.some((l) => {
+          if ((l.anexo ?? "").trim().toLowerCase() === n) return true;
+          const t = l.titulo.trim().toLowerCase();
+          const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
+          return (t.length > 4 && n.includes(t)) || (numero.length >= 4 && n.includes(numero));
+        });
+      })
+      .map((p) => p.nome);
+    return { nomes, links };
+  }, [edital, materia, pdfsLei]);
+
+  const daMateria = useMemo(() => new Set(leisDaMinhaMateria.nomes), [leisDaMinhaMateria.nomes]);
+
+  /** Leis salvas com as desta matéria primeiro. */
+  const pdfsOrdenados = useMemo(
+    () =>
+      [...pdfsLei].sort(
+        (a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome)),
+      ),
+    [pdfsLei, daMateria],
+  );
+
+  const arquivoAtivo =
+    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsLei[0]?.nome || "";
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
