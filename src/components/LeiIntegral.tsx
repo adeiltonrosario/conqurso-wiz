@@ -578,35 +578,55 @@ export function LeiIntegralPainel({
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
-  const filtrarPelosAssuntos = () => {
-    if (!carregado) {
-      toast.error("Escolha a lei salva e extraia o texto integral primeiro.");
-      return;
-    }
-    if (!topicos.length) {
-      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
-      return;
-    }
-    const casados = casadosAssuntos.filter(
-      (a) => !artigosOcultos.has(chaveArtigo(baseLegal, a)),
-    );
+  /** Casa os assuntos, favorita os artigos encontrados e liga o filtro. */
+  const casarEFavoritar = (base: ArtigoIntegral[], lei: string) => {
+    const { artigos: encontrados, assuntosCasados } = artigosDosAssuntos(base, topicos);
+    const casados = encontrados.filter((a) => !artigosOcultos.has(chaveArtigo(lei, a)));
     if (!casados.length) {
       setSoAssuntos(false);
-      toast.error("Nenhum artigo casou com os assuntos desta matéria.");
+      toast.error(
+        `Os assuntos de “${materia}” não aparecem no texto de “${lei}”. Confira o link da lei no Detalhamento do edital.`,
+      );
       return;
     }
     let novos = 0;
     for (const a of casados) {
-      if (chavesFavoritas.has(chaveFavorito(baseLegal, a))) continue;
-      alternarFavorito(a, { lei: baseLegal, materia, capituloEdital: capitulo });
+      if (chavesFavoritas.has(chaveFavorito(lei, a))) continue;
+      alternarFavorito(a, { lei, materia, capituloEdital: capitulo });
       novos++;
     }
     setSoAssuntos(true);
     toast.success(
-      `${casados.length} artigo(s) de ${topicos.length} assunto(s) favoritados (${novos} novo(s)).`,
+      `${casados.length} artigo(s) de ${assuntosCasados} assunto(s) favoritados (${novos} novo(s)).`,
     );
   };
+
+  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
+  const filtrarPelosAssuntos = async () => {
+    if (!topicos.length) {
+      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
+      return;
+    }
+    if (!carregado) {
+      if (!arquivoAtivo) {
+        toast.error(
+          "Cadastre a lei desta matéria no Detalhamento do edital e toque em “Buscar texto”.",
+        );
+        return;
+      }
+      try {
+        const leis = await mutPdf.mutateAsync({ nome: arquivoAtivo, item: itemAtivo });
+        const primeira = leis[0];
+        if (!primeira) return;
+        casarEFavoritar(primeira.artigos, primeira.nome);
+      } catch {
+        /* o erro já é avisado pela leitura do arquivo */
+      }
+      return;
+    }
+    casarEFavoritar(brutos, baseLegal);
+  };
+
 
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
