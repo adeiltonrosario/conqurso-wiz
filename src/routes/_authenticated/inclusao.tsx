@@ -26,7 +26,7 @@ import {
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
-import { removerTextoAnexo } from "@/lib/anexos-store";
+import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
 
 import {
