@@ -124,6 +124,20 @@ export function reexibirTudo(prefixo?: string) {
   });
 }
 
+/** Mantém artigos, parágrafos e trechos ocultos ao renomear a lei. */
+export function renomearLeiNosOcultos(antigo: string, novo: string) {
+  const a = chaveLei(antigo);
+  const n = chaveLei(novo);
+  if (!a || a === n) return;
+  const troca = (c: string) => (c.startsWith(`${a}|`) ? `${n}|${c.slice(a.length + 1)}` : c);
+  const o = lerOcultos();
+  salvar({
+    artigos: o.artigos.map(troca),
+    paragrafos: o.paragrafos.map(troca),
+    trechos: o.trechos.map((t) => (t.lei === a ? { ...t, lei: n } : t)),
+  });
+}
+
 export function useOcultos() {
   const [ocultos, setOcultos] = useState<Ocultos>(VAZIO);
 
