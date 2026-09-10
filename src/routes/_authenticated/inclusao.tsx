@@ -924,69 +924,11 @@ function InclusaoPage() {
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Leis, gramática, provas e edital</h2>
 
-        <div className="space-y-2">
-          <Label htmlFor="url-lei">Buscar lei por link</Label>
-          <Input
-            id="url-lei"
-            inputMode="url"
-            value={urlLei}
-            onChange={(e) => setUrlLei(e.target.value.slice(0, 2000))}
-            placeholder="https://www.planalto.gov.br/ccivil_03/…"
-          />
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => void buscarPorUrl()}
-            disabled={buscandoUrl}
-          >
-            {buscandoUrl ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <LinkIcon className="mr-2 size-4" />
-            )}
-            {buscandoUrl ? "Buscando…" : "Buscar e salvar lei"}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Cole o endereço da lei (Planalto, sites de legislação). O texto é lido, limpo e salvo em
-            “Leis → Texto Integral” — sem gastar IA.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Os links das leis do seu edital ficam em “Detalhamento do edital”, dentro de cada matéria.
+        </p>
 
-        {normasEdital.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Leis do seu edital</p>
-            <ul className="space-y-2">
-              {normasEdital.map((n) => {
-                const salva = leiJaSalva(n.norma);
-                return (
-                  <li
-                    key={n.item}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border p-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{n.norma}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {salva ? "já está no sistema" : "ainda falta"}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={salva ? "ghost" : "outline"}
-                      onClick={() => void buscarNorma(n)}
-                      disabled={buscandoNorma === n.item}
-                    >
-                      {buscandoNorma === n.item ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        "Buscar"
-                      )}
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+
 
 
         <div className="space-y-2">
