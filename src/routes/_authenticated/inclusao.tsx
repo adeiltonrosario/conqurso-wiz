@@ -330,6 +330,9 @@ function InclusaoPage() {
   const semMaterias = MATERIAS.length === 0;
   const [enunciado, setEnunciado] = useState("");
   const [explicacao, setExplicacao] = useState("");
+  const [urlLei, setUrlLei] = useState("");
+  const [buscandoUrl, setBuscandoUrl] = useState(false);
+  const [buscandoNorma, setBuscandoNorma] = useState<string | null>(null);
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
