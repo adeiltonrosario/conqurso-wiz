@@ -667,6 +667,13 @@ export function LeiIntegralPainel({
         )}
       </div>
 
+      {leisDaMinhaMateria.links.length > 0 && leisDaMinhaMateria.nomes.length === 0 && (
+        <p className="rounded-lg bg-secondary p-3 text-[11px] text-muted-foreground">
+          Esta matéria já tem lei cadastrada, mas o texto ainda não foi baixado. Abra o Detalhamento
+          do edital e toque em “Buscar texto” no link da lei.
+        </p>
+      )}
+
       {pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
@@ -681,12 +688,14 @@ export function LeiIntegralPainel({
               aria-label="Lei salva (PDF ou texto colado)"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              {pdfsLei.map((p) => (
+              {pdfsOrdenados.map((p) => (
                 <option key={p.nome} value={p.nome}>
                   {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
+                  {daMateria.has(p.nome) ? " · desta matéria" : ""}
                 </option>
               ))}
             </select>
+
 
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
