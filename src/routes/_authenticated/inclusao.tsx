@@ -80,6 +80,7 @@ function UploadCampo({
   onAdd,
   onRemove,
   onArquivoLido,
+  onRenomear,
 }: {
   label: string;
   ajuda: string;
@@ -91,9 +92,24 @@ function UploadCampo({
    * Retornar "descartar" impede que o arquivo entre na lista (ex.: PDF só de gabarito).
    */
   onArquivoLido?: (nome: string, texto: string) => void | "descartar";
+  /** Quando existe, cada item pode ser renomeado. Retorna erro ou null. */
+  onRenomear?: (antigo: string, novo: string) => Promise<string | null>;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState("");
+
+  async function confirmarNome(antigo: string) {
+    if (!onRenomear) return;
+    const erro = await onRenomear(antigo, rascunho);
+    if (erro) {
+      toast.error(erro);
+      return;
+    }
+    setEditando(null);
+    toast.success("Nome atualizado.");
+  }
 
   async function selecionar(files: File[]) {
     setLendo(true);
