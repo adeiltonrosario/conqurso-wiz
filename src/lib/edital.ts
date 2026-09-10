@@ -414,3 +414,16 @@ export function comLeiAlterada(
 export function comLeiRemovida(materia: MateriaEdital, id: string): LinkLei[] {
   return leisDaMateria(materia).filter((l) => l.id !== id);
 }
+
+/** Ao renomear uma lei salva, mantém o vínculo dos links das matérias. */
+export function renomearAnexoNasLeis(antigo: string, novo: string) {
+  const estado = lerEdital();
+  let mudou = false;
+  const materias = estado.materias.map((m) => {
+    const leis = leisDaMateria(m);
+    if (!leis.some((l) => l.anexo === antigo)) return m;
+    mudou = true;
+    return { ...m, leis: leis.map((l) => (l.anexo === antigo ? { ...l, anexo: novo } : l)) };
+  });
+  if (mudou) salvar({ ...estado, materias });
+}
