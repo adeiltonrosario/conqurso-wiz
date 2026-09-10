@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,7 +12,13 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import { alternarFavorito, chaveFavorito, useFavoritos } from "@/lib/favoritos";
+import {
+  alternarFavorito,
+  chaveFavorito,
+  desfavoritarArtigos,
+  favoritarArtigos,
+  useFavoritos,
+} from "@/lib/favoritos";
 import {
   alternarArtigoOculto,
   alternarParagrafoOculto,
@@ -30,7 +35,6 @@ import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  leiIntegral,
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
@@ -349,14 +353,11 @@ export function LeiIntegralPainel({
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
-  const buscar = useServerFn(leiIntegral);
-  const [lei, setLei] = useState<LeiIntegralTipo | null>(null);
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
-  const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
   const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
@@ -406,7 +407,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
-      setLei(null);
+      
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
         return;
@@ -424,27 +425,14 @@ export function LeiIntegralPainel({
   });
 
 
-  const mut = useMutation({
-    mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
-    onSuccess: (r) => {
-      setLei(r);
-      setLeisPdf([]);
-      onCarregado?.(r);
-      if (!(r.artigos ?? []).length) toast.error("A IA não retornou os artigos deste capítulo.");
-    },
-    onError: (e: Error) => toast.error(e.message || "Não foi possível carregar o texto integral."),
-  });
-
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
-  const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
+  const baseLegal = leiPdfAtiva?.nome ?? "";
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =
-      fonte === "pdf"
-        ? soCapitulo && capitulo.trim().length > 2
-          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
-          : (leiPdfAtiva?.artigos ?? [])
-        : (lei?.artigos ?? []);
+      soCapitulo && capitulo.trim().length > 2
+        ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+        : (leiPdfAtiva?.artigos ?? []);
     if (!limparPdf) return base;
     // Sem revogados/vetados e sem lixo de rodapé do PDF.
     return base
@@ -455,10 +443,10 @@ export function LeiIntegralPainel({
         paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
       }))
       .filter((a) => a.texto.trim().length > 2);
-  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
+  }, [leiPdfAtiva, capitulo, soCapitulo, limparPdf]);
 
 
-  const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
+  const carregado = leisPdf.length > 0;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
