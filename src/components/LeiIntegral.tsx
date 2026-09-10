@@ -511,6 +511,31 @@ export function LeiIntegralPainel({
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
 
+  /** Chaves de favoritos que pertencem à lei aberta. */
+  const favoritosDaLei = useMemo(
+    () => favoritos.filter((f) => f.lei === (baseLegal || "Legislação anexada")).map((f) => f.chave),
+    [favoritos, baseLegal],
+  );
+
+  /** Marca todos os artigos visíveis desta lei como favoritos, com desfazer. */
+  const favoritarTodos = () => {
+    const incluidas = favoritarArtigos(brutos, {
+      lei: baseLegal,
+      materia,
+      capituloEdital: capitulo,
+    });
+    if (!incluidas.length) {
+      toast.info("Todos os artigos desta lei já estavam favoritados.");
+      return;
+    }
+    toast.success(`${incluidas.length} artigo(s) favoritados para leitura.`, {
+      action: {
+        label: "Desfazer",
+        onClick: () => desfavoritarArtigos(incluidas),
+      },
+    });
+  };
+
   const irPara = (id: string) => {
     setEmFoco(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -528,25 +553,7 @@ export function LeiIntegralPainel({
         </p>
       </header>
 
-      <div className="flex gap-2">
-        {(["pdf", "ia"] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFonte(f)}
-            className={`flex-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
-              fonte === f
-                ? "border-primary bg-secondary font-semibold text-primary"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {f === "pdf" ? "PDF anexado" : "IA (reserva)"}
-          </button>
-        ))}
-      </div>
-
-      {fonte === "pdf" ? (
-        pdfsLei.length === 0 ? (
+      {pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
             Texto de leis (Vade Mecum)”.
@@ -652,25 +659,7 @@ export function LeiIntegralPainel({
               </select>
             )}
           </div>
-        )
-      ) : (
-        <Button
-          variant={lei ? "outline" : "default"}
-          className="w-full"
-          disabled={mut.isPending || capitulo.trim().length < 3}
-          onClick={() => mut.mutate()}
-        >
-          {mut.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
-            </>
-          ) : lei ? (
-            "Recarregar texto integral"
-          ) : (
-            "Carregar texto integral dos artigos"
-          )}
-        </Button>
-      )}
+        )}
 
       {carregado && (
         <>
@@ -692,7 +681,7 @@ export function LeiIntegralPainel({
               placeholder="Faixa de artigos (ex.: 312-327)"
               aria-label="Filtrar por faixa de artigos"
             />
-            {fonte === "pdf" && capitulo.trim().length > 2 && (
+            {capitulo.trim().length > 2 && (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
@@ -743,6 +732,29 @@ export function LeiIntegralPainel({
                   Ver só os favoritos (★)
                 </label>
               </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={favoritarTodos}
+                disabled={brutos.length === 0}
+              >
+                <Star className="mr-1.5 size-3.5" /> Favoritar artigos para leitura
+              </Button>
+              {favoritosDaLei.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    desfavoritarArtigos(favoritosDaLei);
+                    toast.success("Os favoritos desta lei foram removidos.");
+                  }}
+                >
+                  Desfavoritar todos desta lei ({favoritosDaLei.length})
+                </Button>
+              )}
             </div>
             {totalOcultosDaLei.total > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -964,11 +976,6 @@ export function LeiIntegralPainel({
             </p>
           )}
 
-          {fonte === "ia" && lei?.observacao && (
-            <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-              {lei.observacao}
-            </p>
-          )}
         </>
       )}
     </section>
