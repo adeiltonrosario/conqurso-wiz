@@ -25,7 +25,7 @@ import {
   reexibirTudo,
   useOcultos,
 } from "@/lib/ocultos";
-import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
+import { corrigirCodificacao, ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ArtigoIntegral, type LeiIntegral as LeiIntegralTipo } from "@/lib/ai.functions";
@@ -413,7 +413,7 @@ export function LeiIntegralPainel({
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
-      const texto = await lerTextoAnexo(nome);
+      const texto = corrigirCodificacao(await lerTextoAnexo(nome));
       if (!texto)
         throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
       const faixaPaginas = item ? faixaDaNorma(item) : null;

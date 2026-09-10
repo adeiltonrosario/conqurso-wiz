@@ -34,9 +34,40 @@ const RUIDO: RegExp[] = [
   // "LEI N. 13.869, DE ... DE" incompleta no rodapé é mantida (faz parte do texto legal)
 ];
 
+/** Pares de mojibake (texto latin-1 lido como UTF-8) que aparecem nas leis oficiais. */
+const MOJIBAKE: [RegExp, string][] = [
+  [/Ã¡/g, "á"], [/Ã /g, "à"], [/Ã¢/g, "â"], [/Ã£/g, "ã"], [/Ã¤/g, "ä"],
+  [/Ã©/g, "é"], [/Ã¨/g, "è"], [/Ãª/g, "ê"],
+  [/Ã­/g, "í"], [/Ã¬/g, "ì"], [/Ã®/g, "î"],
+  [/Ã³/g, "ó"], [/Ã²/g, "ò"], [/Ã´/g, "ô"], [/Ãµ/g, "õ"], [/Ã¶/g, "ö"],
+  [/Ãº/g, "ú"], [/Ã¹/g, "ù"], [/Ã»/g, "û"], [/Ã¼/g, "ü"],
+  [/Ã§/g, "ç"], [/Ã±/g, "ñ"],
+  [/Ã\u0081/g, "Á"], [/Ã€/g, "À"], [/Ã‚/g, "Â"], [/Ãƒ/g, "Ã"],
+  [/Ã‰/g, "É"], [/ÃŠ/g, "Ê"], [/Ã\u008d/g, "Í"],
+  [/Ã“/g, "Ó"], [/Ã”/g, "Ô"], [/Ã•/g, "Õ"],
+  [/Ãš/g, "Ú"], [/Ã‡/g, "Ç"],
+  [/Âº/g, "º"], [/Âª/g, "ª"], [/Â§/g, "§"], [/Â°/g, "°"], [/Â/g, ""],
+  [/â€“/g, "–"], [/â€”/g, "—"], [/â€œ/g, '"'], [/â€\u009d/g, '"'],
+  [/â€™/g, "'"], [/â€˜/g, "'"], [/â€¦/g, "…"],
+];
+
+/**
+ * Repara acentos danificados por leitura em codificação errada e remove os
+ * caracteres de erro (U+FFFD) que apareciam como "?" na leitura das leis.
+ */
+export function corrigirCodificacao(texto: string) {
+  let saida = texto ?? "";
+  if (!saida) return saida;
+  if (/Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€/.test(saida)) {
+    for (const [re, sub] of MOJIBAKE) saida = saida.replace(re, sub);
+  }
+  // caractere de erro solto no meio de uma palavra: melhor remover que exibir "?"
+  return saida.replace(/\uFFFD/g, "");
+}
+
 /** Remove o lixo de rodapé/cabeçalho que sobra no texto extraído do PDF. */
 export function limparRuidoLei(texto: string) {
-  let saida = texto ?? "";
+  let saida = corrigirCodificacao(texto ?? "");
   for (const re of RUIDO) saida = saida.replace(re, " ");
   return saida
     // número de página solto entre espaços

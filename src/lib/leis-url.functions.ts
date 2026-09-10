@@ -95,6 +95,23 @@ function tituloDaLei(texto: string) {
   return (m?.[0] ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Bytes 0x80–0x9F do windows-1252 (o restante é igual ao latin-1). */
+const CP1252 =
+  "\u20ac\u0081\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030\u0160\u2039\u0152\u008d\u017d\u008f" +
+  "\u0090\u2018\u2019\u201c\u201d\u2022\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u009d\u017e\u0178";
+
+/** Converte bytes latin-1 / windows-1252 em texto, sem TextDecoder. */
+function decodificarLatin1(bytes: Uint8Array) {
+  let saida = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    const bloco = bytes.subarray(i, i + 8192);
+    let parte = "";
+    for (const b of bloco) parte += b >= 0x80 && b <= 0x9f ? CP1252[b - 0x80] : String.fromCharCode(b);
+    saida += parte;
+  }
+  return saida;
+}
+
 async function baixar(url: string) {
   const res = await fetch(url, {
     headers: {
@@ -113,17 +130,18 @@ async function baixar(url: string) {
     return { erro: "A página é grande demais. Abra a lei em partes ou cole o texto." };
   }
   const bytes = new Uint8Array(buffer);
-  // Planalto e diários antigos servem em latin-1.
+  // Planalto e diários antigos servem em latin-1; o runtime de borda só decodifica UTF-8,
+  // então a conversão latin-1/cp1252 é feita aqui, sem depender do TextDecoder.
   const charset = /charset=([\w-]+)/i.exec(tipo)?.[1]?.toLowerCase();
-  const cabeca = new TextDecoder("utf-8").decode(bytes.slice(0, 4000));
-  const meta = /charset=["']?([\w-]+)/i.exec(cabeca)?.[1]?.toLowerCase();
-  const enc = charset && charset !== "utf-8" ? charset : (meta ?? "utf-8");
-  let html: string;
-  try {
-    html = new TextDecoder(enc).decode(bytes);
-  } catch {
-    html = new TextDecoder("utf-8").decode(bytes);
-  }
+  const utf8 = new TextDecoder("utf-8").decode(bytes);
+  const meta = /charset=["']?([\w-]+)/i.exec(utf8.slice(0, 4000))?.[1]?.toLowerCase();
+  const declarado = charset ?? meta ?? "";
+  const antigo = /8859|1252|latin/i.test(declarado);
+  if (!antigo && declarado.includes("utf") && !utf8.includes("\uFFFD")) return { html: utf8 };
+  const latin = decodificarLatin1(bytes);
+  // menos caracteres de erro ganha (empate favorece UTF-8, que é o caso moderno)
+  const erros = (s: string) => (s.match(/\uFFFD/g) ?? []).length;
+  const html = antigo || erros(latin) < erros(utf8) ? latin : utf8;
   return { html };
 }
 
