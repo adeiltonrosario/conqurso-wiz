@@ -96,7 +96,9 @@ function tituloDaLei(texto: string) {
 }
 
 /** Bytes 0x80–0x9F do windows-1252 (o restante é igual ao latin-1). */
-const CP1252 = "€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090''\"\"•–—˜™š›œ\u009dž Ÿ";
+const CP1252 =
+  "\u20ac\u0081\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030\u0160\u2039\u0152\u008d\u017d\u008f" +
+  "\u0090\u2018\u2019\u201c\u201d\u2022\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u009d\u017e\u0178";
 
 /** Converte bytes latin-1 / windows-1252 em texto, sem TextDecoder. */
 function decodificarLatin1(bytes: Uint8Array) {
