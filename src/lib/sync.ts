@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { CHAVES, carregarEstado, salvarEstado, type ChaveEstado } from "./sync.functions";
+import { migrarAnexosParaNuvem } from "./anexos-store";
 
 /**
  * Sincroniza o estado de estudo (acervo, revisão, leituras e trilha) entre o
@@ -88,6 +89,12 @@ export function SincronizaEstado() {
         console.error("Falha ao carregar da nuvem", erro);
       } finally {
         aplicando.current = false;
+      }
+      // Textos integrais dos PDFs: sobem para a conta uma vez por aparelho.
+      try {
+        await migrarAnexosParaNuvem();
+      } catch (erro) {
+        console.error("Falha ao migrar os textos dos anexos", erro);
       }
     })();
 
