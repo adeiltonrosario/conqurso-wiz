@@ -27,7 +27,6 @@ export type MateriaEdital = {
   leis?: LinkLei[] | undefined;
 };
 
-
 export type EditalEstado = {
   texto: string;
   materias: MateriaEdital[];
@@ -51,7 +50,6 @@ const VAZIO: EditalEstado = {
   bancaAtiva: "",
   cargoAtivo: "",
 };
-
 
 export function lerEdital(): EditalEstado {
   if (typeof window === "undefined") return VAZIO;
@@ -209,7 +207,6 @@ export function bancasDoEdital(edital: EditalEstado) {
   return unicos(edital.bancas ?? []);
 }
 
-
 function unicos(nomes: string[]) {
   const vistos = new Set<string>();
   return nomes.filter((n) => {
@@ -262,7 +259,9 @@ export function todasAsMaterias(edital: EditalEstado) {
 }
 
 export function ehDoEdital(edital: EditalEstado, nome: string) {
-  return materiasAtivas(edital).some((m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+  return materiasAtivas(edital).some(
+    (m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase(),
+  );
 }
 
 const igual = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();

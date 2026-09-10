@@ -138,7 +138,10 @@ function LeisDaMateria({
   const [titulo, setTitulo] = useState("");
   const [url, setUrl] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
-  const [rascunho, setRascunho] = useState<{ titulo: string; url: string }>({ titulo: "", url: "" });
+  const [rascunho, setRascunho] = useState<{ titulo: string; url: string }>({
+    titulo: "",
+    url: "",
+  });
   const [buscando, setBuscando] = useState<string | null>(null);
 
   const salvasNoSistema = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
@@ -205,14 +208,18 @@ function LeisDaMateria({
                   <Input
                     className="h-8"
                     value={rascunho.titulo}
-                    onChange={(e) => setRascunho((s) => ({ ...s, titulo: e.target.value.slice(0, 120) }))}
+                    onChange={(e) =>
+                      setRascunho((s) => ({ ...s, titulo: e.target.value.slice(0, 120) }))
+                    }
                     placeholder="Nome da lei"
                   />
                   <Input
                     className="h-8"
                     inputMode="url"
                     value={rascunho.url}
-                    onChange={(e) => setRascunho((s) => ({ ...s, url: e.target.value.slice(0, 2000) }))}
+                    onChange={(e) =>
+                      setRascunho((s) => ({ ...s, url: e.target.value.slice(0, 2000) }))
+                    }
                     placeholder="https://…"
                   />
                   <div className="flex gap-2">
@@ -406,7 +413,9 @@ function LinhaMateria({
                           titulo={`Relevância de "${t}" dentro de ${materia.nome}`}
                         />
                       </td>
-                      <td className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}>
+                      <td
+                        className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}
+                      >
                         {pct(relevanciaGeral(materia, t))}
                       </td>
                       <td className="py-2 text-right align-top text-muted-foreground">
@@ -442,11 +451,7 @@ export function EditalRelevancia() {
   const definirRelevanciaMateria = (m: MateriaEdital, valor: number | undefined) =>
     atualizarMateria(m.id, valor == null ? { relevancia: undefined } : { relevancia: valor });
 
-  const definirRelevanciaTopico = (
-    m: MateriaEdital,
-    topico: string,
-    valor: number | undefined,
-  ) => {
+  const definirRelevanciaTopico = (m: MateriaEdital, topico: string, valor: number | undefined) => {
     const mapa = { ...(m.relevanciaTopicos ?? {}) };
     if (valor == null) delete mapa[topico];
     else mapa[topico] = valor;

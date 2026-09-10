@@ -35,10 +35,7 @@ import {
   limparGabarito,
   temGabarito,
 } from "@/lib/questoes-pdf";
-import {
-  removerQuestoesDaProva,
-  salvarQuestoesExtraidas,
-} from "@/lib/questoes-banco.functions";
+import { removerQuestoesDaProva, salvarQuestoesExtraidas } from "@/lib/questoes-banco.functions";
 
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
@@ -54,9 +51,6 @@ import {
   topicosPorRelevancia,
   useEdital,
 } from "@/lib/edital";
-
-
-
 
 export const Route = createFileRoute("/_authenticated/inclusao")({
   head: () => ({
@@ -134,7 +128,6 @@ function UploadCampo({
     if (anexos.length) onAdd(anexos);
   }
 
-
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -195,7 +188,6 @@ function UploadCampo({
               >
                 <Trash2 className="size-3.5 text-destructive" />
               </button>
-
             </li>
           ))}
         </ul>
@@ -314,7 +306,6 @@ function IncluirProva({
   );
 }
 
-
 function InclusaoPage() {
   const { acervo, atualizar } = useAcervo();
   const navigate = useNavigate();
@@ -379,7 +370,6 @@ function InclusaoPage() {
   const [incluindoProva, setIncluindoProva] = useState(false);
   const [lendoGabarito, setLendoGabarito] = useState<string | null>(null);
 
-
   /** Assuntos do Detalhamento do edital para a matéria selecionada. */
   const assuntosDaMateria = useMemo(() => {
     const achada = materiasAtivas(edital).find(
@@ -399,7 +389,6 @@ function InclusaoPage() {
       setAssunto("");
     }
   }, [assunto, assuntosDaMateria]);
-
 
   const simulado = useMutation({
     mutationFn: async () =>
@@ -485,10 +474,12 @@ function InclusaoPage() {
     const res = aplicarGabaritoNaProva(atual.extraidas, gabarito, prova);
     atualizar({
       extraidas: res.questoes,
-      provas: atual.provas.map((a) => (a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a)),
+      provas: atual.provas.map((a) =>
+        a.nome === prova ? { ...a, gabaritoNome: nomeGabarito } : a,
+      ),
     });
     salvarNoBanco(res.questoes.filter((q) => q.prova === prova));
-    
+
     toast.success(
       `Gabarito de “${nomeGabarito}” aplicado a ${res.aplicadas} questão(ões) de “${prova}”.`,
     );
@@ -506,7 +497,14 @@ function InclusaoPage() {
     atualizar({
       extraidas: questoes,
       provas: atual.provas.map((a) =>
-        a.nome === prova ? { nome: a.nome, texto: a.texto, chars: a.chars, ...(a.paginas ? { paginas: a.paginas } : {}) } : a,
+        a.nome === prova
+          ? {
+              nome: a.nome,
+              texto: a.texto,
+              chars: a.chars,
+              ...(a.paginas ? { paginas: a.paginas } : {}),
+            }
+          : a,
       ),
     });
     salvarNoBanco(questoes.filter((q) => q.prova === prova));
@@ -592,8 +590,6 @@ function InclusaoPage() {
     }
   };
 
-
-
   /** Salva o texto de lei colado e limpa o campo. */
   const extrairLeiColada = () => {
     const texto = acervo.leis.trim();
@@ -611,11 +607,6 @@ function InclusaoPage() {
     atualizar({ leis: "" });
     toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
   };
-
-
-
-
-
 
   return (
     <AppShell
@@ -673,7 +664,6 @@ function InclusaoPage() {
             ) : null}
           </div>
         </div>
-
 
         <div className="space-y-2">
           <Label htmlFor="materia-questao">Matéria do edital</Label>
@@ -833,9 +823,6 @@ function InclusaoPage() {
           Os links das leis do seu edital ficam em “Detalhamento do edital”, dentro de cada matéria.
         </p>
 
-
-
-
         <div className="space-y-2">
           <Label htmlFor="leis">Texto de leis (Vade Mecum)</Label>
           <Textarea
@@ -853,7 +840,6 @@ function InclusaoPage() {
             marcação — sem gastar IA.
           </p>
         </div>
-
 
         <UploadCampo
           label="Upload de PDF para leis"
@@ -883,12 +869,14 @@ function InclusaoPage() {
         <div className="space-y-3">
           <IncluirProva lendo={incluindoProva} onIncluir={(p, g) => void incluirProva(p, g)} />
 
-
           {provas.map((p) => {
             const daProva = acervo.extraidas.filter((q) => q.prova === p.nome);
             const comGab = daProva.filter(temGabarito).length;
             return (
-              <div key={p.nome} className="space-y-2 rounded-lg border border-border bg-secondary/40 p-3">
+              <div
+                key={p.nome}
+                className="space-y-2 rounded-lg border border-border bg-secondary/40 p-3"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold">{p.nome}</p>
@@ -960,12 +948,10 @@ function InclusaoPage() {
                     </label>
                   )}
                 </div>
-
               </div>
             );
           })}
         </div>
-
 
         <UploadCampo
           label="Upload de edital (PDF)"
