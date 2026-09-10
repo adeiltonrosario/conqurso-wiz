@@ -516,11 +516,14 @@ export function LeiIntegralPainel({
 
   /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
   const casadosAssuntos = useMemo(
-    () => (topicos.length ? artigosDosAssuntos(brutos, topicos) : []),
+    () =>
+      topicos.length
+        ? artigosDosAssuntos(brutos, topicos)
+        : { artigos: [] as ArtigoIntegral[], assuntosCasados: 0 },
     [brutos, topicos],
   );
   const chavesAssuntos = useMemo(
-    () => new Set(casadosAssuntos.map((a) => chaveArtigo(baseLegal, a))),
+    () => new Set(casadosAssuntos.artigos.map((a) => chaveArtigo(baseLegal, a))),
     [casadosAssuntos, baseLegal],
   );
 
