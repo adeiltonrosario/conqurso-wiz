@@ -186,25 +186,86 @@ function semAcento(s: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** Palavras genéricas de edital que não servem para casar artigos. */
+const GENERICAS = new Set([
+  "artigo",
+  "artigos",
+  "aspectos",
+  "aspecto",
+  "conceito",
+  "conceitos",
+  "geral",
+  "gerais",
+  "geralidades",
+  "nocoes",
+  "noticia",
+  "sobre",
+  "demais",
+  "outros",
+  "outras",
+  "disposicoes",
+  "seus",
+  "suas",
+  "para",
+  "pelo",
+  "pela",
+  "como",
+  "seguintes",
+  "respectivos",
+  "correlatos",
+  "correlatas",
+  "materia",
+  "materias",
+  "assunto",
+  "assuntos",
+  "tema",
+  "temas",
+  "legislacao",
+  "constituicao",
+  "codigo",
+  "decreto",
+  "aplicacao",
+  "estudo",
+  "parte",
+  "titulo",
+  "capitulo",
+  "secao",
+  "livro",
+]);
+
+/** Palavras significativas de um assunto do edital. */
+function termosDoAssunto(assunto: string) {
+  return semAcento(assunto)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 3 && !GENERICAS.has(t) && !/^\d+$/.test(t));
+}
+
 /**
  * Artigos ligados aos assuntos (tópicos) de uma matéria do edital, sem IA.
- * Cada assunto casa quando todas as suas palavras relevantes aparecem na
- * hierarquia da lei (título/capítulo/seção) ou no próprio texto do artigo.
+ * Um assunto casa com o artigo quando alguma de suas palavras significativas
+ * aparece na hierarquia da lei (título/capítulo/seção) ou no texto do artigo.
  */
-export function artigosDosAssuntos(artigos: ArtigoIntegral[], assuntos: string[]) {
-  const listas = assuntos
-    .map((a) =>
-      semAcento(a)
-        .split(/[^a-z0-9]+/)
-        .filter((t) => t.length > 3),
-    )
-    .filter((termos) => termos.length > 0);
-  if (!listas.length) return [];
+export function artigosDosAssuntos(
+  artigos: ArtigoIntegral[],
+  assuntos: string[],
+): { artigos: ArtigoIntegral[]; assuntosCasados: number } {
+  const listas = assuntos.map(termosDoAssunto).filter((termos) => termos.length > 0);
+  if (!listas.length) return { artigos: [], assuntosCasados: 0 };
 
-  return artigos.filter((a) => {
+  const casados = new Set<number>();
+  const encontrados = artigos.filter((a) => {
     const alvo = semAcento(
       `${a.titulo ?? ""} ${a.capitulo_lei ?? ""} ${a.secao ?? ""} ${a.texto} ${(a.paragrafos ?? []).join(" ")}`,
     );
-    return listas.some((termos) => termos.every((t) => alvo.includes(t)));
+    let bate = false;
+    listas.forEach((termos, i) => {
+      if (termos.some((t) => alvo.includes(t))) {
+        casados.add(i);
+        bate = true;
+      }
+    });
+    return bate;
   });
+
+  return { artigos: encontrados, assuntosCasados: casados.size };
 }

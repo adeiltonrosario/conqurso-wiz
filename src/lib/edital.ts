@@ -8,7 +8,13 @@ import { MATERIAS_ESPECIFICO, MATERIAS_GERAL } from "./acervo";
 export type GrupoEdital = "Conhecimento Geral" | "Conhecimento Específico";
 
 /** Link de uma lei cadastrada pelo candidato dentro de uma matéria do edital. */
-export type LinkLei = { id: string; titulo: string; url: string };
+export type LinkLei = {
+  id: string;
+  titulo: string;
+  url: string;
+  /** Nome do item salvo no acervo depois de buscar o texto desta lei. */
+  anexo?: string | undefined;
+};
 
 export type MateriaEdital = {
   id: string;

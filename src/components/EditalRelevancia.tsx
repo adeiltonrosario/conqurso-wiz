@@ -146,12 +146,15 @@ function LeisDaMateria({
 
   const salvasNoSistema = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
   const jaSalva = (l: LinkLei) => {
+    const anexo = (l.anexo ?? "").trim().toLowerCase();
+    if (anexo && salvasNoSistema.includes(anexo)) return true;
     const alvo = l.titulo.trim().toLowerCase();
     const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
     return salvasNoSistema.some(
       (n) => (alvo.length > 4 && n.includes(alvo)) || (numero.length >= 4 && n.includes(numero)),
     );
   };
+
 
   const adicionar = () => {
     const endereco = url.trim();
