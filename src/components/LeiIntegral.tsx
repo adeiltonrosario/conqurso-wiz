@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -49,7 +49,7 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
+import { leisDaMateria, materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
 
 
 
