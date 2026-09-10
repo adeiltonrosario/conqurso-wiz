@@ -420,27 +420,14 @@ export function LeiIntegralPainel({
   });
 
 
-  const mut = useMutation({
-    mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
-    onSuccess: (r) => {
-      setLei(r);
-      setLeisPdf([]);
-      onCarregado?.(r);
-      if (!(r.artigos ?? []).length) toast.error("A IA não retornou os artigos deste capítulo.");
-    },
-    onError: (e: Error) => toast.error(e.message || "Não foi possível carregar o texto integral."),
-  });
-
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
-  const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
+  const baseLegal = leiPdfAtiva?.nome ?? "";
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =
-      fonte === "pdf"
-        ? soCapitulo && capitulo.trim().length > 2
-          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
-          : (leiPdfAtiva?.artigos ?? [])
-        : (lei?.artigos ?? []);
+      soCapitulo && capitulo.trim().length > 2
+        ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+        : (leiPdfAtiva?.artigos ?? []);
     if (!limparPdf) return base;
     // Sem revogados/vetados e sem lixo de rodapé do PDF.
     return base
@@ -451,10 +438,10 @@ export function LeiIntegralPainel({
         paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
       }))
       .filter((a) => a.texto.trim().length > 2);
-  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
+  }, [leiPdfAtiva, capitulo, soCapitulo, limparPdf]);
 
 
-  const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
+  const carregado = leisPdf.length > 0;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
@@ -476,6 +463,19 @@ export function LeiIntegralPainel({
       0,
     );
 
+  /** Assuntos (tópicos) da matéria selecionada, vindos do Detalhamento do edital. */
+  const topicos = useMemo(() => topicosDaMateria(edital, materia), [edital, materia]);
+
+  /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
+  const casadosAssuntos = useMemo(
+    () => (topicos.length ? artigosDosAssuntos(brutos, topicos) : []),
+    [brutos, topicos],
+  );
+  const chavesAssuntos = useMemo(
+    () => new Set(casadosAssuntos.map((a) => chaveArtigo(baseLegal, a))),
+    [casadosAssuntos, baseLegal],
+  );
+
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
     return brutos
@@ -485,6 +485,7 @@ export function LeiIntegralPainel({
         if (!mostrarOcultos && artigosOcultos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
+        if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (limites) {
           const n = numeroArtigo(artigo);
           if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
@@ -499,6 +500,8 @@ export function LeiIntegralPainel({
     marcados,
     soFavoritos,
     chavesFavoritas,
+    soAssuntos,
+    chavesAssuntos,
     baseLegal,
     mostrarOcultos,
     artigosOcultos,
