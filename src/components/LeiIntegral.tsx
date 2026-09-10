@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -28,10 +28,7 @@ import {
 import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  type ArtigoIntegral,
-  type LeiIntegral as LeiIntegralTipo,
-} from "@/lib/ai.functions";
+import { type ArtigoIntegral, type LeiIntegral as LeiIntegralTipo } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
 import {
   artigosDoCapitulo,
@@ -49,10 +46,7 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
-
-
-
+import { leisDaMateria, materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
@@ -186,8 +180,6 @@ function combina(a: ArtigoIntegral, termo: string) {
 const idArtigo = (a: ArtigoIntegral, i: number) =>
   `art-${i}-${a.referencia.replace(/[^\w]+/g, "-").toLowerCase()}`;
 
-
-
 type Indexado = { artigo: ArtigoIntegral; indice: number };
 type NoSecao = { nome: string; artigos: Indexado[] };
 type NoCapitulo = { nome: string; secoes: NoSecao[] };
@@ -237,7 +229,10 @@ function Sumario({
     );
 
   return (
-    <nav aria-label="Sumário da lei" className="rounded-lg border border-border/70 bg-secondary/40 p-3">
+    <nav
+      aria-label="Sumário da lei"
+      className="rounded-lg border border-border/70 bg-secondary/40 p-3"
+    >
       <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
         <List className="size-3.5" /> Sumário
       </p>
@@ -366,7 +361,6 @@ export function LeiIntegralPainel({
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
   const { ocultos } = useOcultos();
 
-
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
   const filtrando = soDoEdital && normasEdital.length > 0;
@@ -384,13 +378,44 @@ export function LeiIntegralPainel({
   const normaAtiva = MAPA_VADE_MECUM.find((m) => m.item === itemAtivo) ?? null;
   const faixaAtiva = normaAtiva ? faixaDaNorma(normaAtiva.item) : null;
 
+  /** Leis salvas que estão cadastradas nesta matéria (Detalhamento do edital). */
+  const leisDaMinhaMateria = useMemo(() => {
+    const alvo = materiasAtivas(edital).find(
+      (m) => m.nome.trim().toLowerCase() === materia.trim().toLowerCase(),
+    );
+    const links = alvo ? leisDaMateria(alvo) : [];
+    if (!links.length) return { nomes: [] as string[], links };
+    const nomes = pdfsLei
+      .filter((p) => {
+        const n = p.nome.trim().toLowerCase();
+        return links.some((l) => {
+          if ((l.anexo ?? "").trim().toLowerCase() === n) return true;
+          const t = l.titulo.trim().toLowerCase();
+          const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
+          return (t.length > 4 && n.includes(t)) || (numero.length >= 4 && n.includes(numero));
+        });
+      })
+      .map((p) => p.nome);
+    return { nomes, links };
+  }, [edital, materia, pdfsLei]);
 
-  const arquivoAtivo = arquivo || pdfsLei[0]?.nome || "";
+  const daMateria = useMemo(() => new Set(leisDaMinhaMateria.nomes), [leisDaMinhaMateria.nomes]);
+
+  /** Leis salvas com as desta matéria primeiro. */
+  const pdfsOrdenados = useMemo(
+    () =>
+      [...pdfsLei].sort((a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome))),
+    [pdfsLei, daMateria],
+  );
+
+  const arquivoAtivo =
+    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsLei[0]?.nome || "";
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
       const texto = await lerTextoAnexo(nome);
-      if (!texto) throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
+      if (!texto)
+        throw new Error("O texto deste PDF não está mais salvo. Reanexe o arquivo em Inclusão.");
       const faixaPaginas = item ? faixaDaNorma(item) : null;
       if (faixaPaginas) {
         const recorte = fatiarPorPaginas(texto, faixaPaginas[0], faixaPaginas[1]);
@@ -402,7 +427,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
-      
+
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
         return;
@@ -419,6 +444,18 @@ export function LeiIntegralPainel({
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
   });
 
+  /** Abre sozinha a lei cadastrada nesta matéria, sem precisar tocar em nada. */
+  const lidoRef = useRef("");
+  useEffect(() => {
+    const alvo = leisDaMinhaMateria.nomes[0];
+    if (!alvo) return;
+    if (arquivo && arquivo !== alvo) return;
+    if (lidoRef.current === alvo) return;
+    lidoRef.current = alvo;
+    if (!arquivo) setArquivo(alvo);
+    mutPdf.mutate({ nome: alvo, item: itemAtivo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leisDaMinhaMateria.nomes, arquivo]);
 
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
@@ -440,7 +477,6 @@ export function LeiIntegralPainel({
       .filter((a) => a.texto.trim().length > 2);
   }, [leiPdfAtiva, capitulo, soCapitulo, limparPdf]);
 
-
   const carregado = leisPdf.length > 0;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
@@ -458,8 +494,7 @@ export function LeiIntegralPainel({
   const contarOcorrencias = (textos: string[]) =>
     trechosDaLei.reduce(
       (soma, trecho) =>
-        soma +
-        textos.reduce((n, t) => n + (trecho ? t.split(trecho).length - 1 : 0), 0),
+        soma + textos.reduce((n, t) => n + (trecho ? t.split(trecho).length - 1 : 0), 0),
       0,
     );
 
@@ -468,11 +503,14 @@ export function LeiIntegralPainel({
 
   /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
   const casadosAssuntos = useMemo(
-    () => (topicos.length ? artigosDosAssuntos(brutos, topicos) : []),
+    () =>
+      topicos.length
+        ? artigosDosAssuntos(brutos, topicos)
+        : { artigos: [] as ArtigoIntegral[], assuntosCasados: 0 },
     [brutos, topicos],
   );
   const chavesAssuntos = useMemo(
-    () => new Set(casadosAssuntos.map((a) => chaveArtigo(baseLegal, a))),
+    () => new Set(casadosAssuntos.artigos.map((a) => chaveArtigo(baseLegal, a))),
     [casadosAssuntos, baseLegal],
   );
 
@@ -483,7 +521,8 @@ export function LeiIntegralPainel({
       .filter(({ artigo }) => {
         if (!combina(artigo, termo)) return false;
         if (!mostrarOcultos && artigosOcultos.has(chaveArtigo(baseLegal, artigo))) return false;
-        if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
+        if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`))
+          return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (limites) {
@@ -512,49 +551,65 @@ export function LeiIntegralPainel({
     const chaves = new Set(brutos.map((a) => chaveArtigo(baseLegal, a)));
     const arts = ocultos.artigos.filter((c) => chaves.has(c)).length;
     const paras = ocultos.paragrafos.filter((c) => chaves.has(c.split("|p:")[0] ?? "")).length;
-    const trechos = contarOcorrencias(
-      brutos.flatMap((a) => [a.texto, ...(a.paragrafos ?? [])]),
-    );
+    const trechos = contarOcorrencias(brutos.flatMap((a) => [a.texto, ...(a.paragrafos ?? [])]));
     return { arts, paras, trechos, total: arts + paras + trechos };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brutos, baseLegal, ocultos, trechosDaLei]);
 
   const arvore = useMemo(() => montarArvore(artigos), [artigos]);
 
-
   const irPara = (id: string) => {
     setEmFoco(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
-  const filtrarPelosAssuntos = () => {
-    if (!carregado) {
-      toast.error("Escolha a lei salva e extraia o texto integral primeiro.");
-      return;
-    }
-    if (!topicos.length) {
-      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
-      return;
-    }
-    const casados = casadosAssuntos.filter(
-      (a) => !artigosOcultos.has(chaveArtigo(baseLegal, a)),
-    );
+  /** Casa os assuntos, favorita os artigos encontrados e liga o filtro. */
+  const casarEFavoritar = (base: ArtigoIntegral[], lei: string) => {
+    const { artigos: encontrados, assuntosCasados } = artigosDosAssuntos(base, topicos);
+    const casados = encontrados.filter((a) => !artigosOcultos.has(chaveArtigo(lei, a)));
     if (!casados.length) {
       setSoAssuntos(false);
-      toast.error("Nenhum artigo casou com os assuntos desta matéria.");
+      toast.error(
+        `Os assuntos de “${materia}” não aparecem no texto de “${lei}”. Confira o link da lei no Detalhamento do edital.`,
+      );
       return;
     }
     let novos = 0;
     for (const a of casados) {
-      if (chavesFavoritas.has(chaveFavorito(baseLegal, a))) continue;
-      alternarFavorito(a, { lei: baseLegal, materia, capituloEdital: capitulo });
+      if (chavesFavoritas.has(chaveFavorito(lei, a))) continue;
+      alternarFavorito(a, { lei, materia, capituloEdital: capitulo });
       novos++;
     }
     setSoAssuntos(true);
     toast.success(
-      `${casados.length} artigo(s) de ${topicos.length} assunto(s) favoritados (${novos} novo(s)).`,
+      `${casados.length} artigo(s) de ${assuntosCasados} assunto(s) favoritados (${novos} novo(s)).`,
     );
+  };
+
+  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
+  const filtrarPelosAssuntos = async () => {
+    if (!topicos.length) {
+      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
+      return;
+    }
+    if (!carregado) {
+      if (!arquivoAtivo) {
+        toast.error(
+          "Cadastre a lei desta matéria no Detalhamento do edital e toque em “Buscar texto”.",
+        );
+        return;
+      }
+      try {
+        const leis = await mutPdf.mutateAsync({ nome: arquivoAtivo, item: itemAtivo });
+        const primeira = leis[0];
+        if (!primeira) return;
+        casarEFavoritar(primeira.artigos, primeira.nome);
+      } catch {
+        /* o erro já é avisado pela leitura do arquivo */
+      }
+      return;
+    }
+    casarEFavoritar(brutos, baseLegal);
   };
 
   return (
@@ -596,118 +651,126 @@ export function LeiIntegralPainel({
         )}
       </div>
 
-      {pdfsLei.length === 0 ? (
-          <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-            Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
-            Texto de leis (Vade Mecum)”.
-          </p>
+      {leisDaMinhaMateria.links.length > 0 && leisDaMinhaMateria.nomes.length === 0 && (
+        <p className="rounded-lg bg-secondary p-3 text-[11px] text-muted-foreground">
+          Esta matéria já tem lei cadastrada, mas o texto ainda não foi baixado. Abra o Detalhamento
+          do edital e toque em “Buscar texto” no link da lei.
+        </p>
+      )}
 
-        ) : (
-          <div className="space-y-2">
+      {pdfsLei.length === 0 ? (
+        <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+          Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
+          Texto de leis (Vade Mecum)”.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <select
+            value={arquivoAtivo}
+            onChange={(e) => setArquivo(e.target.value)}
+            aria-label="Lei salva (PDF ou texto colado)"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            {pdfsOrdenados.map((p) => (
+              <option key={p.nome} value={p.nome}>
+                {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
+                {daMateria.has(p.nome) ? " · desta matéria" : ""}
+              </option>
+            ))}
+          </select>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-xs font-semibold">
+                <input
+                  type="checkbox"
+                  checked={soDoEdital}
+                  onChange={(e) => setSoDoEdital(e.target.checked)}
+                  className="size-4 accent-primary"
+                />
+                Somente as leis do edital
+              </label>
+              <span className="text-[11px] text-muted-foreground">
+                {normasEdital.length
+                  ? `${normasEdital.length} de ${MAPA_VADE_MECUM.length} normas do seu edital`
+                  : "Sem matérias do edital cadastradas — mostrando todo o Vade Mecum"}
+              </span>
+            </div>
             <select
-              value={arquivoAtivo}
-              onChange={(e) => setArquivo(e.target.value)}
-              aria-label="Lei salva (PDF ou texto colado)"
+              value={itemAtivo}
+              onChange={(e) => setItemMapa(e.target.value)}
+              aria-label="Norma do edital (mapa PC-BA → páginas do Vade Mecum)"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              {pdfsLei.map((p) => (
-                <option key={p.nome} value={p.nome}>
-                  {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
+              <option value="">
+                {filtrando
+                  ? "Todo o PDF — inclui leis fora do edital"
+                  : "Todo o PDF (sem corte por página)"}
+              </option>
+              {GRUPOS_VADE_MECUM.filter((g) => visiveis.some((m) => m.grupo === g.nome)).map(
+                (g) => (
+                  <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
+                    {visiveis
+                      .filter((m) => m.grupo === g.nome)
+                      .map((m) => (
+                        <option key={m.item} value={m.item}>
+                          {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
+                          {!filtrando && itensEdital.has(m.item) ? " · Edital" : ""}
+                        </option>
+                      ))}
+                  </optgroup>
+                ),
+              )}
+            </select>
+            <p className="text-[11px] text-muted-foreground">
+              {normaAtiva
+                ? `${normaAtiva.edital}${
+                    faixaAtiva ? ` → páginas ${faixaAtiva[0]}–${faixaAtiva[1]} do Vade Mecum` : ""
+                  }${!itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""}`
+                : "Escolha a norma do edital para ir direto ao ponto de corte do PDF."}
+            </p>
+          </div>
+
+          <Button
+            variant={leisPdf.length ? "outline" : "default"}
+            className="w-full"
+            disabled={mutPdf.isPending || !arquivoAtivo}
+            onClick={() => mutPdf.mutate({ nome: arquivoAtivo, item: itemAtivo })}
+          >
+            {mutPdf.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> Extraindo os artigos do PDF…
+              </>
+            ) : leisPdf.length ? (
+              "Reler o PDF"
+            ) : (
+              "Extrair o texto integral do PDF"
+            )}
+          </Button>
+
+          {leisPdf.length > 1 && (
+            <select
+              value={leiPdfSel}
+              onChange={(e) => setLeiPdfSel(e.target.value)}
+              aria-label="Lei ou código dentro do PDF"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {leisPdf.map((l) => (
+                <option key={l.nome} value={l.nome}>
+                  {l.nome} — {l.artigos.length} artigo(s)
                 </option>
               ))}
             </select>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2 text-xs font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={soDoEdital}
-                    onChange={(e) => setSoDoEdital(e.target.checked)}
-                    className="size-4 accent-primary"
-                  />
-                  Somente as leis do edital
-                </label>
-                <span className="text-[11px] text-muted-foreground">
-                  {normasEdital.length
-                    ? `${normasEdital.length} de ${MAPA_VADE_MECUM.length} normas do seu edital`
-                    : "Sem matérias do edital cadastradas — mostrando todo o Vade Mecum"}
-                </span>
-              </div>
-              <select
-                value={itemAtivo}
-                onChange={(e) => setItemMapa(e.target.value)}
-                aria-label="Norma do edital (mapa PC-BA → páginas do Vade Mecum)"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">
-                  {filtrando
-                    ? "Todo o PDF — inclui leis fora do edital"
-                    : "Todo o PDF (sem corte por página)"}
-                </option>
-                {GRUPOS_VADE_MECUM.filter((g) => visiveis.some((m) => m.grupo === g.nome)).map(
-                  (g) => (
-                    <optgroup key={g.nome} label={`${g.nome} (p. ${g.de}–${g.ate})`}>
-                      {visiveis
-                        .filter((m) => m.grupo === g.nome)
-                        .map((m) => (
-                          <option key={m.item} value={m.item}>
-                            {m.item} · {m.norma} — p. {m.pagina_vade_mecum}
-                            {!filtrando && itensEdital.has(m.item) ? " · Edital" : ""}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ),
-                )}
-              </select>
-              <p className="text-[11px] text-muted-foreground">
-                {normaAtiva
-                  ? `${normaAtiva.edital}${
-                      faixaAtiva ? ` → páginas ${faixaAtiva[0]}–${faixaAtiva[1]} do Vade Mecum` : ""
-                    }${!itemMapa && sugerido ? " (sugerido pelo tópico do edital)" : ""}`
-                  : "Escolha a norma do edital para ir direto ao ponto de corte do PDF."}
-              </p>
-            </div>
-
-
-            <Button
-              variant={leisPdf.length ? "outline" : "default"}
-              className="w-full"
-              disabled={mutPdf.isPending || !arquivoAtivo}
-              onClick={() => mutPdf.mutate({ nome: arquivoAtivo, item: itemAtivo })}
-            >
-              {mutPdf.isPending ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" /> Extraindo os artigos do PDF…
-                </>
-              ) : leisPdf.length ? (
-                "Reler o PDF"
-              ) : (
-                "Extrair o texto integral do PDF"
-              )}
-            </Button>
-
-            {leisPdf.length > 1 && (
-              <select
-                value={leiPdfSel}
-                onChange={(e) => setLeiPdfSel(e.target.value)}
-                aria-label="Lei ou código dentro do PDF"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {leisPdf.map((l) => (
-                  <option key={l.nome} value={l.nome}>
-                    {l.nome} — {l.artigos.length} artigo(s)
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
       {carregado && (
         <>
           <div className="space-y-2">
-            {baseLegal && <p className="text-xs font-semibold text-muted-foreground">{baseLegal}</p>}
+            {baseLegal && (
+              <p className="text-xs font-semibold text-muted-foreground">{baseLegal}</p>
+            )}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -807,7 +870,6 @@ export function LeiIntegralPainel({
                 </Button>
               </div>
             )}
-
           </div>
 
           {artigos.length > 0 && <Sumario arvore={arvore} marcados={marcados} onIr={irPara} />}
@@ -876,7 +938,6 @@ export function LeiIntegralPainel({
                                         alternarArtigoOculto(chave);
                                       }}
                                     >
-
                                       {oculto ? (
                                         <EyeOff className="size-4 text-muted-foreground" />
                                       ) : (
@@ -961,7 +1022,9 @@ export function LeiIntegralPainel({
                                                   <Eye className="size-3.5 text-muted-foreground/60" />
                                                 )}
                                               </button>
-                                              <span className={pOculto ? "line-through opacity-60" : ""}>
+                                              <span
+                                                className={pOculto ? "line-through opacity-60" : ""}
+                                              >
                                                 <TextoOcultavel
                                                   texto={p}
                                                   termo={termo}
@@ -978,7 +1041,6 @@ export function LeiIntegralPainel({
                                   </>
                                 )}
                               </li>
-
                             );
                           })}
                         </ol>
@@ -995,10 +1057,8 @@ export function LeiIntegralPainel({
               Nenhum artigo corresponde ao filtro aplicado.
             </p>
           )}
-
         </>
       )}
     </section>
   );
 }
-

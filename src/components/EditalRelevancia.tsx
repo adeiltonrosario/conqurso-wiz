@@ -146,6 +146,8 @@ function LeisDaMateria({
 
   const salvasNoSistema = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
   const jaSalva = (l: LinkLei) => {
+    const anexo = (l.anexo ?? "").trim().toLowerCase();
+    if (anexo && salvasNoSistema.includes(anexo)) return true;
     const alvo = l.titulo.trim().toLowerCase();
     const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
     return salvasNoSistema.some(
@@ -178,11 +180,16 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
-      const { artigos, titulo: nome } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
+      const {
+        artigos,
+        titulo: nome,
+        nome: anexo,
+      } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
       if (!artigos) {
         toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
         return;
       }
+      onLeis(comLeiAlterada(materia, l.id, { anexo }));
       toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
     } catch {
       toast.error("Não foi possível acessar esse endereço agora.");
