@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { FileUp, Link as LinkIcon, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
