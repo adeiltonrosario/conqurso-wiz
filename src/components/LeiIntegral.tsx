@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -30,13 +29,13 @@ import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  leiIntegral,
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
 import {
   artigosDoCapitulo,
+  artigosDosAssuntos,
   fatiarPorPaginas,
   lerFaixa,
   lerVadeMecum,
@@ -50,7 +49,7 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { materiasAtivas, useEdital } from "@/lib/edital";
+import { materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
 
 
 
