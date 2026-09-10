@@ -591,24 +591,19 @@ function InclusaoPage() {
 
 
 
-  /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
-  const extrairLeiColada = () => {
-    const texto = acervo.leis.trim();
-    if (texto.length < 100) {
-      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
-      return;
-    }
-
+  /** Guarda um texto de lei como item consultável em Leis → Texto Integral. */
+  const salvarLeiNoSistema = (bruto: string, tituloSugerido?: string) => {
+    const texto = limparRuidoLei(bruto).trim();
     const leis = lerVadeMecum(texto);
     const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
     if (!artigos) {
       toast.warning(
         "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
       );
-      return;
+      return 0;
     }
 
-    const titulo = leis[0]?.nome?.trim() || "Texto colado";
+    const titulo = leis[0]?.nome?.trim() || tituloSugerido?.trim() || "Texto colado";
     const data = new Date().toLocaleDateString("pt-BR");
     const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
     let nome = `${titulo} — ${data}`;
@@ -617,7 +612,6 @@ function InclusaoPage() {
 
     void salvarTextoAnexo(nome, texto);
     atualizar({
-      leis: "",
       provas: [
         ...acervo.provas,
         {
@@ -627,10 +621,64 @@ function InclusaoPage() {
         },
       ],
     });
-    toast.success(
-      `${titulo} — ${artigos} artigo(s) salvos para leitura em Leis. Cole a próxima parte.`,
-    );
+    toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    return artigos;
   };
+
+  /** Salva o texto de lei colado e limpa o campo. */
+  const extrairLeiColada = () => {
+    const texto = acervo.leis.trim();
+    if (texto.length < 100) {
+      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
+      return;
+    }
+    if (salvarLeiNoSistema(texto)) atualizar({ leis: "" });
+  };
+
+  /** Busca a lei em um endereço colado pelo candidato. */
+  const buscarPorUrl = async () => {
+    const url = urlLei.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      toast.error("Cole o endereço completo da lei, começando com https://");
+      return;
+    }
+    setBuscandoUrl(true);
+    try {
+      const r = await buscarLeiPorUrl({ data: { url } });
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      if (salvarLeiNoSistema(r.texto, r.titulo)) setUrlLei("");
+    } catch {
+      toast.error("Não foi possível acessar esse endereço.");
+    } finally {
+      setBuscandoUrl(false);
+    }
+  };
+
+  /** Busca automática da lei oficial do edital no site do Planalto. */
+  const buscarNorma = async (norma: NormaMapeada) => {
+    const ref = refDaNorma(norma.norma);
+    if (!ref) {
+      toast.error("Essa norma não tem número de lei — use o campo de endereço acima.");
+      return;
+    }
+    setBuscandoNorma(norma.item);
+    try {
+      const r = await buscarLeiOficial({ data: ref });
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      salvarLeiNoSistema(r.texto, norma.norma);
+    } catch {
+      toast.error("Não foi possível buscar essa lei agora.");
+    } finally {
+      setBuscandoNorma(null);
+    }
+  };
+
 
 
 
