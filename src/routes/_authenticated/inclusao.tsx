@@ -26,6 +26,9 @@ import {
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { lerVadeMecum } from "@/lib/vademecum";
+import { limparRuidoLei } from "@/lib/limpeza-lei";
+import { buscarLeiOficial, buscarLeiPorUrl } from "@/lib/leis-url.functions";
+import { normasDoEdital, type NormaMapeada } from "@/lib/mapa-vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
 
