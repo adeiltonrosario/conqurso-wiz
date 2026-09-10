@@ -1,32 +1,33 @@
-# Publicar o app com o acervo e os PDFs na nuvem
+# Buscar a lei por link (URL) e deixar salva no sistema
 
-Hoje o acervo (questões, matérias, edital, revisão, leituras, trilha, cards) já é salvo na sua conta e volta em qualquer aparelho. O que **ainda fica só no aparelho** é o texto integral dos PDFs anexados (Vade Mecum, provas, gabaritos, gramáticas, edital). Se você publicar e abrir no celular ou no tablet, as leis e provas aparecem na lista, mas o conteúdo delas vem vazio.
-
-Então, antes de publicar, os PDFs passam para a nuvem.
+Sim, dá. Hoje você precisa colar o texto da lei ou anexar o PDF do Vade Mecum. Vai passar a existir um campo onde você cola o **endereço da lei** (por exemplo o link da lei no site do Planalto) e o sistema busca o texto, limpa e guarda para leitura.
 
 ## O que será feito
 
-### 1. PDFs guardados na sua conta
-- Ao anexar um PDF, o texto extraído é enviado para um espaço privado da sua conta na nuvem (só você acessa).
-- Ao abrir a leitura das leis, das provas ou do edital em qualquer aparelho, o texto é buscado da nuvem.
-- O aparelho continua guardando uma cópia para abrir rápido e funcionar sem internet.
-- Ao excluir um anexo, o arquivo também é apagado da nuvem.
+### 1. Campo "Buscar lei por link" em Inclusão
+- Você cola o link e toca em **Buscar e salvar lei**.
+- O sistema baixa a página, remove menus, propaganda e rodapés, e reconhece "LEI Nº …", títulos, capítulos e artigos (Art. 1º, incisos, parágrafos) — o mesmo reconhecimento que já usamos no texto colado.
+- A lei fica salva na sua conta e aparece na aba **Leis → Texto Integral**, com árvore por título/capítulo, busca, favoritos e a opção de ocultar trechos.
+- Mostra na hora quantos artigos foram reconhecidos. Se o link não trouxer artigos, avisa e sugere colar o texto.
 
-### 2. Migração automática do que você já tem
-Na primeira vez que você abrir depois da mudança, os PDFs que já estão neste aparelho sobem para a conta automaticamente, uma única vez. Nada se perde.
+### 2. Leis do edital, com um toque
+Abaixo do campo aparece a lista das **leis citadas no seu edital** (as que já vêm do Detalhamento). Para cada uma:
+- Um botão **Buscar** que já tenta o texto oficial no site do Planalto.
+- Um selo indicando se ela já está salva no sistema ou ainda falta.
 
-### 3. Publicar
-Com isso pronto, publico o app: ele fica no ar numa URL pública `.lovable.app`, com login por e-mail e senha (e Google), e a opção de ligar um domínio próprio depois. As mudanças de banco valem na hora; mudanças de tela sobem quando você atualiza a publicação.
+Assim você vai marcando as leis do edital até completar todas, sem precisar procurar PDF.
+
+### 3. Sem gastar IA
+Tudo é feito por leitura direta do texto da página, sem crédito de IA.
 
 ## Observações
-- PDFs muito grandes (Vade Mecum inteiro) sobem sem problema: o limite por arquivo será de 25 MB de texto.
-- Se a internet cair no meio do envio, aparece um aviso e o anexo continua funcionando neste aparelho até o próximo envio.
+- Funciona com páginas de texto público (Planalto, sites de legislação, diários oficiais). Páginas que exigem login ou que são só imagem não podem ser lidas — nesses casos continua valendo colar o texto ou anexar o PDF.
+- Leis muito grandes (códigos inteiros) podem levar alguns segundos.
 
 ## Detalhes técnicos
 
-- Novo bucket privado `anexos` (25MB por arquivo) via `storage_create_bucket`, com políticas RLS em `storage.objects` restritas a `auth.uid()::text = (storage.foldername(name))[1]`; caminho `{user_id}/{nome-do-anexo}.txt`.
-- `src/lib/anexos-store.ts` mantém a mesma interface (`salvarTextoAnexo`, `lerTextoAnexo`, `removerTextoAnexo`) e passa a: gravar no IndexedDB (cache) + upload para o bucket; na leitura, tentar o IndexedDB e cair para download do bucket, populando o cache; no remover, apagar nos dois.
-- Upload/download pelo cliente do navegador (`supabase.storage.from("anexos")`), sem server function — o bucket é privado e a RLS já isola por usuário.
-- Migração única: `SincronizaEstado` (`src/lib/sync.ts`) ganha um passo que percorre os nomes de anexos do acervo (`gramatica`, `provas`, `edital`) e envia ao bucket os que existem no IndexedDB e não na nuvem, marcando conclusão em `localStorage`.
-- Chamadas afetadas: `src/routes/_authenticated/inclusao.tsx` (linhas 113, 116, 188, 552, 618, 916) e `src/components/LeiIntegral.tsx` (linha 396) — sem mudança de assinatura, apenas passam a ser assíncronas onde já são.
-- Depois: `security--run_security_scan` e publicação via `preview_ui--publish`.
+- Novo `src/lib/leis-url.functions.ts`: server function `buscarLeiPorUrl` com `inputValidator` Zod (URL http/https, sem endereços internos/localhost/IP privado), `fetch` da página com timeout e limite de tamanho (~5 MB), conversão HTML→texto (remoção de `script`/`style`/`nav`/`footer`, decodificação de entidades, normalização de espaços e quebras) e retorno `{ titulo, texto, chars }`. Sem AI gateway.
+- Reaproveita `lerVadeMecum` (`src/lib/vademecum.ts`) e `limparRuidoLei` (`src/lib/limpeza-lei.ts`) no cliente para contar artigos e limpar rodapés antes de salvar.
+- Persistência idêntica ao fluxo atual de `extrairLeiColada` em `src/routes/_authenticated/inclusao.tsx`: `salvarTextoAnexo(nome, texto)` + novo item em `acervo.provas` com `marcarComoLei(nome)` e `texto.slice(0, LIMITE_TRECHO_IA)`.
+- Novo bloco de UI em `/inclusao` (Input de URL + botão com estado de carregamento) e lista das normas do edital reaproveitando `normasDoEdital`/o mapeamento de `src/lib/mapa-vademecum.ts`, com link sugerido `planalto.gov.br` por número/ano quando disponível.
+- Sem mudança de banco e sem novas dependências.
