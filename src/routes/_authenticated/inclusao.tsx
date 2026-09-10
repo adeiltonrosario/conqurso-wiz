@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { FileUp, Link as LinkIcon, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
@@ -26,6 +26,9 @@ import {
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { lerVadeMecum } from "@/lib/vademecum";
+import { limparRuidoLei } from "@/lib/limpeza-lei";
+import { buscarLeiOficial, buscarLeiPorUrl } from "@/lib/leis-url.functions";
+import { normasDoEdital, type NormaMapeada } from "@/lib/mapa-vademecum";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
 
@@ -54,6 +57,18 @@ import {
   topicosPorRelevancia,
   useEdital,
 } from "@/lib/edital";
+
+/** Extrai número/ano de uma norma do edital (ex.: "Lei n. 13.869/2019"). */
+function refDaNorma(nome: string): { numero: string; ano: number; complementar: boolean } | null {
+  const m = nome.match(/(complementar\s+)?n?[º°.\s]*\s*([\d.]{3,9})\s*(?:\/|,?\s*de\s+[^,]*?)\s*((?:19|20)\d{2})/i);
+  if (!m) return null;
+  const numero = (m[2] ?? "").replace(/\D/g, "");
+  const ano = Number(m[3]);
+  if (!numero || !ano) return null;
+  return { numero, ano, complementar: /complementar/i.test(nome) };
+}
+
+
 
 export const Route = createFileRoute("/_authenticated/inclusao")({
   head: () => ({
@@ -327,6 +342,20 @@ function InclusaoPage() {
   const semMaterias = MATERIAS.length === 0;
   const [enunciado, setEnunciado] = useState("");
   const [explicacao, setExplicacao] = useState("");
+  const [urlLei, setUrlLei] = useState("");
+  const [buscandoUrl, setBuscandoUrl] = useState(false);
+  const [buscandoNorma, setBuscandoNorma] = useState<string | null>(null);
+  const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
+  const nomesDeLeisSalvas = useMemo(
+    () => acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase()),
+    [acervo.provas],
+  );
+  const leiJaSalva = (norma: string) => {
+    const ref = refDaNorma(norma);
+    const chave = ref ? `${ref.numero}` : norma.toLowerCase().slice(0, 18);
+    const alvo = ref ? [chave, chave.replace(/(\d+)(\d{3})$/, "$1.$2")] : [chave];
+    return nomesDeLeisSalvas.some((n) => alvo.some((a) => n.includes(a)));
+  };
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
@@ -591,24 +620,19 @@ function InclusaoPage() {
 
 
 
-  /** Salva o texto de lei colado como item consultável em Leis → Texto Integral e limpa o campo. */
-  const extrairLeiColada = () => {
-    const texto = acervo.leis.trim();
-    if (texto.length < 100) {
-      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
-      return;
-    }
-
+  /** Guarda um texto de lei como item consultável em Leis → Texto Integral. */
+  const salvarLeiNoSistema = (bruto: string, tituloSugerido?: string) => {
+    const texto = limparRuidoLei(bruto).trim();
     const leis = lerVadeMecum(texto);
     const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
     if (!artigos) {
       toast.warning(
         "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
       );
-      return;
+      return 0;
     }
 
-    const titulo = leis[0]?.nome?.trim() || "Texto colado";
+    const titulo = leis[0]?.nome?.trim() || tituloSugerido?.trim() || "Texto colado";
     const data = new Date().toLocaleDateString("pt-BR");
     const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
     let nome = `${titulo} — ${data}`;
@@ -617,7 +641,6 @@ function InclusaoPage() {
 
     void salvarTextoAnexo(nome, texto);
     atualizar({
-      leis: "",
       provas: [
         ...acervo.provas,
         {
@@ -627,10 +650,64 @@ function InclusaoPage() {
         },
       ],
     });
-    toast.success(
-      `${titulo} — ${artigos} artigo(s) salvos para leitura em Leis. Cole a próxima parte.`,
-    );
+    toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    return artigos;
   };
+
+  /** Salva o texto de lei colado e limpa o campo. */
+  const extrairLeiColada = () => {
+    const texto = acervo.leis.trim();
+    if (texto.length < 100) {
+      toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
+      return;
+    }
+    if (salvarLeiNoSistema(texto)) atualizar({ leis: "" });
+  };
+
+  /** Busca a lei em um endereço colado pelo candidato. */
+  const buscarPorUrl = async () => {
+    const url = urlLei.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      toast.error("Cole o endereço completo da lei, começando com https://");
+      return;
+    }
+    setBuscandoUrl(true);
+    try {
+      const r = await buscarLeiPorUrl({ data: { url } });
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      if (salvarLeiNoSistema(r.texto, r.titulo)) setUrlLei("");
+    } catch {
+      toast.error("Não foi possível acessar esse endereço.");
+    } finally {
+      setBuscandoUrl(false);
+    }
+  };
+
+  /** Busca automática da lei oficial do edital no site do Planalto. */
+  const buscarNorma = async (norma: NormaMapeada) => {
+    const ref = refDaNorma(norma.norma);
+    if (!ref) {
+      toast.error("Essa norma não tem número de lei — use o campo de endereço acima.");
+      return;
+    }
+    setBuscandoNorma(norma.item);
+    try {
+      const r = await buscarLeiOficial({ data: ref });
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      salvarLeiNoSistema(r.texto, norma.norma);
+    } catch {
+      toast.error("Não foi possível buscar essa lei agora.");
+    } finally {
+      setBuscandoNorma(null);
+    }
+  };
+
 
 
 
@@ -846,6 +923,71 @@ function InclusaoPage() {
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Leis, gramática, provas e edital</h2>
+
+        <div className="space-y-2">
+          <Label htmlFor="url-lei">Buscar lei por link</Label>
+          <Input
+            id="url-lei"
+            inputMode="url"
+            value={urlLei}
+            onChange={(e) => setUrlLei(e.target.value.slice(0, 2000))}
+            placeholder="https://www.planalto.gov.br/ccivil_03/…"
+          />
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => void buscarPorUrl()}
+            disabled={buscandoUrl}
+          >
+            {buscandoUrl ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <LinkIcon className="mr-2 size-4" />
+            )}
+            {buscandoUrl ? "Buscando…" : "Buscar e salvar lei"}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Cole o endereço da lei (Planalto, sites de legislação). O texto é lido, limpo e salvo em
+            “Leis → Texto Integral” — sem gastar IA.
+          </p>
+        </div>
+
+        {normasEdital.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Leis do seu edital</p>
+            <ul className="space-y-2">
+              {normasEdital.map((n) => {
+                const salva = leiJaSalva(n.norma);
+                return (
+                  <li
+                    key={n.item}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border p-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm">{n.norma}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {salva ? "já está no sistema" : "ainda falta"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={salva ? "ghost" : "outline"}
+                      onClick={() => void buscarNorma(n)}
+                      disabled={buscandoNorma === n.item}
+                    >
+                      {buscandoNorma === n.item ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        "Buscar"
+                      )}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
 
         <div className="space-y-2">
           <Label htmlFor="leis">Texto de leis (Vade Mecum)</Label>
