@@ -528,6 +528,7 @@ export function EditalRelevancia() {
             historico={historico}
             onMateria={(v) => definirRelevanciaMateria(m, v)}
             onTopico={(t, v) => definirRelevanciaTopico(m, t, v)}
+            onLeis={(leis) => atualizarMateria(m.id, { leis })}
           />
         ))}
       </ul>
