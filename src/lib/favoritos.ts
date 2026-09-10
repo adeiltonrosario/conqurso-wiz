@@ -52,18 +52,10 @@ function salvar(favoritos: ArtigoFavorito[]) {
   window.dispatchEvent(new Event(EVENTO));
 }
 
-/** Favorita ou desfavorita o artigo. Retorna true quando ficou favoritado. */
-export function alternarFavorito(
-  artigo: ArtigoIntegral,
-  info: { lei: string; materia: string; capituloEdital: string },
-) {
-  const chave = chaveFavorito(info.lei, artigo);
-  const atuais = lerFavoritos();
-  if (atuais.some((f) => f.chave === chave)) {
-    salvar(atuais.filter((f) => f.chave !== chave));
-    return false;
-  }
-  const novo: ArtigoFavorito = {
+type InfoFavorito = { lei: string; materia: string; capituloEdital: string };
+
+function montar(artigo: ArtigoIntegral, info: InfoFavorito, chave: string): ArtigoFavorito {
+  return {
     chave,
     lei: info.lei || "Legislação anexada",
     referencia: artigo.referencia,
@@ -76,7 +68,41 @@ export function alternarFavorito(
     capituloEdital: info.capituloEdital,
     salvoEm: Date.now(),
   };
-  salvar([...atuais, novo]);
+}
+
+/**
+ * Favorita vários artigos de uma vez (leitura completa da lei), sem repetir o
+ * que já estava favoritado. Devolve as chaves realmente incluídas.
+ */
+export function favoritarArtigos(artigos: ArtigoIntegral[], info: InfoFavorito): string[] {
+  const atuais = lerFavoritos();
+  const existentes = new Set(atuais.map((f) => f.chave));
+  const novos: ArtigoFavorito[] = [];
+  for (const artigo of artigos) {
+    const chave = chaveFavorito(info.lei, artigo);
+    if (existentes.has(chave)) continue;
+    existentes.add(chave);
+    novos.push(montar(artigo, info, chave));
+  }
+  if (novos.length) salvar([...atuais, ...novos]);
+  return novos.map((n) => n.chave);
+}
+
+/** Remove um conjunto de favoritos pelas chaves (usado pelo "Desfazer"). */
+export function desfavoritarArtigos(chaves: string[]) {
+  if (!chaves.length) return;
+  const fora = new Set(chaves);
+  salvar(lerFavoritos().filter((f) => !fora.has(f.chave)));
+}
+
+/** Favorita ou desfavorita o artigo. Retorna true quando ficou favoritado. */
+export function alternarFavorito(artigo: ArtigoIntegral, info: InfoFavorito) {
+  const chave = chaveFavorito(info.lei, artigo);
+  if (lerFavoritos().some((f) => f.chave === chave)) {
+    desfavoritarArtigos([chave]);
+    return false;
+  }
+  favoritarArtigos([artigo], info);
   return true;
 }
 
