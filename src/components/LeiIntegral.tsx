@@ -452,6 +452,21 @@ export function LeiIntegralPainel({
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
   });
 
+  /** Abre sozinha a lei cadastrada nesta matéria, sem precisar tocar em nada. */
+  const lidoRef = useRef("");
+  useEffect(() => {
+    const alvo = leisDaMinhaMateria.nomes[0];
+    if (!alvo) return;
+    if (arquivo && arquivo !== alvo) return;
+    if (lidoRef.current === alvo) return;
+    lidoRef.current = alvo;
+    if (!arquivo) setArquivo(alvo);
+    mutPdf.mutate({ nome: alvo, item: itemAtivo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leisDaMinhaMateria.nomes, arquivo]);
+
+
+
 
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
