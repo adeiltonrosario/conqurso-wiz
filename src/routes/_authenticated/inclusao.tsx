@@ -184,16 +184,56 @@ function UploadCampo({
               key={a.nome}
               className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs"
             >
-              <span className="min-w-0 flex-1 truncate">
-                {nomeLimpo(a)}
-                <span
-                  className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
-                >
-                  {a.chars
-                    ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
-                    : "sem texto lido — reanexe o PDF"}
+              {editando === a.nome ? (
+                <Input
+                  autoFocus
+                  className="h-7 flex-1 text-xs"
+                  value={rascunho}
+                  onChange={(e) => setRascunho(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void confirmarNome(nomeLimpo(a));
+                    if (e.key === "Escape") setEditando(null);
+                  }}
+                  aria-label={`Novo nome de ${nomeLimpo(a)}`}
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate">
+                  {nomeLimpo(a)}
+                  <span
+                    className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
+                  >
+                    {a.chars
+                      ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
+                      : "sem texto lido — reanexe o PDF"}
+                  </span>
                 </span>
-              </span>
+              )}
+              {onRenomear &&
+                (editando === a.nome ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void confirmarNome(nomeLimpo(a))}
+                      aria-label="Salvar nome"
+                    >
+                      <Check className="size-3.5 text-primary" />
+                    </button>
+                    <button type="button" onClick={() => setEditando(null)} aria-label="Cancelar">
+                      <X className="size-3.5 text-muted-foreground" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditando(a.nome);
+                      setRascunho(nomeLimpo(a));
+                    }}
+                    aria-label={`Renomear ${nomeLimpo(a)}`}
+                  >
+                    <Pencil className="size-3.5 text-muted-foreground" />
+                  </button>
+                ))}
               <button
                 type="button"
                 onClick={() => {
