@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -30,13 +29,13 @@ import { ehRevogado, limparRuidoLei } from "@/lib/limpeza-lei";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  leiIntegral,
   type ArtigoIntegral,
   type LeiIntegral as LeiIntegralTipo,
 } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
 import {
   artigosDoCapitulo,
+  artigosDosAssuntos,
   fatiarPorPaginas,
   lerFaixa,
   lerVadeMecum,
@@ -50,7 +49,7 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { materiasAtivas, useEdital } from "@/lib/edital";
+import { materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
 
 
 
@@ -334,7 +333,6 @@ function Sumario({
 export function LeiIntegralPainel({
   materia,
   capitulo,
-  contexto,
   marcados,
   pdfsLei = [],
   onAlternarMarcado,
@@ -349,14 +347,12 @@ export function LeiIntegralPainel({
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
-  const buscar = useServerFn(leiIntegral);
-  const [lei, setLei] = useState<LeiIntegralTipo | null>(null);
   const [termo, setTermo] = useState("");
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
+  const [soAssuntos, setSoAssuntos] = useState(false);
   const [emFoco, setEmFoco] = useState<string | null>(null);
-  const [fonte, setFonte] = useState<"pdf" | "ia">(pdfsLei.length ? "pdf" : "ia");
   const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
   const [leisPdf, setLeisPdf] = useState<LeiDoPdf[]>([]);
@@ -406,7 +402,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
-      setLei(null);
+      
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
         return;
@@ -424,27 +420,14 @@ export function LeiIntegralPainel({
   });
 
 
-  const mut = useMutation({
-    mutationFn: () => buscar({ data: { materia, capitulo, contexto } }),
-    onSuccess: (r) => {
-      setLei(r);
-      setLeisPdf([]);
-      onCarregado?.(r);
-      if (!(r.artigos ?? []).length) toast.error("A IA não retornou os artigos deste capítulo.");
-    },
-    onError: (e: Error) => toast.error(e.message || "Não foi possível carregar o texto integral."),
-  });
-
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
-  const baseLegal = fonte === "pdf" ? (leiPdfAtiva?.nome ?? "") : (lei?.base_legal ?? "");
+  const baseLegal = leiPdfAtiva?.nome ?? "";
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =
-      fonte === "pdf"
-        ? soCapitulo && capitulo.trim().length > 2
-          ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
-          : (leiPdfAtiva?.artigos ?? [])
-        : (lei?.artigos ?? []);
+      soCapitulo && capitulo.trim().length > 2
+        ? artigosDoCapitulo(leiPdfAtiva?.artigos ?? [], capitulo)
+        : (leiPdfAtiva?.artigos ?? []);
     if (!limparPdf) return base;
     // Sem revogados/vetados e sem lixo de rodapé do PDF.
     return base
@@ -455,10 +438,10 @@ export function LeiIntegralPainel({
         paragrafos: (a.paragrafos ?? []).filter((p) => !ehRevogado(p)).map(limparRuidoLei),
       }))
       .filter((a) => a.texto.trim().length > 2);
-  }, [fonte, leiPdfAtiva, lei, capitulo, soCapitulo, limparPdf]);
+  }, [leiPdfAtiva, capitulo, soCapitulo, limparPdf]);
 
 
-  const carregado = fonte === "pdf" ? leisPdf.length > 0 : lei !== null;
+  const carregado = leisPdf.length > 0;
 
   const chavesFavoritas = useMemo(() => new Set(favoritos.map((f) => f.chave)), [favoritos]);
   const ehFavorito = (a: ArtigoIntegral) => chavesFavoritas.has(chaveFavorito(baseLegal, a));
@@ -480,6 +463,19 @@ export function LeiIntegralPainel({
       0,
     );
 
+  /** Assuntos (tópicos) da matéria selecionada, vindos do Detalhamento do edital. */
+  const topicos = useMemo(() => topicosDaMateria(edital, materia), [edital, materia]);
+
+  /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
+  const casadosAssuntos = useMemo(
+    () => (topicos.length ? artigosDosAssuntos(brutos, topicos) : []),
+    [brutos, topicos],
+  );
+  const chavesAssuntos = useMemo(
+    () => new Set(casadosAssuntos.map((a) => chaveArtigo(baseLegal, a))),
+    [casadosAssuntos, baseLegal],
+  );
+
   const artigos = useMemo<Indexado[]>(() => {
     const limites = lerFaixa(faixa);
     return brutos
@@ -489,6 +485,7 @@ export function LeiIntegralPainel({
         if (!mostrarOcultos && artigosOcultos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`)) return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
+        if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (limites) {
           const n = numeroArtigo(artigo);
           if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
@@ -503,6 +500,8 @@ export function LeiIntegralPainel({
     marcados,
     soFavoritos,
     chavesFavoritas,
+    soAssuntos,
+    chavesAssuntos,
     baseLegal,
     mostrarOcultos,
     artigosOcultos,
@@ -528,6 +527,36 @@ export function LeiIntegralPainel({
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
+  const filtrarPelosAssuntos = () => {
+    if (!carregado) {
+      toast.error("Escolha a lei salva e extraia o texto integral primeiro.");
+      return;
+    }
+    if (!topicos.length) {
+      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
+      return;
+    }
+    const casados = casadosAssuntos.filter(
+      (a) => !artigosOcultos.has(chaveArtigo(baseLegal, a)),
+    );
+    if (!casados.length) {
+      setSoAssuntos(false);
+      toast.error("Nenhum artigo casou com os assuntos desta matéria.");
+      return;
+    }
+    let novos = 0;
+    for (const a of casados) {
+      if (chavesFavoritas.has(chaveFavorito(baseLegal, a))) continue;
+      alternarFavorito(a, { lei: baseLegal, materia, capituloEdital: capitulo });
+      novos++;
+    }
+    setSoAssuntos(true);
+    toast.success(
+      `${casados.length} artigo(s) de ${topicos.length} assunto(s) favoritados (${novos} novo(s)).`,
+    );
+  };
+
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="space-y-1">
@@ -540,25 +569,34 @@ export function LeiIntegralPainel({
         </p>
       </header>
 
-      <div className="flex gap-2">
-        {(["pdf", "ia"] as const).map((f) => (
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={filtrarPelosAssuntos}
+          className={`w-full rounded-lg border px-3 py-2 text-xs transition-colors ${
+            soAssuntos
+              ? "border-primary bg-secondary font-semibold text-primary"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          <Star className="mr-1 inline size-3.5" /> Assuntos da matéria (★)
+        </button>
+        <p className="text-[11px] text-muted-foreground">
+          Sem IA: mantém só os artigos ligados aos assuntos de “{materia || "sua matéria"}” e
+          favorita todos.
+        </p>
+        {soAssuntos && (
           <button
-            key={f}
             type="button"
-            onClick={() => setFonte(f)}
-            className={`flex-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
-              fonte === f
-                ? "border-primary bg-secondary font-semibold text-primary"
-                : "border-border text-muted-foreground"
-            }`}
+            onClick={() => setSoAssuntos(false)}
+            className="text-[11px] font-semibold text-primary underline"
           >
-            {f === "pdf" ? "PDF anexado" : "IA (reserva)"}
+            Ver todos os artigos de novo
           </button>
-        ))}
+        )}
       </div>
 
-      {fonte === "pdf" ? (
-        pdfsLei.length === 0 ? (
+      {pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
             Texto de leis (Vade Mecum)”.
@@ -664,25 +702,7 @@ export function LeiIntegralPainel({
               </select>
             )}
           </div>
-        )
-      ) : (
-        <Button
-          variant={lei ? "outline" : "default"}
-          className="w-full"
-          disabled={mut.isPending || capitulo.trim().length < 3}
-          onClick={() => mut.mutate()}
-        >
-          {mut.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Buscando os artigos…
-            </>
-          ) : lei ? (
-            "Recarregar texto integral"
-          ) : (
-            "Carregar texto integral dos artigos"
-          )}
-        </Button>
-      )}
+        )}
 
       {carregado && (
         <>
@@ -704,7 +724,7 @@ export function LeiIntegralPainel({
               placeholder="Faixa de artigos (ex.: 312-327)"
               aria-label="Filtrar por faixa de artigos"
             />
-            {fonte === "pdf" && capitulo.trim().length > 2 && (
+            {capitulo.trim().length > 2 && (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
@@ -976,11 +996,6 @@ export function LeiIntegralPainel({
             </p>
           )}
 
-          {fonte === "ia" && lei?.observacao && (
-            <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-              {lei.observacao}
-            </p>
-          )}
         </>
       )}
     </section>

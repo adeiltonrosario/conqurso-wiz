@@ -178,3 +178,33 @@ export function artigosDoCapitulo(artigos: ArtigoIntegral[], capitulo: string) {
   });
   return encontrados.length ? encontrados : artigos;
 }
+
+function semAcento(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Artigos ligados aos assuntos (tópicos) de uma matéria do edital, sem IA.
+ * Cada assunto casa quando todas as suas palavras relevantes aparecem na
+ * hierarquia da lei (título/capítulo/seção) ou no próprio texto do artigo.
+ */
+export function artigosDosAssuntos(artigos: ArtigoIntegral[], assuntos: string[]) {
+  const listas = assuntos
+    .map((a) =>
+      semAcento(a)
+        .split(/[^a-z0-9]+/)
+        .filter((t) => t.length > 3),
+    )
+    .filter((termos) => termos.length > 0);
+  if (!listas.length) return [];
+
+  return artigos.filter((a) => {
+    const alvo = semAcento(
+      `${a.titulo ?? ""} ${a.capitulo_lei ?? ""} ${a.secao ?? ""} ${a.texto} ${(a.paragrafos ?? []).join(" ")}`,
+    );
+    return listas.some((termos) => termos.every((t) => alvo.includes(t)));
+  });
+}
