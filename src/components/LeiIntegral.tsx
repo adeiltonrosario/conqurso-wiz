@@ -527,6 +527,36 @@ export function LeiIntegralPainel({
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  /** Filtra os artigos ligados aos assuntos da matéria e favorita todos (sem IA). */
+  const filtrarPelosAssuntos = () => {
+    if (!carregado) {
+      toast.error("Escolha a lei salva e extraia o texto integral primeiro.");
+      return;
+    }
+    if (!topicos.length) {
+      toast.error("Cadastre os assuntos desta matéria no Detalhamento do edital.");
+      return;
+    }
+    const casados = casadosAssuntos.filter(
+      (a) => !artigosOcultos.has(chaveArtigo(baseLegal, a)),
+    );
+    if (!casados.length) {
+      setSoAssuntos(false);
+      toast.error("Nenhum artigo casou com os assuntos desta matéria.");
+      return;
+    }
+    let novos = 0;
+    for (const a of casados) {
+      if (chavesFavoritas.has(chaveFavorito(baseLegal, a))) continue;
+      alternarFavorito(a, { lei: baseLegal, materia, capituloEdital: capitulo });
+      novos++;
+    }
+    setSoAssuntos(true);
+    toast.success(
+      `${casados.length} artigo(s) de ${topicos.length} assunto(s) favoritados (${novos} novo(s)).`,
+    );
+  };
+
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
       <header className="space-y-1">
@@ -539,25 +569,34 @@ export function LeiIntegralPainel({
         </p>
       </header>
 
-      <div className="flex gap-2">
-        {(["pdf", "ia"] as const).map((f) => (
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={filtrarPelosAssuntos}
+          className={`w-full rounded-lg border px-3 py-2 text-xs transition-colors ${
+            soAssuntos
+              ? "border-primary bg-secondary font-semibold text-primary"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          <Star className="mr-1 inline size-3.5" /> Assuntos da matéria (★)
+        </button>
+        <p className="text-[11px] text-muted-foreground">
+          Sem IA: mantém só os artigos ligados aos assuntos de “{materia || "sua matéria"}” e
+          favorita todos.
+        </p>
+        {soAssuntos && (
           <button
-            key={f}
             type="button"
-            onClick={() => setFonte(f)}
-            className={`flex-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
-              fonte === f
-                ? "border-primary bg-secondary font-semibold text-primary"
-                : "border-border text-muted-foreground"
-            }`}
+            onClick={() => setSoAssuntos(false)}
+            className="text-[11px] font-semibold text-primary underline"
           >
-            {f === "pdf" ? "PDF anexado" : "IA (reserva)"}
+            Ver todos os artigos de novo
           </button>
-        ))}
+        )}
       </div>
 
-      {fonte === "pdf" ? (
-        pdfsLei.length === 0 ? (
+      {pdfsLei.length === 0 ? (
           <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
             Texto de leis (Vade Mecum)”.
