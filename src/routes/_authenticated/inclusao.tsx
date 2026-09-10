@@ -345,6 +345,17 @@ function InclusaoPage() {
   const [urlLei, setUrlLei] = useState("");
   const [buscandoUrl, setBuscandoUrl] = useState(false);
   const [buscandoNorma, setBuscandoNorma] = useState<string | null>(null);
+  const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
+  const nomesDeLeisSalvas = useMemo(
+    () => acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase()),
+    [acervo.provas],
+  );
+  const leiJaSalva = (norma: string) => {
+    const ref = refDaNorma(norma);
+    const chave = ref ? `${ref.numero}` : norma.toLowerCase().slice(0, 18);
+    const alvo = ref ? [chave, chave.replace(/(\d+)(\d{3})$/, "$1.$2")] : [chave];
+    return nomesDeLeisSalvas.some((n) => alvo.some((a) => n.includes(a)));
+  };
   const [assunto, setAssunto] = useState("");
   const [formato, setFormato] = useState<"multipla" | "certo-errado">("multipla");
   const [alternativas, setAlternativas] = useState<string[]>(["", "", "", "", ""]);
