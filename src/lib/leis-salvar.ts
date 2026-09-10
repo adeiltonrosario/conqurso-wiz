@@ -10,31 +10,34 @@ import { LIMITE_TRECHO_IA } from "./pdf";
 
 export type ResultadoLeiSalva = { artigos: number; titulo: string; nome: string };
 
-export function salvarLeiNoAcervo(bruto: string, tituloSugerido?: string): ResultadoLeiSalva {
+/**
+ * `nomePreferido` é o nome cadastrado no Detalhamento do edital: quando existe,
+ * ele manda, para que edital e acervo mostrem sempre o mesmo nome e não haja
+ * cópias duplicadas da mesma lei.
+ */
+export function salvarLeiNoAcervo(bruto: string, nomePreferido?: string): ResultadoLeiSalva {
   const texto = limparRuidoLei(bruto).trim();
   const leis = lerVadeMecum(texto);
   const artigos = leis.reduce((s, l) => s + l.artigos.length, 0);
-  const titulo = leis[0]?.nome?.trim() || tituloSugerido?.trim() || "Texto colado";
-  if (!artigos) return { artigos: 0, titulo, nome: "" };
+  const nome = nomePreferido?.trim() || leis[0]?.nome?.trim() || "Texto colado";
+  if (!artigos) return { artigos: 0, titulo: nome, nome: "" };
 
   const acervo = lerAcervo();
-  const data = new Date().toLocaleDateString("pt-BR");
-  const jaUsados = new Set(acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a)));
-  let nome = `${titulo} — ${data}`;
-  let n = 2;
-  while (jaUsados.has(nome)) nome = `${titulo} — ${data} (${n++})`;
+  const item = {
+    nome: marcarComoLei(nome),
+    texto: texto.slice(0, LIMITE_TRECHO_IA),
+    chars: texto.length,
+  };
+  const alvo = nome.toLowerCase();
+  const indice = acervo.provas.findIndex(
+    (a) => ehAnexoDeLei(a) && nomeLimpo(a).toLowerCase() === alvo,
+  );
+  const provas =
+    indice >= 0
+      ? acervo.provas.map((a, i) => (i === indice ? { ...a, ...item } : a))
+      : [...acervo.provas, item];
 
   void salvarTextoAnexo(nome, texto);
-  salvarAcervo({
-    ...acervo,
-    provas: [
-      ...acervo.provas,
-      {
-        nome: marcarComoLei(nome),
-        texto: texto.slice(0, LIMITE_TRECHO_IA),
-        chars: texto.length,
-      },
-    ],
-  });
-  return { artigos, titulo, nome };
+  salvarAcervo({ ...acervo, provas });
+  return { artigos, titulo: nome, nome };
 }
