@@ -181,11 +181,12 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
-      const { artigos, titulo: nome } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
+      const { artigos, titulo: nome, nome: anexo } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
       if (!artigos) {
         toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
         return;
       }
+      onLeis(comLeiAlterada(materia, l.id, { anexo }));
       toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
     } catch {
       toast.error("Não foi possível acessar esse endereço agora.");
