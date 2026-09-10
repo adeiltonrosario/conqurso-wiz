@@ -5,8 +5,11 @@
 import { ehAnexoDeLei, lerAcervo, marcarComoLei, nomeLimpo, salvarAcervo } from "./acervo";
 import { limparRuidoLei } from "./limpeza-lei";
 import { lerVadeMecum } from "./vademecum";
-import { salvarTextoAnexo } from "./anexos-store";
+import { lerTextoAnexo, removerTextoAnexo, salvarTextoAnexo } from "./anexos-store";
 import { LIMITE_TRECHO_IA } from "./pdf";
+import { renomearLeiNosFavoritos } from "./favoritos";
+import { renomearLeiNosOcultos } from "./ocultos";
+import { renomearAnexoNasLeis } from "./edital";
 
 export type ResultadoLeiSalva = { artigos: number; titulo: string; nome: string };
 
