@@ -382,3 +382,30 @@ export function topicosPorRelevancia(materia: MateriaEdital) {
     (a, b) => (materia.relevanciaTopicos?.[b] ?? 0) - (materia.relevanciaTopicos?.[a] ?? 0),
   );
 }
+
+/** Links de leis cadastrados na matéria. */
+export function leisDaMateria(materia: MateriaEdital): LinkLei[] {
+  return materia.leis ?? [];
+}
+
+/** Acrescenta um link de lei à matéria (sem repetir o mesmo endereço). */
+export function comLeiAdicionada(materia: MateriaEdital, titulo: string, url: string): LinkLei[] {
+  const atuais = leisDaMateria(materia);
+  const limpo = url.trim();
+  if (atuais.some((l) => l.url.trim().toLowerCase() === limpo.toLowerCase())) return atuais;
+  return [...atuais, { id: novoId(), titulo: titulo.trim() || limpo, url: limpo }];
+}
+
+/** Altera o título/endereço de um link de lei da matéria. */
+export function comLeiAlterada(
+  materia: MateriaEdital,
+  id: string,
+  patch: Partial<Omit<LinkLei, "id">>,
+): LinkLei[] {
+  return leisDaMateria(materia).map((l) => (l.id === id ? { ...l, ...patch } : l));
+}
+
+/** Remove um link de lei da matéria. */
+export function comLeiRemovida(materia: MateriaEdital, id: string): LinkLei[] {
+  return leisDaMateria(materia).filter((l) => l.id !== id);
+}
