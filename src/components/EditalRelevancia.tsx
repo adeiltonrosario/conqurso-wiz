@@ -3,16 +3,38 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, LineChart, Loader2, Sparkles } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  LineChart,
+  Loader2,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { estimarRelevanciaEdital } from "@/lib/ai.functions";
 import {
+  comLeiAdicionada,
+  comLeiAlterada,
+  comLeiRemovida,
+  leisDaMateria,
   materiasPorRelevancia,
   relevanciaGeral,
   topicosPorRelevancia,
   useEdital,
+  type LinkLei,
   type MateriaEdital,
 } from "@/lib/edital";
+import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
+import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
+import { ehAnexoDeLei, nomeLimpo, useAcervo } from "@/lib/acervo";
 import { useRevisao, type HistoricoRevisao } from "@/lib/revisao";
 import { useTrilha } from "@/lib/trilha";
 
@@ -103,16 +125,227 @@ function CampoPct({
   );
 }
 
+/** Links das leis de uma matéria: cadastrar, buscar o texto, editar e excluir. */
+function LeisDaMateria({
+  materia,
+  onLeis,
+}: {
+  materia: MateriaEdital;
+  onLeis: (leis: LinkLei[]) => void;
+}) {
+  const leis = leisDaMateria(materia);
+  const { acervo } = useAcervo();
+  const [titulo, setTitulo] = useState("");
+  const [url, setUrl] = useState("");
+  const [editando, setEditando] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState<{ titulo: string; url: string }>({
+    titulo: "",
+    url: "",
+  });
+  const [buscando, setBuscando] = useState<string | null>(null);
+
+  const salvasNoSistema = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
+  const jaSalva = (l: LinkLei) => {
+    const alvo = l.titulo.trim().toLowerCase();
+    const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
+    return salvasNoSistema.some(
+      (n) => (alvo.length > 4 && n.includes(alvo)) || (numero.length >= 4 && n.includes(numero)),
+    );
+  };
+
+  const adicionar = () => {
+    const endereco = url.trim();
+    if (!/^https?:\/\//i.test(endereco)) {
+      toast.error("Cole o endereço completo da lei, começando com https://");
+      return;
+    }
+    const proximas = comLeiAdicionada(materia, titulo, endereco);
+    if (proximas.length === leis.length) {
+      toast.error("Esse endereço já está cadastrado nesta matéria.");
+      return;
+    }
+    onLeis(proximas);
+    setTitulo("");
+    setUrl("");
+    toast.success("Link salvo nesta matéria.");
+  };
+
+  const buscar = async (l: LinkLei) => {
+    setBuscando(l.id);
+    try {
+      const r = await buscarLeiPorUrl({ data: { url: l.url } });
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      const { artigos, titulo: nome } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
+      if (!artigos) {
+        toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
+        return;
+      }
+      toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    } catch {
+      toast.error("Não foi possível acessar esse endereço agora.");
+    } finally {
+      setBuscando(null);
+    }
+  };
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-border p-3">
+      <p className="text-xs font-semibold">Leis desta matéria</p>
+      <p className="text-xs text-muted-foreground">
+        Cadastre o nome e o endereço da lei conforme o seu edital. O texto é lido e salvo em “Leis →
+        Texto Integral”, sem gastar IA.
+      </p>
+
+      {leis.length > 0 && (
+        <ul className="space-y-2">
+          {leis.map((l) => (
+            <li key={l.id} className="rounded-md border border-border/70 p-2">
+              {editando === l.id ? (
+                <div className="space-y-2">
+                  <Input
+                    className="h-8"
+                    value={rascunho.titulo}
+                    onChange={(e) =>
+                      setRascunho((s) => ({ ...s, titulo: e.target.value.slice(0, 120) }))
+                    }
+                    placeholder="Nome da lei"
+                  />
+                  <Input
+                    className="h-8"
+                    inputMode="url"
+                    value={rascunho.url}
+                    onChange={(e) =>
+                      setRascunho((s) => ({ ...s, url: e.target.value.slice(0, 2000) }))
+                    }
+                    placeholder="https://…"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (!/^https?:\/\//i.test(rascunho.url.trim())) {
+                          toast.error("O endereço deve começar com https://");
+                          return;
+                        }
+                        onLeis(
+                          comLeiAlterada(materia, l.id, {
+                            titulo: rascunho.titulo.trim() || rascunho.url.trim(),
+                            url: rascunho.url.trim(),
+                          }),
+                        );
+                        setEditando(null);
+                      }}
+                    >
+                      <Check className="mr-1 size-3.5" /> Salvar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditando(null)}>
+                      <X className="mr-1 size-3.5" /> Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold">{l.titulo}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{l.url}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {jaSalva(l) ? "já está no sistema" : "ainda falta buscar o texto"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={buscando === l.id}
+                      onClick={() => void buscar(l)}
+                    >
+                      {buscando === l.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <Download className="mr-1 size-3.5" /> Buscar texto
+                        </>
+                      )}
+                    </Button>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Abrir ${l.titulo}`}
+                      className="rounded p-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                    <button
+                      type="button"
+                      aria-label={`Editar ${l.titulo}`}
+                      className="rounded p-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setEditando(l.id);
+                        setRascunho({ titulo: l.titulo, url: l.url });
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Excluir ${l.titulo}`}
+                      className="rounded p-1.5"
+                      onClick={() => onLeis(comLeiRemovida(materia, l.id))}
+                    >
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form
+        className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          adicionar();
+        }}
+      >
+        <Input
+          className="h-8"
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value.slice(0, 120))}
+          placeholder="Nome da lei (ex.: Lei 13.869/2019)"
+        />
+        <Input
+          className="h-8"
+          inputMode="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value.slice(0, 2000))}
+          placeholder="https://www.planalto.gov.br/…"
+        />
+        <Button type="submit" size="sm" variant="outline">
+          <Plus className="mr-1 size-3.5" /> Salvar link
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 function LinhaMateria({
   materia,
   historico,
   onMateria,
   onTopico,
+  onLeis,
 }: {
   materia: MateriaEdital;
   historico: HistoricoRevisao;
   onMateria: (valor: number | undefined) => void;
   onTopico: (topico: string, valor: number | undefined) => void;
+  onLeis: (leis: LinkLei[]) => void;
 }) {
   const [aberta, setAberta] = useState(false);
   const geral = desempenho(historico, materia.nome);
@@ -180,7 +413,9 @@ function LinhaMateria({
                           titulo={`Relevância de "${t}" dentro de ${materia.nome}`}
                         />
                       </td>
-                      <td className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}>
+                      <td
+                        className={`py-2 text-right align-top ${cor(relevanciaGeral(materia, t))}`}
+                      >
                         {pct(relevanciaGeral(materia, t))}
                       </td>
                       <td className="py-2 text-right align-top text-muted-foreground">
@@ -199,6 +434,7 @@ function LinhaMateria({
               </tbody>
             </table>
           )}
+          <LeisDaMateria materia={materia} onLeis={onLeis} />
         </div>
       )}
     </li>
@@ -215,11 +451,7 @@ export function EditalRelevancia() {
   const definirRelevanciaMateria = (m: MateriaEdital, valor: number | undefined) =>
     atualizarMateria(m.id, valor == null ? { relevancia: undefined } : { relevancia: valor });
 
-  const definirRelevanciaTopico = (
-    m: MateriaEdital,
-    topico: string,
-    valor: number | undefined,
-  ) => {
+  const definirRelevanciaTopico = (m: MateriaEdital, topico: string, valor: number | undefined) => {
     const mapa = { ...(m.relevanciaTopicos ?? {}) };
     if (valor == null) delete mapa[topico];
     else mapa[topico] = valor;
@@ -301,6 +533,7 @@ export function EditalRelevancia() {
             historico={historico}
             onMateria={(v) => definirRelevanciaMateria(m, v)}
             onTopico={(t, v) => definirRelevanciaTopico(m, t, v)}
+            onLeis={(leis) => atualizarMateria(m.id, { leis })}
           />
         ))}
       </ul>

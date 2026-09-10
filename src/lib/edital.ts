@@ -7,6 +7,9 @@ import { MATERIAS_ESPECIFICO, MATERIAS_GERAL } from "./acervo";
  */
 export type GrupoEdital = "Conhecimento Geral" | "Conhecimento Específico";
 
+/** Link de uma lei cadastrada pelo candidato dentro de uma matéria do edital. */
+export type LinkLei = { id: string; titulo: string; url: string };
+
 export type MateriaEdital = {
   id: string;
   nome: string;
@@ -20,8 +23,9 @@ export type MateriaEdital = {
   relevancia?: number | undefined;
   /** Relevância de cada tópico DENTRO da matéria, em %. */
   relevanciaTopicos?: Record<string, number> | undefined;
+  /** Links das leis desta matéria, informados pelo candidato. */
+  leis?: LinkLei[] | undefined;
 };
-
 
 export type EditalEstado = {
   texto: string;
@@ -46,7 +50,6 @@ const VAZIO: EditalEstado = {
   bancaAtiva: "",
   cargoAtivo: "",
 };
-
 
 export function lerEdital(): EditalEstado {
   if (typeof window === "undefined") return VAZIO;
@@ -204,7 +207,6 @@ export function bancasDoEdital(edital: EditalEstado) {
   return unicos(edital.bancas ?? []);
 }
 
-
 function unicos(nomes: string[]) {
   const vistos = new Set<string>();
   return nomes.filter((n) => {
@@ -257,7 +259,9 @@ export function todasAsMaterias(edital: EditalEstado) {
 }
 
 export function ehDoEdital(edital: EditalEstado, nome: string) {
-  return materiasAtivas(edital).some((m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+  return materiasAtivas(edital).some(
+    (m) => m.nome.trim().toLowerCase() === nome.trim().toLowerCase(),
+  );
 }
 
 const igual = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -376,4 +380,31 @@ export function topicosPorRelevancia(materia: MateriaEdital) {
   return [...materia.topicos].sort(
     (a, b) => (materia.relevanciaTopicos?.[b] ?? 0) - (materia.relevanciaTopicos?.[a] ?? 0),
   );
+}
+
+/** Links de leis cadastrados na matéria. */
+export function leisDaMateria(materia: MateriaEdital): LinkLei[] {
+  return materia.leis ?? [];
+}
+
+/** Acrescenta um link de lei à matéria (sem repetir o mesmo endereço). */
+export function comLeiAdicionada(materia: MateriaEdital, titulo: string, url: string): LinkLei[] {
+  const atuais = leisDaMateria(materia);
+  const limpo = url.trim();
+  if (atuais.some((l) => l.url.trim().toLowerCase() === limpo.toLowerCase())) return atuais;
+  return [...atuais, { id: novoId(), titulo: titulo.trim() || limpo, url: limpo }];
+}
+
+/** Altera o título/endereço de um link de lei da matéria. */
+export function comLeiAlterada(
+  materia: MateriaEdital,
+  id: string,
+  patch: Partial<Omit<LinkLei, "id">>,
+): LinkLei[] {
+  return leisDaMateria(materia).map((l) => (l.id === id ? { ...l, ...patch } : l));
+}
+
+/** Remove um link de lei da matéria. */
+export function comLeiRemovida(materia: MateriaEdital, id: string): LinkLei[] {
+  return leisDaMateria(materia).filter((l) => l.id !== id);
 }
