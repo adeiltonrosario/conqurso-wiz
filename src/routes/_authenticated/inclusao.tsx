@@ -3,7 +3,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, Link as LinkIcon, ListPlus, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  FileUp,
+  Link as LinkIcon,
+  ListPlus,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
@@ -25,7 +35,7 @@ import {
   type QuestaoCadastrada,
 } from "@/lib/acervo";
 import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
-import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
+import { renomearLei, salvarLeiNoAcervo } from "@/lib/leis-salvar";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
 
@@ -80,6 +90,7 @@ function UploadCampo({
   onAdd,
   onRemove,
   onArquivoLido,
+  onRenomear,
 }: {
   label: string;
   ajuda: string;
@@ -91,9 +102,24 @@ function UploadCampo({
    * Retornar "descartar" impede que o arquivo entre na lista (ex.: PDF só de gabarito).
    */
   onArquivoLido?: (nome: string, texto: string) => void | "descartar";
+  /** Quando existe, cada item pode ser renomeado. Retorna erro ou null. */
+  onRenomear?: (antigo: string, novo: string) => Promise<string | null>;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState("");
+
+  async function confirmarNome(antigo: string) {
+    if (!onRenomear) return;
+    const erro = await onRenomear(antigo, rascunho);
+    if (erro) {
+      toast.error(erro);
+      return;
+    }
+    setEditando(null);
+    toast.success("Nome atualizado.");
+  }
 
   async function selecionar(files: File[]) {
     setLendo(true);
@@ -168,16 +194,56 @@ function UploadCampo({
               key={a.nome}
               className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs"
             >
-              <span className="min-w-0 flex-1 truncate">
-                {nomeLimpo(a)}
-                <span
-                  className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
-                >
-                  {a.chars
-                    ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
-                    : "sem texto lido — reanexe o PDF"}
+              {editando === a.nome ? (
+                <Input
+                  autoFocus
+                  className="h-7 flex-1 text-xs"
+                  value={rascunho}
+                  onChange={(e) => setRascunho(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void confirmarNome(nomeLimpo(a));
+                    if (e.key === "Escape") setEditando(null);
+                  }}
+                  aria-label={`Novo nome de ${nomeLimpo(a)}`}
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate">
+                  {nomeLimpo(a)}
+                  <span
+                    className={`ml-2 text-[10px] font-semibold ${a.chars ? "text-primary" : "text-destructive"}`}
+                  >
+                    {a.chars
+                      ? `${a.chars.toLocaleString("pt-BR")} caracteres${a.paginas ? ` · ${a.paginas} página(s)` : ""} lidos`
+                      : "sem texto lido — reanexe o PDF"}
+                  </span>
                 </span>
-              </span>
+              )}
+              {onRenomear &&
+                (editando === a.nome ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void confirmarNome(nomeLimpo(a))}
+                      aria-label="Salvar nome"
+                    >
+                      <Check className="size-3.5 text-primary" />
+                    </button>
+                    <button type="button" onClick={() => setEditando(null)} aria-label="Cancelar">
+                      <X className="size-3.5 text-muted-foreground" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditando(a.nome);
+                      setRascunho(nomeLimpo(a));
+                    }}
+                    aria-label={`Renomear ${nomeLimpo(a)}`}
+                  >
+                    <Pencil className="size-3.5 text-muted-foreground" />
+                  </button>
+                ))}
               <button
                 type="button"
                 onClick={() => {
@@ -854,6 +920,7 @@ function InclusaoPage() {
             })
           }
           onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
+          onRenomear={renomearLei}
         />
 
         <UploadCampo

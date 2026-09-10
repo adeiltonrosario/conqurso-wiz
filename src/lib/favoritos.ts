@@ -80,6 +80,21 @@ export function alternarFavorito(
   return true;
 }
 
+/** Mantém os favoritos ao renomear a lei (a chave começa com o nome da lei). */
+export function renomearLeiNosFavoritos(antigo: string, novo: string) {
+  const a = antigo.trim().toLowerCase();
+  const n = novo.trim().toLowerCase();
+  if (!a || a === n) return;
+  salvar(
+    lerFavoritos().map((f) => {
+      const daLei = f.chave.startsWith(`${a}|`) || f.lei.trim().toLowerCase() === a;
+      if (!daLei) return f;
+      const resto = f.chave.startsWith(`${a}|`) ? f.chave.slice(a.length + 1) : f.chave;
+      return { ...f, lei: novo.trim(), chave: `${n}|${resto}` };
+    }),
+  );
+}
+
 export function removerFavorito(chave: string) {
   salvar(lerFavoritos().filter((f) => f.chave !== chave));
 }
