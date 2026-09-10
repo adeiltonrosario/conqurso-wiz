@@ -402,7 +402,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
-      setLei(null);
+      
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
         return;
@@ -996,11 +996,6 @@ export function LeiIntegralPainel({
             </p>
           )}
 
-          {fonte === "ia" && lei?.observacao && (
-            <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-              {lei.observacao}
-            </p>
-          )}
         </>
       )}
     </section>
