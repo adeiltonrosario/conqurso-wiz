@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { extrairMateriasEdital } from "@/lib/ai.functions";
+import {
+  extrairMateriasEdital,
+  LIMITE_BLOCO_EDITAL,
+  LIMITE_EDITAL,
+} from "@/lib/ai.functions";
 import { extrairMateriasDoTexto } from "@/lib/edital-parser";
 import {
   bancasDoEdital,
@@ -16,11 +20,61 @@ import {
   novoId,
   useEdital,
   type GrupoEdital,
+  type MateriaEdital,
 } from "@/lib/edital";
+import { cn } from "@/lib/utils";
 
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 
 const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"];
+const LIMITE_TOPICO = 1000;
+const LIMITE_NOME = 160;
+
+/** Caixa de texto que cresce conforme o conteúdo, para caber editais extensos. */
+function CaixaCrescente({
+  valor,
+  aoMudar,
+  limite,
+  minLinhas = 3,
+  maxAltura = 900,
+  id,
+  placeholder,
+  ariaLabel,
+  className,
+}: {
+  valor: string;
+  aoMudar: (v: string) => void;
+  limite: number;
+  minLinhas?: number;
+  maxAltura?: number;
+  id?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const minimo = minLinhas * 20 + 20;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, minimo), maxAltura)}px`;
+  }, [valor, minLinhas, maxAltura]);
+
+  return (
+    <Textarea
+      id={id}
+      ref={ref}
+      rows={minLinhas}
+      aria-label={ariaLabel}
+      value={valor}
+      placeholder={placeholder}
+      className={cn("resize-none leading-5", className)}
+      onChange={(e) => aoMudar(e.target.value.slice(0, limite))}
+    />
+  );
+}
 
 /** Cadastro das matérias do edital: extração por IA e edição manual. */
 export function EditalMaterias() {
@@ -48,10 +102,12 @@ export function EditalMaterias() {
   const bancas = edital.bancas ?? [];
   const bancasDisponiveis = bancasDoEdital(edital);
   const cargosDisponiveis = cargosDoEdital(edital);
+  const partes = Math.max(1, Math.ceil(valor.trim().length / LIMITE_BLOCO_EDITAL));
+  const estourou = valor.length >= LIMITE_EDITAL;
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
-    onSuccess: ({ materias, cargos: cargosIA, bancas: bancasIA }) => {
+    onSuccess: ({ materias, cargos: cargosIA, bancas: bancasIA, partes }) => {
       if (!materias.length) {
         toast.error("A IA não encontrou matérias nesse texto.");
         return;
@@ -84,12 +140,33 @@ export function EditalMaterias() {
         bancas: [...bancasAtuais, ...bancasNovas],
       });
       toast.success(
-        `${novas.length} matéria(s), ${cargosNovos.length} cargo(s) e ${bancasNovas.length} banca(s) do edital cadastrados.`,
+        `${novas.length} matéria(s), ${cargosNovos.length} cargo(s) e ${bancasNovas.length} banca(s) do edital cadastrados${
+          partes > 1 ? ` — edital lido em ${partes} partes` : ""
+        }.`,
       );
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o edital."),
   });
 
+  /** Inclui vários tópicos de uma vez: um por linha ou separados por ";". */
+  const adicionarTopicos = (m: MateriaEdital) => {
+    const novos = (topicoNovo[m.id] ?? "")
+      .split(/\r?\n|;/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2);
+    if (!novos.length) return;
+    const atuais = [...m.topicos];
+    let incluidos = 0;
+    for (const t of novos) {
+      if (atuais.some((x) => x.trim().toLowerCase() === t.toLowerCase())) continue;
+      atuais.push(t);
+      incluidos += 1;
+    }
+    setTopicoNovo((s) => ({ ...s, [m.id]: "" }));
+    if (!incluidos) return;
+    atualizarMateria(m.id, { topicos: atuais });
+    if (incluidos > 1) toast.success(`${incluidos} tópicos incluídos em ${m.nome}.`);
+  };
 
   const adicionar = () => {
     const nome = nova.trim();
@@ -126,13 +203,24 @@ export function EditalMaterias() {
 
       <div className="space-y-2">
         <Label htmlFor="edital-texto">Conteúdo programático do edital</Label>
-        <Textarea
+        <CaixaCrescente
           id="edital-texto"
-          rows={5}
-          value={valor}
-          onChange={(e) => setTexto(e.target.value.slice(0, 40000))}
+          valor={valor}
+          aoMudar={setTexto}
+          limite={LIMITE_EDITAL}
+          minLinhas={14}
           placeholder="Cole aqui o trecho do edital com as disciplinas e os tópicos…"
         />
+        <p className="text-xs text-muted-foreground">
+          {valor.length.toLocaleString("pt-BR")} de {LIMITE_EDITAL.toLocaleString("pt-BR")}{" "}
+          caracteres — pode colar em partes: cada parte é somada às matérias já cadastradas.
+        </p>
+        {estourou && (
+          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
+            O campo aceita até {LIMITE_EDITAL.toLocaleString("pt-BR")} caracteres e já está cheio.
+            Extraia o que está aqui e cole o restante do edital em seguida.
+          </p>
+        )}
         <div className="flex gap-2">
           <Button
             type="button"
@@ -142,7 +230,8 @@ export function EditalMaterias() {
           >
             {mut.isPending ? (
               <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Lendo o edital…
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                {partes > 1 ? `Lendo o edital (parte a parte)…` : "Lendo o edital…"}
               </>
             ) : (
               <>
@@ -178,6 +267,12 @@ export function EditalMaterias() {
           </Button>
 
         </div>
+        {partes > 1 && (
+          <p className="text-xs text-muted-foreground">
+            Texto longo: a IA vai ler em {partes} partes e juntar tudo no final. A extração local
+            ("Extrair e limpar") também aceita o texto inteiro e não gasta créditos.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2 border-t border-border pt-4">
@@ -213,10 +308,15 @@ export function EditalMaterias() {
             {cargos.map((c) => (
               <li
                 key={c}
-                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+                className="flex max-w-full items-start gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
               >
-                <span>{c}</span>
-                <button type="button" onClick={() => removerCargo(c)} aria-label={`Remover ${c}`}>
+                <span className="break-words [overflow-wrap:anywhere]">{c}</span>
+                <button
+                  type="button"
+                  onClick={() => removerCargo(c)}
+                  aria-label={`Remover ${c}`}
+                  className="shrink-0"
+                >
                   <Trash2 className="size-3 text-destructive" />
                 </button>
               </li>
@@ -259,10 +359,15 @@ export function EditalMaterias() {
             {bancas.map((b) => (
               <li
                 key={b}
-                className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+                className="flex max-w-full items-start gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
               >
-                <span>{b}</span>
-                <button type="button" onClick={() => removerBanca(b)} aria-label={`Remover ${b}`}>
+                <span className="break-words [overflow-wrap:anywhere]">{b}</span>
+                <button
+                  type="button"
+                  onClick={() => removerBanca(b)}
+                  aria-label={`Remover ${b}`}
+                  className="shrink-0"
+                >
                   <Trash2 className="size-3 text-destructive" />
                 </button>
               </li>
@@ -275,7 +380,7 @@ export function EditalMaterias() {
       <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[1fr_auto_auto]">
         <Input
           value={nova}
-          onChange={(e) => setNova(e.target.value.slice(0, 80))}
+          onChange={(e) => setNova(e.target.value.slice(0, LIMITE_NOME))}
           placeholder="Adicionar matéria manualmente"
         />
         <select
@@ -305,7 +410,9 @@ export function EditalMaterias() {
               <div className="flex flex-wrap items-center gap-2">
                 <Input
                   value={m.nome}
-                  onChange={(e) => atualizarMateria(m.id, { nome: e.target.value.slice(0, 80) })}
+                  onChange={(e) =>
+                    atualizarMateria(m.id, { nome: e.target.value.slice(0, LIMITE_NOME) })
+                  }
                   className="h-8 flex-1 min-w-40"
                 />
                 <select
@@ -361,15 +468,16 @@ export function EditalMaterias() {
                   {m.topicos.map((t) => (
                     <li
                       key={t}
-                      className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
+                      className="flex max-w-full items-start gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
                     >
-                      <span>{t}</span>
+                      <span className="break-words [overflow-wrap:anywhere]">{t}</span>
                       <button
                         type="button"
                         onClick={() =>
                           atualizarMateria(m.id, { topicos: m.topicos.filter((x) => x !== t) })
                         }
                         aria-label={`Remover tópico ${t}`}
+                        className="shrink-0"
                       >
                         <Trash2 className="size-3 text-destructive" />
                       </button>
@@ -379,24 +487,28 @@ export function EditalMaterias() {
               )}
 
               <form
-                className="mt-2 flex gap-2"
+                className="mt-2 flex items-start gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const t = (topicoNovo[m.id] ?? "").trim();
-                  if (t.length < 2 || m.topicos.includes(t)) return;
-                  atualizarMateria(m.id, { topicos: [...m.topicos, t] });
-                  setTopicoNovo((s) => ({ ...s, [m.id]: "" }));
+                  adicionarTopicos(m);
                 }}
               >
-                <Input
-                  value={topicoNovo[m.id] ?? ""}
-                  onChange={(e) =>
-                    setTopicoNovo((s) => ({ ...s, [m.id]: e.target.value.slice(0, 200) }))
-                  }
-                  placeholder="Adicionar tópico do edital"
-                  className="h-8"
+                <CaixaCrescente
+                  valor={topicoNovo[m.id] ?? ""}
+                  aoMudar={(v) => setTopicoNovo((s) => ({ ...s, [m.id]: v }))}
+                  limite={LIMITE_TOPICO}
+                  minLinhas={2}
+                  maxAltura={320}
+                  ariaLabel={`Adicionar tópico do edital em ${m.nome}`}
+                  placeholder="Adicionar tópico do edital — um por linha, ou separados por ;"
                 />
-                <Button type="submit" size="sm" variant="outline" aria-label="Adicionar tópico">
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  aria-label="Adicionar tópico"
+                  className="mt-1 shrink-0"
+                >
                   <Plus className="size-4" />
                 </Button>
               </form>

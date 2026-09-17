@@ -409,7 +409,7 @@ function LinhaMateria({
                   const desempenhoTopico = desempenho(historico, materia.nome, t);
                   return (
                     <tr key={t} className="border-b border-border/60 last:border-0">
-                      <td className="py-2 pr-2 align-top">
+                      <td className="py-2 pr-2 align-top [overflow-wrap:anywhere]">
                         <span className="text-muted-foreground">{i + 1}. </span>
                         {t}
                       </td>
@@ -473,7 +473,7 @@ export function EditalRelevancia() {
           cargo: trilha.cargo || undefined,
           materias: edital.materias.map((m) => ({
             nome: m.nome,
-            topicos: m.topicos.slice(0, 120),
+            topicos: m.topicos,
           })),
         },
       }),

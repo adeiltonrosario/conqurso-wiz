@@ -53,7 +53,7 @@ function nomeDeMateria(linha: string): string | null {
   }
 
   const semNumero = limpar(bruto);
-  if (semNumero.length < 3 || semNumero.length > 80) return null;
+  if (semNumero.length < 3 || semNumero.length > 160) return null;
   // Linhas com muitos tópicos separados por ";" são conteúdo, não cabeçalho.
   if (semNumero.includes(";")) return null;
 
@@ -77,7 +77,7 @@ function topicosDaLinha(linha: string): string[] {
   return base
     .split(/\s*;\s*|\s+\u2022\s+/)
     .map((t) => limpar(t))
-    .filter((t) => t.length >= 3 && t.length <= 240);
+    .filter((t) => t.length >= 3 && t.length <= 5000);
 }
 
 export function extrairMateriasDoTexto(texto: string): MateriaExtraida[] {
