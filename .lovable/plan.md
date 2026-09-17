@@ -1,16 +1,33 @@
-# Separação de matérias e tópicos sem gastar crédito
+# Filtrar questões a partir de um link na aba Questões
 
-Hoje já existem dois caminhos na aba Incluir: "Extrair matérias com a IA" (gasta créditos) e "Extrair e limpar" (gratuito, roda no próprio aparelho). A separação por numeração que você pediu (MEDICINA LEGAL como matéria; 1, 1.1, 1.2… como tópicos) já funciona no caminho gratuito. O que falta é deixar isso claro e tornar o gratuito o caminho principal, para você não precisar gastar crédito.
+Novo bloco **"Buscar questões por link"** dentro de `/questoes`: você cola o endereço de uma página com questões, o app lê o conteúdo, separa as questões, aplica os filtros de matéria, banca e assunto e mostra só o que passou — salvando no acervo apenas essas questões.
 
 ## Como vai funcionar
 
-1. **Caminho gratuito em destaque**: o botão "Extrair e limpar" passa a ser o botão principal, com texto mais claro: "Extrair matérias e tópicos (grátis)". Ele separa matéria e tópicos numerados sem usar IA.
-2. **IA vira opção reserva**: o botão da IA fica discreto, com aviso de que consome créditos, para usar só quando o texto estiver tão bagunçado que o extrator gratuito não reconhecer nada.
-3. **Aviso quando o gratuito não reconhecer**: se o extrator local não achar matérias, a mensagem sugere tentar a IA — em vez de parecer erro.
-4. **Resultado idêntico**: nos dois caminhos o resultado vai para a mesma lista de matérias, cargos e tópicos do Detalhamento do Edital.
+1. Você cola o link e escolhe:
+   - **Matéria** (lista do edital ativo, respeitando o filtro de concurso/banca/cargo);
+   - **Assunto**: tópico do Detalhamento do Edital da matéria escolhida e/ou palavra-chave livre;
+   - **Banca**: já vem preenchida com a banca em estudo, com opção de aceitar qualquer banca.
+2. O app baixa a página no servidor, transforma em texto limpo (sem menus, rodapés e propaganda) e reconhece enunciado, alternativas A–E e gabarito quando a página traz.
+3. Cada questão é classificada por matéria e assunto pelo mesmo mecanismo já usado nos PDFs; o que não casar com os filtros fica de fora da prévia.
+4. A prévia mostra as questões aprovadas com título "matéria · assunto · banca · ano". Você confere, pode desmarcar alguma e clica em **Salvar no acervo**.
+5. As salvas passam a aparecer normalmente nos filtros da aba Questões, na prova interativa e podem ser editadas, favoritadas ou excluídas como as outras.
+
+Tudo isso roda sem IA e **sem gastar crédito**.
+
+## Sites que pedem login
+
+Páginas públicas de provas (sites de bancas, portais abertos) funcionam. Sites de questões como o QConcursos exigem login e normalmente bloqueiam leitura automática: nesses casos o app avisa com uma mensagem clara ("esta página exige login") e oferece o caminho alternativo já existente — copiar as questões e colar no campo de inclusão, que separa enunciado e alternativas automaticamente. Não vou tentar contornar o login desses sites.
+
+## Duplicadas e segurança
+
+- Questões repetidas (mesmo enunciado já no acervo) são marcadas na prévia e não entram duas vezes.
+- Só endereços públicos http/https são aceitos; a página é lida no servidor com limite de tamanho, e cada usuário só vê as próprias questões.
 
 ## Detalhes técnicos
 
-- `src/components/EditalMaterias.tsx`: trocar a ordem e o destaque dos botões (extrator local vira o botão principal; IA vira `variant="outline"` com selo "usa créditos"); ajustar textos e dicas ao lado da caixa de texto.
-- Nenhuma mudança no `edital-parser.ts` neste passo — a separação por numeração já está corrigida e testada com o exemplo de Medicina Legal (1 matéria, 21 tópicos).
-- Sem mudança no banco de dados e sem custo de IA para a extração.
+- Novo `src/lib/questoes-url.functions.ts`: server function autenticada (`requireSupabaseAuth`) que reaproveita o validador de URL, o conversor HTML→texto e a limpeza de ruído de `src/lib/leis-url.functions.ts` (extraídos para um módulo compartilhado `src/lib/html-texto.ts` para evitar duplicação); limite de 5 MB e retorno `{ texto, titulo, origem }`.
+- Extração no cliente: reaproveitar `extrairQuestoesDePdf`/`classificarQuestao`/`anoDaProva`/`tituloDaQuestao` de `src/lib/questoes-pdf.ts`, alimentando o texto vindo da URL; fallback por questão para `separarQuestaoColada` (`src/lib/questao-colada.ts`) quando o bloco não seguir o padrão de prova.
+- Filtro: matéria/assunto via `classificadorDoEdital` + tópicos do Detalhamento (`topicosDaMateria`), banca comparada com a banca ativa, palavra-chave por `includes` normalizado no enunciado e alternativas.
+- Persistência: `salvarQuestoesExtraidas` de `src/lib/questoes-banco.functions.ts`, com `origem` = URL e `prova` = título da página; modo local (sem login) continua salvando no estado local.
+- Novo componente `src/components/QuestoesPorLink.tsx` renderizado em `src/routes/_authenticated/questoes.tsx` junto às fontes atuais (IA / PDF), sem alterar os fluxos existentes.
