@@ -498,6 +498,7 @@ export function EditalMaterias() {
                   aoMudar={(v) => setTopicoNovo((s) => ({ ...s, [m.id]: v }))}
                   limite={LIMITE_TOPICO}
                   minLinhas={2}
+                  maxAltura={320}
                   ariaLabel={`Adicionar tópico do edital em ${m.nome}`}
                   placeholder="Adicionar tópico do edital — um por linha, ou separados por ;"
                 />
