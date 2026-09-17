@@ -68,9 +68,17 @@ export function lerEdital(): EditalEstado {
 }
 
 function salvar(estado: EditalEstado) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(estado));
+  if (typeof window === "undefined") return true;
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(estado));
+  } catch {
+    toast.error(
+      "O aparelho ficou sem espaço para guardar o Detalhamento do edital. Exclua matérias que não usa mais ou cole o edital em partes menores.",
+    );
+    return false;
+  }
   window.dispatchEvent(new Event("edital:mudou"));
+  return true;
 }
 
 export function novoId() {
