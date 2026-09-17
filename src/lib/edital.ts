@@ -98,7 +98,7 @@ export function useEdital() {
 
   const aplicar = (patch: Partial<EditalEstado>) => {
     const proximo = { ...lerEdital(), ...patch };
-    salvar(proximo);
+    if (!salvar(proximo)) return;
     setEdital(proximo);
   };
 
