@@ -57,9 +57,9 @@ function quebrarPorNumeracao(texto: string): string {
   return (texto ?? "")
     .replace(/\u00a0/g, " ")
     // "… texto 1.1 Assunto" / "… texto (1.2) Assunto" → nova linha
-    .replace(/([^\n])[\s.;]+\(?(\d+(?:\.\d+)+)\)?[.)]?\s+/g, "$1\n$2 ")
+    .replace(/(?<![\d.])[\s.;]+\(?(\d+(?:\.\d+)+)\)?[.)]?\s+/g, "\n$1 ")
     // "… texto 2 DIREITO PENAL" (número de primeiro nível seguido de letra)
-    .replace(/([^\n])[\s.;]+\(?(\d+)\)?[.)]?\s+(?=[A-ZÀ-Ý])/g, "$1\n$2 ");
+    .replace(/(?<![\d.])[\s.;]+\(?(\d+)(?![\d.])\)?[.)]?\s+(?=[A-ZÀ-Ý])/g, "\n$1 ");
 }
 
 const PREFIXO_MATERIA =
