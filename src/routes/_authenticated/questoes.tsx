@@ -39,6 +39,7 @@ import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
 import { daCadastrada } from "@/lib/prova-local";
 import { BancaAtual } from "@/components/BancaAtual";
+import { QuestoesPorLink } from "@/components/QuestoesPorLink";
 
 
 export const Route = createFileRoute("/_authenticated/questoes")({
