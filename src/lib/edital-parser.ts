@@ -38,7 +38,7 @@ const limpar = (s: string) =>
     .replace(/[;.,:]+$/, "")
     .trim();
 
-/** Limpa o tópico mantendo a numeração do edital (1.1, 1.2.3). */
+/** Limpa o tópico mantendo a numeração do edital (1, 1.1, 1.2.3). */
 const limparTopico = (s: string) =>
   s
     .replace(/\u00a0/g, " ")
@@ -50,28 +50,41 @@ const limparTopico = (s: string) =>
     .trim();
 
 /**
- * Editais costumam vir em parágrafo corrido: "1 Língua Portuguesa. 1.1 Compreensão…
- * 1.2 Ortografia…". Aqui cada item numerado passa a ocupar a própria linha.
+ * Editais costumam vir em parágrafo corrido: "MEDICINA LEGAL: 1. Conceito…
+ * 1.1. Corpo de delito…". O cabeçalho e cada item numerado passam a ocupar
+ * linhas próprias, sem quebrar ponto e vírgula ou dois-pontos internos.
  */
 function quebrarPorNumeracao(texto: string): string {
   return (texto ?? "")
     .replace(/\u00a0/g, " ")
-    // "… texto 1.1 Assunto" / "… texto (1.2) Assunto" → nova linha
-    .replace(/(?<![\d.])[\s.;]+\(?(\d+(?:\.\d+)+)\)?[.)]?\s+/g, "\n$1 ")
-    // "… texto 2 DIREITO PENAL" (número de primeiro nível seguido de letra)
-    .replace(/(?<![\d.])[\s.;]+\(?(\d+)(?![\d.])\)?[.)]?\s+(?=[A-ZÀ-Ý])/g, "\n$1 ");
+    // "MEDICINA LEGAL: 1." → matéria em uma linha e primeiro tópico na próxima.
+    // Exige cabeçalho em maiúsculas para não confundir dois-pontos dentro do assunto.
+    .replace(
+      /(^|\n)\s*([A-ZÀ-Ý][A-ZÀ-Ý\d\sÀ-ÿ/(),.&ºª-]{2,159}:)\s*(?=\(?\d+(?:\.\d+)*\)?[.)]?\s+)/g,
+      "$1$2\n",
+    )
+    // "… texto 1.1. Assunto" / "… texto (1.2) Assunto" → nova linha.
+    // O marcador é preservado para aparecer no tópico salvo.
+    .replace(
+      /(^|[\s;])\(?((?:\d+\.)*\d+)\)?[.)]?\s+(?=[A-ZÀ-Ý])/g,
+      (_trecho, separador: string, numero: string) =>
+        `${separador === ";" ? ";" : ""}\n${numero} `,
+    );
 }
 
 const PREFIXO_MATERIA =
   /^(?:disciplina|matéria|materia|conhecimentos?(?:\s+(?:gerais|específicos|especificos|básicos|basicos))?)\s*[:\-–]\s*/i;
 
 /** Cabeçalho de matéria: "DIREITO PENAL", "Disciplina: X", "Língua Portuguesa:" */
-function nomeDeMateria(linha: string): string | null {
+function nomeDeMateria(linha: string, materiaAberta = false): string | null {
   const bruto = linha.replace(/\u00a0/g, " ").trim();
   if (!bruto) return null;
 
   // "1.1", "(2.3.1)" são tópicos de uma matéria, nunca cabeçalho.
   if (/^\(?\d+\.\d/.test(bruto)) return null;
+  // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele.
+  // Isso também cobre "7. Aspectos...:" — os dois-pontos são parte do tópico.
+  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto)) return null;
 
   const comPrefixo = bruto.match(PREFIXO_MATERIA);
   if (comPrefixo) {
@@ -94,7 +107,7 @@ function nomeDeMateria(linha: string): string | null {
   if (maiusculas) return semNumero;
   if (terminaComDoisPontos) return semNumero.replace(/:+$/, "").trim();
   // "1 DIREITO PENAL" / "1. Língua Portuguesa" curtos (poucas palavras) → cabeçalho
-  if (numeroDeMateria && semNumero.split(" ").length <= 8) return semNumero;
+  if (!materiaAberta && numeroDeMateria && semNumero.split(" ").length <= 8) return semNumero;
   return null;
 }
 
@@ -105,7 +118,7 @@ function topicosDaLinha(linha: string, manterNumeracao = true): string[] {
   const numero = marcador ? marcador[1] : "";
   const corpo = marcador ? base.slice(marcador[0].length) : base;
   const partes = corpo
-    .split(/\s*;\s*|\s+\u2022\s+/)
+    .split(/\s+\u2022\s+/)
     .map((t) => limparTopico(t))
     .filter((t) => t.length >= 3 && t.length <= 5000);
   if (!partes.length) return [];
@@ -123,7 +136,7 @@ export function extrairMateriasDoTexto(texto: string): MateriaExtraida[] {
   let atual: MateriaExtraida | null = null;
 
   for (const linha of linhas) {
-    const nome = nomeDeMateria(linha);
+    const nome = nomeDeMateria(linha, atual !== null);
     if (nome) {
       const existente = materias.find((m) => m.nome.toLowerCase() === nome.toLowerCase());
       atual = existente ?? { nome, grupo: grupoSugerido(nome), topicos: [] };
