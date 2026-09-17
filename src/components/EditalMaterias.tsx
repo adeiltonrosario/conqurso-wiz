@@ -36,6 +36,7 @@ function CaixaCrescente({
   aoMudar,
   limite,
   minLinhas = 3,
+  maxAltura = 900,
   id,
   placeholder,
   ariaLabel,
@@ -45,6 +46,7 @@ function CaixaCrescente({
   aoMudar: (v: string) => void;
   limite: number;
   minLinhas?: number;
+  maxAltura?: number;
   id?: string;
   placeholder?: string;
   ariaLabel?: string;
@@ -57,8 +59,8 @@ function CaixaCrescente({
     if (!el) return;
     el.style.height = "auto";
     const minimo = minLinhas * 20 + 20;
-    el.style.height = `${Math.max(el.scrollHeight, minimo)}px`;
-  }, [valor, minLinhas]);
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, minimo), maxAltura)}px`;
+  }, [valor, minLinhas, maxAltura]);
 
   return (
     <Textarea
