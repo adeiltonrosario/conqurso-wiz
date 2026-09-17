@@ -39,6 +39,7 @@ import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
 import { daCadastrada } from "@/lib/prova-local";
 import { BancaAtual } from "@/components/BancaAtual";
+import { QuestoesPorLink } from "@/components/QuestoesPorLink";
 
 
 export const Route = createFileRoute("/_authenticated/questoes")({
@@ -597,6 +598,20 @@ function QuestoesPage() {
     toast.success(q.favorita ? "Removida dos favoritos." : "Questão favoritada.");
   };
 
+  /** Salva no acervo (aparelho + nuvem) as questões vindas de um link. */
+  const importarDoLink = (novas: Questao[]) => {
+    if (!novas.length) return;
+    const atuais = lerAcervo().extraidas;
+    const mapa = new Map(atuais.map((q) => [q.id, q]));
+    for (const q of novas) mapa.set(q.id, q);
+    atualizar({ extraidas: Array.from(mapa.values()) });
+    setFonte("pdf");
+    void salvar({ data: { questoes: novas } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
+      .catch(() => toast.error("Não deu para salvar na nuvem agora; ficaram salvas no aparelho."));
+  };
+
+
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
   const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
   const pendentes = questoesPendentes(extraidas);
@@ -626,6 +641,15 @@ function QuestoesPage() {
     >
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
+
+      <QuestoesPorLink
+        edital={edital}
+        banca={banca}
+        materias={materias}
+        materiaAtiva={materiaAtiva}
+        existentes={extraidas}
+        onImportar={importarDoLink}
+      />
 
       <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
