@@ -642,6 +642,15 @@ function QuestoesPage() {
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
 
+      <QuestoesPorLink
+        edital={edital}
+        banca={banca}
+        materias={materias}
+        materiaAtiva={materiaAtiva}
+        existentes={extraidas}
+        onImportar={importarDoLink}
+      />
+
       <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">
           {(["pdf", "ia"] as const).map((f) => (
