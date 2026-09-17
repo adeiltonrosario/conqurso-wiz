@@ -293,36 +293,115 @@ export type MateriaExtraida = {
   topicos: string[];
 };
 
+/** Texto máximo enviado à IA de cada vez — editais longos são lidos em partes. */
+export const LIMITE_BLOCO_EDITAL = 30_000;
+
+/** Texto máximo aceito no campo do conteúdo programático. */
+export const LIMITE_EDITAL = 500_000;
+
+/** Divide o texto em blocos de até `limite` caracteres, quebrando sempre no fim de uma linha. */
+function dividirEmBlocos(texto: string, limite: number): string[] {
+  const blocos: string[] = [];
+  let atual = "";
+  const empurrar = () => {
+    if (atual) {
+      blocos.push(atual);
+      atual = "";
+    }
+  };
+  for (const linha of texto.split(/\r?\n/)) {
+    if (linha.length > limite) {
+      empurrar();
+      for (let i = 0; i < linha.length; i += limite) blocos.push(linha.slice(i, i + limite));
+      continue;
+    }
+    const candidato = atual ? `${atual}\n${linha}` : linha;
+    if (candidato.length > limite) {
+      empurrar();
+      atual = linha;
+    } else {
+      atual = candidato;
+    }
+  }
+  empurrar();
+  return blocos;
+}
+
+/** Junta nomes à lista sem repetir (comparação sem caixa). */
+function acrescentar(destino: string[], novos: string[] | undefined) {
+  for (const n of novos ?? []) {
+    const v = (n ?? "").trim();
+    if (v && !destino.some((x) => x.toLowerCase() === v.toLowerCase())) destino.push(v);
+  }
+}
+
+const SISTEMA_EDITAL = `Você organiza o conteúdo programático de editais de concursos públicos brasileiros.
+Leia o texto e liste as MATÉRIAS cobradas, classificando cada uma como "Conhecimento Geral"
+(português, matemática/raciocínio lógico, informática, atualidades, legislação básica de cidadania)
+ou "Conhecimento Específico" (matérias técnicas do cargo).
+Para cada matéria, liste os tópicos/capítulos exatamente como cobrados no edital, sem resumir nem omitir itens.
+Liste também os CARGOS previstos no edital, com o nome exato (ex.: "Escrivão de Polícia Civil").
+Liste ainda as BANCAS organizadoras citadas no edital, com a sigla usual (ex.: "Cebraspe", "FGV", "FCC", "Vunesp").
+Não invente matérias, cargos nem bancas que não estejam no texto.
+Formato JSON: {"cargos":string[],"bancas":string[],"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecimento Específico","topicos":string[]}]}`;
+
 export const extrairMateriasEdital = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        texto: z.string().trim().min(20).max(40000),
+        texto: z.string().trim().min(20).max(LIMITE_EDITAL),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const result = await runAIJson<{
-      materias: MateriaExtraida[];
-      cargos?: string[];
-      bancas?: string[];
-    }>(
-      `Você organiza o conteúdo programático de editais de concursos públicos brasileiros.
-Leia o texto e liste as MATÉRIAS cobradas, classificando cada uma como "Conhecimento Geral"
-(português, matemática/raciocínio lógico, informática, atualidades, legislação básica de cidadania)
-ou "Conhecimento Específico" (matérias técnicas do cargo).
-Para cada matéria, liste os tópicos/capítulos exatamente como cobrados no edital, em itens curtos.
-Liste também os CARGOS previstos no edital, com o nome exato (ex.: "Escrivão de Polícia Civil").
-Liste ainda as BANCAS organizadoras citadas no edital, com a sigla usual (ex.: "Cebraspe", "FGV", "FCC", "Vunesp").
-Não invente matérias, cargos nem bancas que não estejam no texto.
-Formato JSON: {"cargos":string[],"bancas":string[],"materias":[{"nome":string,"grupo":"Conhecimento Geral"|"Conhecimento Específico","topicos":string[]}]}`,
-      `Texto do edital:\n${data.texto.slice(0, 30000)}`,
-    );
-    return {
-      materias: result.materias ?? [],
-      cargos: result.cargos ?? [],
-      bancas: result.bancas ?? [],
-    };
+    const blocos = dividirEmBlocos(data.texto, LIMITE_BLOCO_EDITAL);
+    const materias: MateriaExtraida[] = [];
+    const cargos: string[] = [];
+    const bancas: string[] = [];
+
+    for (const [i, bloco] of blocos.entries()) {
+      const resultado = await runAIJson<{
+        materias: MateriaExtraida[];
+        cargos?: string[];
+        bancas?: string[];
+      }>(
+        SISTEMA_EDITAL,
+        blocos.length > 1
+          ? `Texto do edital — parte ${i + 1} de ${blocos.length}:\n${bloco}`
+          : `Texto do edital:\n${bloco}`,
+      );
+      for (const m of resultado.materias ?? []) {
+        const nome = (m?.nome ?? "").trim();
+        if (!nome) continue;
+        const alvo = materias.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+        if (alvo) {
+          for (const t of m.topicos ?? []) {
+            const topico = (t ?? "").trim();
+            if (topico && !alvo.topicos.some((x) => x.toLowerCase() === topico.toLowerCase())) {
+              alvo.topicos.push(topico);
+            }
+          }
+          continue;
+        }
+        const topicos: string[] = [];
+        for (const t of m.topicos ?? []) {
+          const topico = (t ?? "").trim();
+          if (topico && !topicos.some((x) => x.toLowerCase() === topico.toLowerCase())) {
+            topicos.push(topico);
+          }
+        }
+        materias.push({
+          nome,
+          grupo:
+            m.grupo === "Conhecimento Geral" ? "Conhecimento Geral" : "Conhecimento Específico",
+          topicos,
+        });
+      }
+      acrescentar(cargos, resultado.cargos);
+      acrescentar(bancas, resultado.bancas);
+    }
+
+    return { materias, cargos, bancas, partes: blocos.length };
   });
 
 
@@ -342,12 +421,12 @@ export const estimarRelevanciaEdital = createServerFn({ method: "POST" })
         materias: z
           .array(
             z.object({
-              nome: z.string().trim().min(1).max(160),
-              topicos: z.array(z.string().trim().max(300)).max(120),
+              nome: z.string().trim().min(1).max(200),
+              topicos: z.array(z.string().trim().max(1000)).max(400),
             }),
           )
           .min(1)
-          .max(40),
+          .max(200),
       })
       .parse(d),
   )
