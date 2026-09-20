@@ -1,8 +1,15 @@
 # Só mostrar o que é do concurso selecionado (banca + cargo)
 
-Hoje o filtro "Concurso em estudo" (banca + cargo) já limita matérias, tópicos e questões, mas as **leis salvas** e os **flashcards** continuam mostrando tudo, mesmo quando você escolheu um concurso específico. Este plano fecha essas brechas.
+Hoje o filtro "Concurso em estudo" (banca + cargo) já limita parte do app, mas o **Detalhamento do Edital** (lista de matérias e tópicos), as **leis salvas** e os **flashcards** continuam mostrando tudo, mesmo quando você escolheu um concurso específico. Este plano fecha essas brechas.
 
 ## O que vai mudar
+
+0. **Detalhamento do Edital (matérias e tópicos)**
+   - A lista de matérias passa a mostrar só as matérias da banca e do cargo selecionados; as demais ficam ocultas (nada é apagado).
+   - Ao adicionar uma matéria nova com um concurso selecionado, ela já nasce marcada com essa banca e esse cargo, para continuar aparecendo.
+   - Um aviso curto indica quantas matérias estão ocultas pelo filtro, com a opção de voltar para "Todas/Todos".
+   - O painel de relevância acompanha a mesma lista filtrada.
+
 
 1. **Leis**
    - Criar uma regra única: "leis do concurso em estudo" = leis vinculadas às matérias da banca/cargo selecionados (os links salvos no Detalhamento do Edital).
@@ -22,6 +29,8 @@ Hoje o filtro "Concurso em estudo" (banca + cargo) já limita matérias, tópico
 
 ## Detalhes técnicos
 
+- `src/components/EditalMaterias.tsx`: trocar `edital.materias` por `materiasAtivas(edital)` na renderização da lista; ao criar matéria, preencher `banca: edital.bancaAtiva` e `cargo: edital.cargoAtivo`; mostrar contagem de ocultas.
+- `src/components/EditalRelevancia.tsx`: `materiasPorRelevancia` restrito às matérias ativas.
 - Nova função em `src/lib/edital.ts`: `anexosDoConcurso(edital)` — junta os `LinkLei.anexo` das matérias visíveis (`materiasAtivas`) e devolve o conjunto de nomes de anexo permitidos.
 - `src/components/LeiIntegral.tsx` e as listas de leis (`src/routes/_authenticated/leis.tsx`, `src/routes/_authenticated/inclusao.tsx`) filtram os anexos por esse conjunto quando `editalRestrito(edital)` for verdade.
 - `src/routes/_authenticated/flashcards.tsx`: filtrar cards com `materiaPermitida(edital, card.materia)`.
