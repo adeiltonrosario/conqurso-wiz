@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,6 +96,7 @@ export function EditalMaterias() {
   const [topicoNovo, setTopicoNovo] = useState<Record<string, string>>({});
   const [novoCargo, setNovoCargo] = useState("");
   const [novaBanca, setNovaBanca] = useState("");
+  const [materiasAbertas, setMateriasAbertas] = useState<Set<string>>(() => new Set());
 
   const valor = texto ?? edital.texto;
   const cargos = edital.cargos ?? [];
@@ -104,6 +105,15 @@ export function EditalMaterias() {
   const cargosDisponiveis = cargosDoEdital(edital);
   const partes = Math.max(1, Math.ceil(valor.trim().length / LIMITE_BLOCO_EDITAL));
   const estourou = valor.length >= LIMITE_EDITAL;
+
+  const alternarMateria = (id: string) => {
+    setMateriasAbertas((atuais) => {
+      const proximas = new Set(atuais);
+      if (proximas.has(id)) proximas.delete(id);
+      else proximas.add(id);
+      return proximas;
+    });
+  };
 
   const mut = useMutation({
     mutationFn: () => extrair({ data: { texto: valor.trim() } }),
@@ -406,8 +416,36 @@ export function EditalMaterias() {
       ) : (
         <ul className="space-y-3">
           {edital.materias.map((m) => (
-            <li key={m.id} className="rounded-lg border border-border p-3">
-              <div className="flex flex-wrap items-center gap-2">
+            <li key={m.id} className="overflow-hidden rounded-lg border border-border">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => alternarMateria(m.id)}
+                aria-expanded={materiasAbertas.has(m.id)}
+                aria-controls={`materia-${m.id}`}
+                className="h-auto w-full justify-start rounded-none px-3 py-3 text-left hover:bg-secondary/60"
+              >
+                {materiasAbertas.has(m.id) ? (
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-sm font-semibold [overflow-wrap:anywhere]">
+                    {m.nome}
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-normal text-muted-foreground">
+                    <span>{m.grupo}</span>
+                    <span>{m.banca || "Todas as bancas"}</span>
+                    <span>{m.cargo || "Todos os cargos"}</span>
+                    <span>{m.topicos.length} tópico(s)</span>
+                  </span>
+                </span>
+              </Button>
+
+              {materiasAbertas.has(m.id) && (
+              <div id={`materia-${m.id}`} className="border-t border-border p-3">
+                <div className="flex flex-wrap items-center gap-2">
                 <Input
                   value={m.nome}
                   onChange={(e) =>
@@ -512,6 +550,8 @@ export function EditalMaterias() {
                   <Plus className="size-4" />
                 </Button>
               </form>
+              </div>
+              )}
             </li>
           ))}
         </ul>
