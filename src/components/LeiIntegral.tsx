@@ -47,7 +47,7 @@ import {
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
 import {
-  anexosDoConcurso,
+  leiDoConcurso,
   editalRestrito,
   leisDaMateria,
   materiasAtivas,
@@ -371,12 +371,12 @@ export function LeiIntegralPainel({
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
 
-  /** Com banca/cargo selecionados, só entram as leis vinculadas às matérias ativas. */
+  /** Entram as leis cujo assunto consta no Detalhamento do concurso em estudo. */
   const pdfsPermitidos = useMemo(() => {
     if (!editalRestrito(edital)) return pdfsLei;
-    const permitidos = anexosDoConcurso(edital);
-    return pdfsLei.filter((p) => permitidos.has(p.nome.trim().toLowerCase()));
+    return pdfsLei.filter((p) => leiDoConcurso(edital, p.nome));
   }, [edital, pdfsLei]);
+
 
   const filtrando = soDoEdital && normasEdital.length > 0;
   const itensEdital = useMemo(() => new Set(normasEdital.map((n) => n.item)), [normasEdital]);
