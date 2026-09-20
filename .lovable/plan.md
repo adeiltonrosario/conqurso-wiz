@@ -11,8 +11,6 @@ Hoje o filtro "Concurso em estudo" (banca + cargo) já limita parte do app, mas 
    - O painel de relevância acompanha a mesma lista filtrada.
 
 
-## O que vai mudar
-
 1. **Leis**
    - Criar uma regra única: "leis do concurso em estudo" = leis vinculadas às matérias da banca/cargo selecionados (os links salvos no Detalhamento do Edital).
    - Aplicar essa regra em:
