@@ -675,10 +675,11 @@ export function LeiIntegralPainel({
         </p>
       )}
 
-      {pdfsLei.length === 0 ? (
+      {pdfsPermitidos.length === 0 ? (
         <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-          Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
-          Texto de leis (Vade Mecum)”.
+          {editalRestrito(edital) && pdfsLei.length > 0
+            ? "Nenhuma lei deste concurso (banca/cargo) está salva ainda. Volte o filtro para “Todas/Todos” para ver as demais, ou vincule as leis às matérias no Detalhamento do edital."
+            : "Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão → Texto de leis (Vade Mecum)”."}
         </p>
       ) : (
         <div className="space-y-2">
