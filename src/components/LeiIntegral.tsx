@@ -47,7 +47,7 @@ import {
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
 import {
-  anexosDoConcurso,
+  leiDoConcurso,
   editalRestrito,
   leisDaMateria,
   materiasAtivas,
