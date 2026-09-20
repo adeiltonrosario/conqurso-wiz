@@ -363,6 +363,14 @@ export function LeiIntegralPainel({
 
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
+
+  /** Com banca/cargo selecionados, só entram as leis vinculadas às matérias ativas. */
+  const pdfsPermitidos = useMemo(() => {
+    if (!editalRestrito(edital)) return pdfsLei;
+    const permitidos = anexosDoConcurso(edital);
+    return pdfsLei.filter((p) => permitidos.has(p.nome.trim().toLowerCase()));
+  }, [edital, pdfsLei]);
+
   const filtrando = soDoEdital && normasEdital.length > 0;
   const itensEdital = useMemo(() => new Set(normasEdital.map((n) => n.item)), [normasEdital]);
   const visiveis = filtrando ? normasEdital : MAPA_VADE_MECUM;

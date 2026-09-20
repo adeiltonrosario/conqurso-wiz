@@ -402,6 +402,21 @@ export function leisDaMateria(materia: MateriaEdital): LinkLei[] {
   return materia.leis ?? [];
 }
 
+/**
+ * Nomes (minúsculos) dos anexos de lei vinculados às matérias visíveis no
+ * filtro atual (banca + cargo). Vazio quando nenhuma matéria tem lei anexada.
+ */
+export function anexosDoConcurso(edital: EditalEstado) {
+  const nomes = new Set<string>();
+  for (const m of materiasAtivas(edital)) {
+    for (const l of leisDaMateria(m)) {
+      const anexo = (l.anexo ?? "").trim().toLowerCase();
+      if (anexo) nomes.add(anexo);
+    }
+  }
+  return nomes;
+}
+
 /** Acrescenta um link de lei à matéria (sem repetir o mesmo endereço). */
 export function comLeiAdicionada(materia: MateriaEdital, titulo: string, url: string): LinkLei[] {
   const atuais = leisDaMateria(materia);
