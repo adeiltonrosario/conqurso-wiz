@@ -1,6 +1,15 @@
 # Só mostrar o que é do concurso selecionado (banca + cargo)
 
-Hoje o filtro "Concurso em estudo" (banca + cargo) já limita matérias, tópicos e questões, mas as **leis salvas** e os **flashcards** continuam mostrando tudo, mesmo quando você escolheu um concurso específico. Este plano fecha essas brechas.
+Hoje o filtro "Concurso em estudo" (banca + cargo) já limita parte do app, mas o **Detalhamento do Edital** (lista de matérias e tópicos), as **leis salvas** e os **flashcards** continuam mostrando tudo, mesmo quando você escolheu um concurso específico. Este plano fecha essas brechas.
+
+## O que vai mudar
+
+0. **Detalhamento do Edital (matérias e tópicos)**
+   - A lista de matérias passa a mostrar só as matérias da banca e do cargo selecionados; as demais ficam ocultas (nada é apagado).
+   - Ao adicionar uma matéria nova com um concurso selecionado, ela já nasce marcada com essa banca e esse cargo, para continuar aparecendo.
+   - Um aviso curto indica quantas matérias estão ocultas pelo filtro, com a opção de voltar para "Todas/Todos".
+   - O painel de relevância acompanha a mesma lista filtrada.
+
 
 ## O que vai mudar
 
