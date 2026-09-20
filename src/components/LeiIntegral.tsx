@@ -46,7 +46,14 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { leisDaMateria, materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
+import {
+  anexosDoConcurso,
+  editalRestrito,
+  leisDaMateria,
+  materiasAtivas,
+  topicosDaMateria,
+  useEdital,
+} from "@/lib/edital";
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
@@ -363,6 +370,14 @@ export function LeiIntegralPainel({
 
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
   const normasEdital = useMemo(() => normasDoEdital(materiasAtivas(edital)), [edital]);
+
+  /** Com banca/cargo selecionados, só entram as leis vinculadas às matérias ativas. */
+  const pdfsPermitidos = useMemo(() => {
+    if (!editalRestrito(edital)) return pdfsLei;
+    const permitidos = anexosDoConcurso(edital);
+    return pdfsLei.filter((p) => permitidos.has(p.nome.trim().toLowerCase()));
+  }, [edital, pdfsLei]);
+
   const filtrando = soDoEdital && normasEdital.length > 0;
   const itensEdital = useMemo(() => new Set(normasEdital.map((n) => n.item)), [normasEdital]);
   const visiveis = filtrando ? normasEdital : MAPA_VADE_MECUM;
@@ -385,7 +400,7 @@ export function LeiIntegralPainel({
     );
     const links = alvo ? leisDaMateria(alvo) : [];
     if (!links.length) return { nomes: [] as string[], links };
-    const nomes = pdfsLei
+    const nomes = pdfsPermitidos
       .filter((p) => {
         const n = p.nome.trim().toLowerCase();
         return links.some((l) => {
@@ -397,19 +412,21 @@ export function LeiIntegralPainel({
       })
       .map((p) => p.nome);
     return { nomes, links };
-  }, [edital, materia, pdfsLei]);
+  }, [edital, materia, pdfsPermitidos]);
 
   const daMateria = useMemo(() => new Set(leisDaMinhaMateria.nomes), [leisDaMinhaMateria.nomes]);
 
   /** Leis salvas com as desta matéria primeiro. */
   const pdfsOrdenados = useMemo(
     () =>
-      [...pdfsLei].sort((a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome))),
-    [pdfsLei, daMateria],
+      [...pdfsPermitidos].sort(
+        (a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome)),
+      ),
+    [pdfsPermitidos, daMateria],
   );
 
   const arquivoAtivo =
-    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsLei[0]?.nome || "";
+    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsPermitidos[0]?.nome || "";
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
@@ -658,10 +675,11 @@ export function LeiIntegralPainel({
         </p>
       )}
 
-      {pdfsLei.length === 0 ? (
+      {pdfsPermitidos.length === 0 ? (
         <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-          Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão →
-          Texto de leis (Vade Mecum)”.
+          {editalRestrito(edital) && pdfsLei.length > 0
+            ? "Nenhuma lei deste concurso (banca/cargo) está salva ainda. Volte o filtro para “Todas/Todos” para ver as demais, ou vincule as leis às matérias no Detalhamento do edital."
+            : "Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão → Texto de leis (Vade Mecum)”."}
         </p>
       ) : (
         <div className="space-y-2">

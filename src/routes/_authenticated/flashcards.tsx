@@ -11,7 +11,7 @@ import { CardForm } from "@/components/CardForm";
 import { ImagemCard } from "@/components/ImagemCard";
 import { Marcado } from "@/components/Marcado";
 import { useAcervo } from "@/lib/acervo";
-import { useEdital, materiasAtivas } from "@/lib/edital";
+import { useEdital, editalRestrito, materiaPermitida, materiasAtivas } from "@/lib/edital";
 import { bancoLocal } from "@/lib/prova-local";
 import { temGabarito } from "@/lib/questoes-pdf";
 import { registrarResposta } from "@/lib/revisao";
@@ -77,7 +77,12 @@ function FlashcardsPage() {
     initialData: () => (lerCards().length ? lerCards() : undefined),
   });
 
-  const meusCards = cardsQuery.data ?? [];
+  /** Com banca/cargo selecionados, só aparecem os cards das matérias daquele edital. */
+  const meusCards = useMemo(() => {
+    const todos = cardsQuery.data ?? [];
+    if (!editalRestrito(edital)) return todos;
+    return todos.filter((c) => materiaPermitida(edital, c.materia));
+  }, [cardsQuery.data, edital]);
 
   useEffect(() => {
     if (cardsQuery.data) salvarCardsLocal(cardsQuery.data);

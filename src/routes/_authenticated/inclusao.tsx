@@ -50,7 +50,9 @@ import { removerQuestoesDaProva, salvarQuestoesExtraidas } from "@/lib/questoes-
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
+  anexosDoConcurso,
   contextoDoEdital,
+  editalRestrito,
   ehDoEdital,
   grupoDaMateria,
   materiaPermitida,
@@ -515,7 +517,11 @@ function InclusaoPage() {
     toast.success("Questão cadastrada no acervo.");
   };
 
-  const leisPdf = acervo.provas.filter(ehAnexoDeLei);
+  const anexosPermitidos = anexosDoConcurso(edital);
+  const restringeLeis = editalRestrito(edital);
+  const leisPdf = acervo.provas
+    .filter(ehAnexoDeLei)
+    .filter((a) => !restringeLeis || anexosPermitidos.has(nomeLimpo(a).trim().toLowerCase()));
   const provas = provasAnteriores(acervo);
 
   /** Salva as questões no banco da conta (fica disponível em qualquer aparelho). */
