@@ -50,7 +50,9 @@ import { removerQuestoesDaProva, salvarQuestoesExtraidas } from "@/lib/questoes-
 import { useBancaPrevista } from "@/lib/trilha";
 import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
 import {
+  anexosDoConcurso,
   contextoDoEdital,
+  editalRestrito,
   ehDoEdital,
   grupoDaMateria,
   materiaPermitida,
