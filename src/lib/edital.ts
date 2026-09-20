@@ -417,6 +417,63 @@ export function anexosDoConcurso(edital: EditalEstado) {
   return nomes;
 }
 
+/** Texto sem acentos, em minúsculas, com espaços simples. */
+function chave(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Números de lei/decreto citados no texto (4 dígitos ou mais, sem pontuação). */
+function numerosDeLei(texto: string) {
+  const achados = texto.match(/\d[\d.\s]{3,}\d/g) ?? [];
+  return achados.map((n) => n.replace(/\D/g, "")).filter((n) => n.length >= 4);
+}
+
+/**
+ * Assuntos do concurso em estudo (matérias, tópicos e títulos de leis do
+ * Detalhamento), já normalizados, com os anexos e números de lei citados.
+ */
+function assuntosDoConcurso(edital: EditalEstado) {
+  const anexos = new Set<string>();
+  const termos = new Set<string>();
+  const numeros = new Set<string>();
+  const add = (texto: string) => {
+    const k = chave(texto);
+    if (k.length > 4) termos.add(k);
+    for (const n of numerosDeLei(texto)) numeros.add(n);
+  };
+  for (const m of materiasAtivas(edital)) {
+    add(m.nome);
+    for (const t of m.topicos) add(t);
+    for (const l of leisDaMateria(m)) {
+      const anexo = (l.anexo ?? "").trim().toLowerCase();
+      if (anexo) anexos.add(anexo);
+      add(l.titulo);
+    }
+  }
+  return { anexos, termos, numeros };
+}
+
+/**
+ * Uma lei salva no acervo vale para o concurso em estudo quando está anexada a
+ * uma matéria ativa OU quando o assunto dela (nome/número da lei) aparece no
+ * Detalhamento do edital ativo — assim a mesma lei serve para vários editais.
+ */
+export function leiDoConcurso(edital: EditalEstado, nomeArquivo: string) {
+  if (!editalRestrito(edital)) return true;
+  const { anexos, termos, numeros } = assuntosDoConcurso(edital);
+  if (anexos.has(nomeArquivo.trim().toLowerCase())) return true;
+  const nome = chave(nomeArquivo);
+  if (!nome) return false;
+  for (const n of numerosDeLei(nomeArquivo)) if (numeros.has(n)) return true;
+  for (const t of termos) if (nome.includes(t) || t.includes(nome)) return true;
+  return false;
+}
+
 /** Acrescenta um link de lei à matéria (sem repetir o mesmo endereço). */
 export function comLeiAdicionada(materia: MateriaEdital, titulo: string, url: string): LinkLei[] {
   const atuais = leisDaMateria(materia);
