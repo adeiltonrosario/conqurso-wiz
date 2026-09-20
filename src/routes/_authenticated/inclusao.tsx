@@ -515,7 +515,11 @@ function InclusaoPage() {
     toast.success("Questão cadastrada no acervo.");
   };
 
-  const leisPdf = acervo.provas.filter(ehAnexoDeLei);
+  const anexosPermitidos = anexosDoConcurso(edital);
+  const restringeLeis = editalRestrito(edital);
+  const leisPdf = acervo.provas
+    .filter(ehAnexoDeLei)
+    .filter((a) => !restringeLeis || anexosPermitidos.has(nomeLimpo(a).trim().toLowerCase()));
   const provas = provasAnteriores(acervo);
 
   /** Salva as questões no banco da conta (fica disponível em qualquer aparelho). */

@@ -25,6 +25,7 @@ import {
   comLeiAlterada,
   comLeiRemovida,
   leisDaMateria,
+  materiasAtivas,
   materiasPorRelevancia,
   relevanciaGeral,
   topicosPorRelevancia,
@@ -471,7 +472,7 @@ export function EditalRelevancia() {
         data: {
           banca: trilha.banca || undefined,
           cargo: trilha.cargo || undefined,
-          materias: edital.materias.map((m) => ({
+          materias: materiasAtivas(edital).map((m) => ({
             nome: m.nome,
             topicos: m.topicos,
           })),
@@ -501,7 +502,7 @@ export function EditalRelevancia() {
     onError: (e: Error) => toast.error(e.message || "Falha ao calcular a relevância."),
   });
 
-  if (!edital.materias.length) return null;
+  if (!materiasAtivas(edital).length) return null;
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
