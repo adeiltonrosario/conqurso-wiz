@@ -16,6 +16,7 @@ import { extrairMateriasDoTexto } from "@/lib/edital-parser";
 import {
   bancasDoEdital,
   cargosDoEdital,
+  materiasAtivas,
   mesclarMaterias,
   novoId,
   useEdital,
@@ -88,6 +89,7 @@ export function EditalMaterias() {
     removerCargo,
     adicionarBanca,
     removerBanca,
+    definirFiltro,
   } = useEdital();
   const extrair = useServerFn(extrairMateriasEdital);
   const [texto, setTexto] = useState<string | null>(null);
@@ -105,6 +107,9 @@ export function EditalMaterias() {
   const cargosDisponiveis = cargosDoEdital(edital);
   const partes = Math.max(1, Math.ceil(valor.trim().length / LIMITE_BLOCO_EDITAL));
   const estourou = valor.length >= LIMITE_EDITAL;
+  const materiasVisiveis = materiasAtivas(edital);
+  const ocultas = edital.materias.length - materiasVisiveis.length;
+  const filtroAtivo = Boolean((edital.bancaAtiva ?? "").trim() || (edital.cargoAtivo ?? "").trim());
 
   const alternarMateria = (id: string) => {
     setMateriasAbertas((atuais) => {
@@ -409,13 +414,31 @@ export function EditalMaterias() {
         </Button>
       </div>
 
+      {ocultas > 0 && filtroAtivo && (
+        <p className="rounded-lg border border-border bg-secondary/60 p-2 text-xs text-muted-foreground">
+          {ocultas} matéria(s) de outro concurso estão ocultas pelo filtro.{" "}
+          <button
+            type="button"
+            className="font-semibold text-accent underline"
+            onClick={() => definirFiltro({ banca: "", cargo: "" })}
+          >
+            Voltar para Todas/Todos
+          </button>
+        </p>
+      )}
+
       {edital.materias.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
           Nenhuma matéria do edital cadastrada ainda — o app usa as matérias padrão.
         </p>
+      ) : materiasVisiveis.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          Nenhuma matéria deste concurso (banca/cargo) cadastrada ainda — extraia do edital ou
+          adicione acima; ela já nasce marcada com a seleção atual.
+        </p>
       ) : (
         <ul className="space-y-3">
-          {edital.materias.map((m) => (
+          {materiasVisiveis.map((m) => (
             <li key={m.id} className="overflow-hidden rounded-lg border border-border">
               <Button
                 type="button"
