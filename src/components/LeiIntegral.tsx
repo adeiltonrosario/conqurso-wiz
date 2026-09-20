@@ -46,7 +46,14 @@ import {
   normaDoTopico,
   normasDoEdital,
 } from "@/lib/mapa-vademecum";
-import { leisDaMateria, materiasAtivas, topicosDaMateria, useEdital } from "@/lib/edital";
+import {
+  anexosDoConcurso,
+  editalRestrito,
+  leisDaMateria,
+  materiasAtivas,
+  topicosDaMateria,
+  useEdital,
+} from "@/lib/edital";
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
@@ -393,7 +400,7 @@ export function LeiIntegralPainel({
     );
     const links = alvo ? leisDaMateria(alvo) : [];
     if (!links.length) return { nomes: [] as string[], links };
-    const nomes = pdfsLei
+    const nomes = pdfsPermitidos
       .filter((p) => {
         const n = p.nome.trim().toLowerCase();
         return links.some((l) => {
@@ -405,19 +412,21 @@ export function LeiIntegralPainel({
       })
       .map((p) => p.nome);
     return { nomes, links };
-  }, [edital, materia, pdfsLei]);
+  }, [edital, materia, pdfsPermitidos]);
 
   const daMateria = useMemo(() => new Set(leisDaMinhaMateria.nomes), [leisDaMinhaMateria.nomes]);
 
   /** Leis salvas com as desta matéria primeiro. */
   const pdfsOrdenados = useMemo(
     () =>
-      [...pdfsLei].sort((a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome))),
-    [pdfsLei, daMateria],
+      [...pdfsPermitidos].sort(
+        (a, b) => Number(daMateria.has(b.nome)) - Number(daMateria.has(a.nome)),
+      ),
+    [pdfsPermitidos, daMateria],
   );
 
   const arquivoAtivo =
-    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsLei[0]?.nome || "";
+    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsPermitidos[0]?.nome || "";
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
