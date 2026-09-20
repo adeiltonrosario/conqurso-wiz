@@ -29,6 +29,8 @@ Hoje o filtro "Concurso em estudo" (banca + cargo) já limita parte do app, mas 
 
 ## Detalhes técnicos
 
+- `src/components/EditalMaterias.tsx`: trocar `edital.materias` por `materiasAtivas(edital)` na renderização da lista; ao criar matéria, preencher `banca: edital.bancaAtiva` e `cargo: edital.cargoAtivo`; mostrar contagem de ocultas.
+- `src/components/EditalRelevancia.tsx`: `materiasPorRelevancia` restrito às matérias ativas.
 - Nova função em `src/lib/edital.ts`: `anexosDoConcurso(edital)` — junta os `LinkLei.anexo` das matérias visíveis (`materiasAtivas`) e devolve o conjunto de nomes de anexo permitidos.
 - `src/components/LeiIntegral.tsx` e as listas de leis (`src/routes/_authenticated/leis.tsx`, `src/routes/_authenticated/inclusao.tsx`) filtram os anexos por esse conjunto quando `editalRestrito(edital)` for verdade.
 - `src/routes/_authenticated/flashcards.tsx`: filtrar cards com `materiaPermitida(edital, card.materia)`.
