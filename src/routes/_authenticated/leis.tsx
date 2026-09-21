@@ -225,23 +225,83 @@ function LeisPage() {
     >
       <FiltroConcurso compacto />
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="space-y-2">
+          <Label>Matérias com leis no edital</Label>
+          {comLeis.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Nenhuma matéria do concurso em estudo tem lei cadastrada ainda. Cadastre o link da lei
+              no Detalhamento do edital (tela{" "}
+              <Link to="/inclusao" className="font-semibold text-primary underline">
+                Incluir
+              </Link>
+              ) e ela aparece aqui.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {comLeis.map((m) => {
+                const leis = leisDaMateria(m);
+                const abertaMateria = abertaId === m.id;
+                const selecionada = materiaAtiva === m.nome;
+                return (
+                  <li key={m.id} className="border-l-4 border-accent/70">
+                    <button
+                      type="button"
+                      aria-expanded={abertaMateria}
+                      aria-controls={`leis-materia-${m.id}`}
+                      onClick={() => {
+                        setMateria(m.nome);
+                        setAbertaId(abertaMateria ? null : m.id);
+                      }}
+                      className={`flex w-full items-center gap-x-3 px-3 py-2.5 text-left ${
+                        selecionada ? "bg-secondary/80" : "bg-secondary/40"
+                      }`}
+                    >
+                      {abertaMateria ? (
+                        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="flex-1 font-display text-sm font-bold">{m.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {leis.length} lei(s)
+                      </span>
+                    </button>
+                    {abertaMateria && (
+                      <ul id={`leis-materia-${m.id}`} className="space-y-2 px-3 py-2">
+                        {leis.map((l) => (
+                          <li
+                            key={l.id}
+                            className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-xs"
+                          >
+                            <span className="flex-1 [overflow-wrap:anywhere]">{l.titulo}</span>
+                            {l.anexo ? (
+                              <span className="flex items-center gap-1 font-medium text-primary">
+                                <CheckCircle2 className="size-3.5" /> texto salvo
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">só o link</span>
+                            )}
+                            <a
+                              href={l.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Abrir ${l.titulo} em outra aba`}
+                              className="text-primary"
+                            >
+                              <ExternalLink className="size-4" />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="materia">Matéria</Label>
-            <select
-              id="materia"
-              value={materiaAtiva}
-              onChange={(e) => setMateria(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {MATERIAS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                  {ehDoEdital(edital, m) ? " (edital)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="space-y-2">
             <Label htmlFor="banca-lei">Banca</Label>
             <select
