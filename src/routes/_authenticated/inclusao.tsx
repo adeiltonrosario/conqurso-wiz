@@ -268,6 +268,8 @@ function UploadCampo({
               >
                 <Trash2 className="size-3.5 text-destructive" />
               </button>
+              </div>
+              {renderExtra?.(a)}
             </li>
           ))}
         </ul>
