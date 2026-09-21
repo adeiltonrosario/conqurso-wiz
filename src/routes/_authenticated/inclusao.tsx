@@ -964,7 +964,77 @@ function InclusaoPage() {
           }
           onRemove={(nome) => atualizar({ provas: acervo.provas.filter((a) => a.nome !== nome) })}
           onRenomear={renomearLei}
+          renderExtra={(a) => {
+            const anexo = nomeLimpo(a);
+            const vinculos = materiasVinculadas(anexo);
+            return (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 pt-1.5">
+                {vinculos.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Vinculada a: <span className="font-semibold">{vinculos.join(", ")}</span>
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setVinculando(anexo)}
+                  aria-label={`Vincular ${anexo} a uma matéria do edital`}
+                  className="ml-auto inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/10"
+                >
+                  <Link2 className="size-3" /> Vincular ao edital
+                </button>
+              </div>
+            );
+          }}
         />
+
+        <Dialog
+          open={vinculando !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setVinculando(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Vincular lei a uma matéria do edital</DialogTitle>
+              <DialogDescription>
+                {vinculando
+                  ? `“${vinculando}” passa a constar no Detalhamento do edital, dentro da matéria escolhida, já com o texto salvo.`
+                  : ""}
+              </DialogDescription>
+            </DialogHeader>
+            {materiasAtivas(edital).length > 0 ? (
+              <ul className="max-h-72 space-y-1 overflow-y-auto">
+                {materiasAtivas(edital).map((m) => {
+                  const jaVinculada = leisDaMateria(m).some(
+                    (l) =>
+                      (l.anexo ?? "").trim().toLowerCase() ===
+                      (vinculando ?? "").trim().toLowerCase(),
+                  );
+                  return (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        disabled={jaVinculada}
+                        onClick={() => vincularLeiAoEdital(m)}
+                        className="flex w-full items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-left text-xs transition-colors hover:bg-secondary disabled:opacity-50"
+                      >
+                        <span className="font-semibold">{m.nome}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {jaVinculada ? "já vinculada" : m.grupo}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Nenhuma matéria no Detalhamento do edital para o concurso em estudo. Cadastre as
+                matérias abaixo, em “Detalhamento do edital”, e volte aqui para vincular a lei.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <UploadCampo
           label="Upload de gramática (PDF)"
