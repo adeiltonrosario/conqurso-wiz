@@ -487,6 +487,26 @@ export function comLeiAdicionada(materia: MateriaEdital, titulo: string, url: st
   return [...atuais, { id: novoId(), titulo: titulo.trim() || limpo, url: limpo }];
 }
 
+/**
+ * Vincula à matéria uma lei que já está salva no acervo (PDF anexado).
+ * O link nasce com `anexo` preenchido — a matéria passa a exibir a lei com
+ * "texto salvo" e ela entra na lista recolhível da tela Leis. Sem duplicar.
+ */
+export function vincularAnexoAMateria(
+  materia: MateriaEdital,
+  titulo: string,
+  anexo: string,
+): LinkLei[] {
+  const atuais = leisDaMateria(materia);
+  const alvo = anexo.trim().toLowerCase();
+  if (!alvo) return atuais;
+  if (atuais.some((l) => (l.anexo ?? "").trim().toLowerCase() === alvo)) return atuais;
+  return [
+    ...atuais,
+    { id: novoId(), titulo: titulo.trim() || anexo, url: `acervo:${anexo.trim()}`, anexo: anexo.trim() },
+  ];
+}
+
 /** Altera o título/endereço de um link de lei da matéria. */
 export function comLeiAlterada(
   materia: MateriaEdital,
