@@ -206,11 +206,9 @@ function UploadCampo({
       {arquivos.length > 0 && (
         <ul className="space-y-1">
           {arquivos.map((a) => (
-            <li
-              key={a.nome}
-              className="flex items-center justify-between gap-2 rounded-md bg-secondary px-3 py-1.5 text-xs"
-            >
-              {editando === a.nome ? (
+            <li key={a.nome} className="rounded-md bg-secondary px-3 py-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                {editando === a.nome ? (
                 <Input
                   autoFocus
                   className="h-7 flex-1 text-xs"
