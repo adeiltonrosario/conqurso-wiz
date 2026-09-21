@@ -3,7 +3,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, Brain, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
@@ -18,11 +28,14 @@ import {
   contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
+  leisDaMateria,
   materiaPermitida,
+  materiasComLeis,
   topicoPermitido,
   todasAsMaterias,
   topicosDaMateria,
   useEdital,
+  type MateriaEdital,
 } from "@/lib/edital";
 import {
   contextoDaLeitura,
