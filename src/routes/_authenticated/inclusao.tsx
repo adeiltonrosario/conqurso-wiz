@@ -104,6 +104,7 @@ function UploadCampo({
   onRemove,
   onArquivoLido,
   onRenomear,
+  renderExtra,
 }: {
   label: string;
   ajuda: string;
@@ -117,6 +118,8 @@ function UploadCampo({
   onArquivoLido?: (nome: string, texto: string) => void | "descartar";
   /** Quando existe, cada item pode ser renomeado. Retorna erro ou null. */
   onRenomear?: (antigo: string, novo: string) => Promise<string | null>;
+  /** Conteúdo extra por item, abaixo da linha do arquivo (ex.: vínculo ao edital). */
+  renderExtra?: (a: ArquivoAnexo) => ReactNode;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
