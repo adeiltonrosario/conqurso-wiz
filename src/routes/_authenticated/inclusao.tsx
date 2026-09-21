@@ -396,7 +396,31 @@ function InclusaoPage() {
   const removerBanco = useServerFn(removerQuestoesDaProva);
   const { banca, definida: bancaDefinida } = useBancaPrevista();
 
-  const { edital } = useEdital();
+  const { edital, atualizarMateria } = useEdital();
+  /** Nome da lei (sem prefixo) que está sendo vinculada a uma matéria do edital. */
+  const [vinculando, setVinculando] = useState<string | null>(null);
+
+  /** Matérias do concurso em estudo que já têm esta lei vinculada. */
+  const materiasVinculadas = (anexo: string) =>
+    materiasAtivas(edital)
+      .filter((m) =>
+        leisDaMateria(m).some(
+          (l) => (l.anexo ?? "").trim().toLowerCase() === anexo.trim().toLowerCase(),
+        ),
+      )
+      .map((m) => m.nome);
+
+  /** Cria o vínculo da lei anexada com a matéria escolhida (sem duplicar). */
+  const vincularLeiAoEdital = (materia: MateriaEdital) => {
+    if (!vinculando) return;
+    const antes = leisDaMateria(materia);
+    const leis = vincularAnexoAMateria(materia, vinculando, vinculando);
+    if (leis !== antes) {
+      atualizarMateria(materia.id, { leis });
+      toast.success(`Lei vinculada a ${materia.nome}.`);
+    }
+    setVinculando(null);
+  };
   const MATERIAS = todasAsMaterias(edital);
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : (MATERIAS[0] ?? "");
