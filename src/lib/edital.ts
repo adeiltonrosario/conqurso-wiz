@@ -402,6 +402,11 @@ export function leisDaMateria(materia: MateriaEdital): LinkLei[] {
   return materia.leis ?? [];
 }
 
+/** Matérias visíveis no filtro atual que têm pelo menos uma lei cadastrada. */
+export function materiasComLeis(edital: EditalEstado) {
+  return materiasAtivas(edital).filter((m) => leisDaMateria(m).length > 0);
+}
+
 /**
  * Nomes (minúsculos) dos anexos de lei vinculados às matérias visíveis no
  * filtro atual (banca + cargo). Vazio quando nenhuma matéria tem lei anexada.
