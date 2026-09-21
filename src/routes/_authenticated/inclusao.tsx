@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
   Check,
   FileUp,
   Link as LinkIcon,
+  Link2,
   ListPlus,
   Loader2,
   Pencil,
@@ -19,6 +20,13 @@ import { BancaAtual } from "@/components/BancaAtual";
 import { EditalMaterias } from "@/components/EditalMaterias";
 import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CampoFormatado } from "@/components/CampoFormatado";
@@ -55,6 +63,7 @@ import {
   editalRestrito,
   ehDoEdital,
   grupoDaMateria,
+  leisDaMateria,
   materiaPermitida,
   materiasAtivas,
   relevanciaNaDisciplina,
@@ -62,6 +71,8 @@ import {
   topicoPermitido,
   topicosPorRelevancia,
   useEdital,
+  vincularAnexoAMateria,
+  type MateriaEdital,
 } from "@/lib/edital";
 
 export const Route = createFileRoute("/_authenticated/inclusao")({
