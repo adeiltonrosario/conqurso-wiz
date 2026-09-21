@@ -26,7 +26,6 @@ import { BANCAS, contextoDoAcervo, ehAnexoDeLei, nomeLimpo, useAcervo } from "@/
 import { useBancaPrevista } from "@/lib/trilha";
 import {
   contextoDoEdital,
-  ehDoEdital,
   grupoDaMateria,
   leisDaMateria,
   materiaPermitida,
@@ -35,7 +34,6 @@ import {
   todasAsMaterias,
   topicosDaMateria,
   useEdital,
-  type MateriaEdital,
 } from "@/lib/edital";
 import {
   contextoDaLeitura,
@@ -103,9 +101,13 @@ function LeisPage() {
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [auto, setAuto] = useState(true);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [abertaId, setAbertaId] = useState<string | null>(null);
 
   const MATERIAS = todasAsMaterias(edital);
-  const materiaAtiva = MATERIAS.includes(materia) ? materia : (MATERIAS[0] ?? "");
+  const comLeis = materiasComLeis(edital);
+  const materiaAtiva = MATERIAS.includes(materia)
+    ? materia
+    : (comLeis[0]?.nome ?? MATERIAS[0] ?? "");
   const doEdital = topicosDaMateria(edital, materiaAtiva);
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
 
