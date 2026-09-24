@@ -293,13 +293,23 @@ export function EditalMaterias() {
       <div className="space-y-2 border-t border-border pt-4">
         <Label htmlFor="edital-cargo">Cargos do edital</Label>
         <p className="text-xs text-muted-foreground">
+          Todo cargo é vinculado a uma banca — assim o seletor de concurso muda os dois juntos.
           Só estes cargos aparecem na Trilha, para você não estudar o conteúdo de outro cargo.
         </p>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            adicionarCargo(novoCargo);
+            if (!bancaDoNovoCargo) {
+              toast.error("Escolha a banca deste cargo — o cargo fica vinculado a ela.");
+              return;
+            }
+            if (cargos.some((c) => c.trim().toLowerCase() === novoCargo.trim().toLowerCase())) {
+              toast.error("Esse cargo já está cadastrado.");
+              return;
+            }
+            if (!novoCargo.trim()) return;
+            adicionarCargo(novoCargo, bancaDoNovoCargo);
             setNovoCargo("");
           }}
         >
@@ -310,6 +320,19 @@ export function EditalMaterias() {
             placeholder="Ex.: Escrivão de Polícia Civil"
             className="h-9"
           />
+          <select
+            value={bancaDoNovoCargo}
+            onChange={(e) => setBancaDoNovoCargo(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+            aria-label="Banca deste cargo"
+          >
+            <option value="">Banca do cargo…</option>
+            {bancasDisponiveis.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
           <Button type="submit" variant="outline" aria-label="Adicionar cargo">
             <Plus className="size-4" />
           </Button>
@@ -320,22 +343,28 @@ export function EditalMaterias() {
           </p>
         ) : (
           <ul className="flex flex-wrap gap-1.5">
-            {cargos.map((c) => (
-              <li
-                key={c}
-                className="flex max-w-full items-start gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
-              >
-                <span className="break-words [overflow-wrap:anywhere]">{c}</span>
-                <button
-                  type="button"
-                  onClick={() => removerCargo(c)}
-                  aria-label={`Remover ${c}`}
-                  className="shrink-0"
+            {cargos.map((c) => {
+              const banca = bancaDoCargo(edital, c);
+              return (
+                <li
+                  key={c}
+                  className="flex max-w-full items-start gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs"
                 >
-                  <Trash2 className="size-3 text-destructive" />
-                </button>
-              </li>
-            ))}
+                  <span className="break-words [overflow-wrap:anywhere]">
+                    {c}
+                    {banca ? <span className="text-muted-foreground"> — {banca}</span> : null}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removerCargo(c)}
+                    aria-label={`Remover ${c}`}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="size-3 text-destructive" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
