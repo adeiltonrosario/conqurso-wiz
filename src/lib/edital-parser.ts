@@ -106,7 +106,10 @@ function nomeDeMateria(linha: string, materiaAberta = false): string | null {
   if (/^\(?\d+\.\d/.test(bruto)) return null;
   // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele —
   // exceto uma nova disciplina numerada ("2. NOÇÕES DE INFORMÁTICA", "3 Direito Penal").
-  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto) && !novaDisciplina(bruto)) return null;
+  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto)) {
+    if (!novaDisciplina(bruto)) return null;
+    return limpar(bruto).replace(/:+$/, "").trim();
+  }
 
   const comPrefixo = bruto.match(PREFIXO_MATERIA);
   if (comPrefixo) {
