@@ -39,6 +39,8 @@ export type EditalEstado = {
   materias: MateriaEdital[];
   /** Cargos previstos no edital — usados como filtro na Trilha. */
   cargos: string[];
+  /** Banca de cada cargo (cargo → banca): o seletor muda os dois juntos. */
+  bancaDoCargo?: Record<string, string> | undefined;
   /** Bancas previstas/organizadoras do edital — usadas como filtro na Trilha. */
   bancas: string[];
   /** Banca do concurso em estudo — filtra matérias, tópicos e leis. */
