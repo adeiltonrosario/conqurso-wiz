@@ -13,12 +13,41 @@ import {
   tituloDaQuestao,
 } from "./questoes-pdf";
 
+function chave(t: string) {
+  return t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Matéria e assunto declarados no cadastro da questão ("Matéria — Assunto").
+ * A escolha do usuário manda: só cai na classificação por palavras-chave
+ * quando o campo não corresponde a nenhuma matéria do edital.
+ */
+function declarados(edital: EditalEstado, q: QuestaoCadastrada) {
+  const bruto = (q.assunto ?? "").trim();
+  if (!bruto) return null;
+  const [primeiro, ...resto] = bruto.split(/\s*[—–-]\s*/);
+  const nomeMateria = (primeiro ?? "").trim();
+  const topico = resto.join(" - ").trim();
+  if (!nomeMateria) return null;
+  const materia = todasAsMaterias(edital).find((m) => chave(m) === chave(nomeMateria));
+  if (!materia) return null;
+  if (!topico) return { materia };
+  const topicos = topicosDaMateria(edital, materia);
+  const achadoTopico = topicos.find((t) => chave(t) === chave(topico));
+  return { materia, assunto: achadoTopico ?? topico };
+}
+
 /** Converte uma questão cadastrada à mão no acervo para o formato padrão. */
 export function daCadastrada(edital: EditalEstado, q: QuestaoCadastrada): Questao {
-  const achado = classificarQuestao(
-    edital,
-    `${q.assunto} ${q.enunciado} ${q.alternativas.join(" ")}`,
-  );
+  const escolhido = declarados(edital, q);
+  const achado =
+    escolhido ??
+    classificarQuestao(edital, `${q.assunto} ${q.enunciado} ${q.alternativas.join(" ")}`);
   const materia = achado?.materia ?? NAO_CLASSIFICADA;
   const assunto = achado?.assunto;
   return {
