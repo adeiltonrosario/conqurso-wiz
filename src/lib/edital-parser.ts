@@ -88,7 +88,7 @@ function novaDisciplina(bruto: string) {
   if (semNumero.length < 3 || semNumero.length > 80) return false;
   if (semNumero.includes(";")) return false;
   // Só disciplinas de primeiro nível: "2." e nunca "2.1."
-  if (!/^\(?\d{1,2}\)?\s*[.)-]?\s+/.test(bruto.trim())) return false;
+  if (!/^\(?\d{1,2}\)?[.)-]?\s+/.test(bruto.trim())) return false;
   const palavras = semNumero.split(/\s+/);
   if (palavras.length > 6) return false;
   const letras = semNumero.replace(/[^a-zA-ZÀ-ÿ]/g, "");
