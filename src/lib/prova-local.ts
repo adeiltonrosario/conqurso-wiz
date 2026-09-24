@@ -4,7 +4,13 @@
  */
 import type { Questao } from "./ai.functions";
 import type { Acervo, QuestaoCadastrada } from "./acervo";
-import { grupoDaMateria, questaoPermitida, type EditalEstado } from "./edital";
+import {
+  grupoDaMateria,
+  questaoPermitida,
+  todasAsMaterias,
+  topicosDaMateria,
+  type EditalEstado,
+} from "./edital";
 import {
   classificarQuestao,
   NAO_CLASSIFICADA,
