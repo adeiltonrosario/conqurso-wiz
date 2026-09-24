@@ -230,6 +230,30 @@ export function bancasDoEdital(edital: EditalEstado) {
   return unicos(edital.bancas ?? []);
 }
 
+/** Banca vinculada ao cargo (vazio quando o cargo vale para qualquer banca). */
+export function bancaDoCargo(edital: EditalEstado, cargo: string) {
+  const alvo = cargo.trim().toLowerCase();
+  for (const [nome, banca] of Object.entries(edital.bancaDoCargo ?? {})) {
+    if (nome.trim().toLowerCase() === alvo) return banca;
+  }
+  return "";
+}
+
+/**
+ * Cargos oferecidos no seletor para a banca escolhida: só os cargos vinculados
+ * a ela; se nenhum cargo estiver vinculado, mostra os sem vínculo. Sem banca
+ * escolhida, mostra todos.
+ */
+export function cargosDaBanca(edital: EditalEstado, banca: string) {
+  const cargos = cargosDoEdital(edital);
+  const f = banca.trim().toLowerCase();
+  if (!f) return cargos;
+  const comVinculo = cargos.filter((c) => (bancaDoCargo(edital, c) ?? "").trim());
+  if (!comVinculo.length) return cargos;
+  const ligados = comVinculo.filter((c) => bancaDoCargo(edital, c).trim().toLowerCase() === f);
+  return ligados;
+}
+
 function unicos(nomes: string[]) {
   const vistos = new Set<string>();
   return nomes.filter((n) => {
