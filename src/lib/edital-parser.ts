@@ -82,9 +82,9 @@ function nomeDeMateria(linha: string, materiaAberta = false): string | null {
 
   // "1.1", "(2.3.1)" são tópicos de uma matéria, nunca cabeçalho.
   if (/^\(?\d+\.\d/.test(bruto)) return null;
-  // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele.
-  // Isso também cobre "7. Aspectos...:" — os dois-pontos são parte do tópico.
-  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto)) return null;
+  // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele —
+  // exceto uma nova disciplina numerada ("2. NOÇÕES DE INFORMÁTICA", "3 Direito Penal").
+  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto) && !novaDisciplina(bruto)) return null;
 
   const comPrefixo = bruto.match(PREFIXO_MATERIA);
   if (comPrefixo) {
