@@ -125,17 +125,23 @@ export function useEdital() {
     aplicar({ materias: atual.materias.filter((m) => m.id !== id) });
   };
 
-  const adicionarCargo = (nome: string) => {
+  const adicionarCargo = (nome: string, banca?: string) => {
     const atual = lerEdital();
     const limpo = nome.trim();
     if (!limpo) return;
     if ((atual.cargos ?? []).some((c) => c.trim().toLowerCase() === limpo.toLowerCase())) return;
-    aplicar({ cargos: [...(atual.cargos ?? []), limpo] });
+    const b = (banca ?? "").trim();
+    aplicar({
+      cargos: [...(atual.cargos ?? []), limpo],
+      bancaDoCargo: { ...(atual.bancaDoCargo ?? {}), [limpo]: b },
+    });
   };
 
   const removerCargo = (nome: string) => {
     const atual = lerEdital();
-    aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome) });
+    const mapa = { ...(atual.bancaDoCargo ?? {}) };
+    delete mapa[nome];
+    aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome), bancaDoCargo: mapa });
   };
 
   const adicionarBanca = (nome: string) => {
