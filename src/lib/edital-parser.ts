@@ -75,6 +75,28 @@ function quebrarPorNumeracao(texto: string): string {
 const PREFIXO_MATERIA =
   /^(?:disciplina|matéria|materia|conhecimentos?(?:\s+(?:gerais|específicos|especificos|básicos|basicos))?)\s*[:\-–]\s*/i;
 
+/** Começos típicos de nome de disciplina em editais. */
+const INICIO_DISCIPLINA =
+  /^(?:no[çc][õo]es|conhecimentos?|fundamentos|l[íi]ngua|l[íi]nguagem|direito|legisla[çc][ãa]o|inform[áa]tica|matem[áa]tica|racioc[íi]nio|contabilidade|administra[çc][ãa]o|gest[ãa]o|economia|estat[íi]stica|hist[óo]ria|geografia|atualidades|[ée]tica|reda[çc][ãa]o|portugu[êe]s|ingl[êe]s|espanhol|medicina\s+legal|criminologia|crimin[áa]l[íi]stica|psicologia|sociologia|filosofia|pedagogia|arquivologia|auditoria|seguran[çc]a\s+p[úu]blica|sa[úu]de\s+p[úu]blica|biologia|f[íi]sica|qu[íi]mica)\b/i;
+
+/**
+ * Linha numerada que na verdade abre uma nova disciplina
+ * ("2. NOÇÕES DE INFORMÁTICA", "3 Direito Penal"), e não um tópico da anterior.
+ */
+function novaDisciplina(bruto: string) {
+  const semNumero = limpar(bruto).replace(/:+$/, "").trim();
+  if (semNumero.length < 3 || semNumero.length > 80) return false;
+  if (semNumero.includes(";")) return false;
+  // Só disciplinas de primeiro nível: "2." e nunca "2.1."
+  if (!/^\(?\d{1,2}\)?[.)-]?\s+/.test(bruto.trim())) return false;
+  const palavras = semNumero.split(/\s+/);
+  if (palavras.length > 6) return false;
+  const letras = semNumero.replace(/[^a-zA-ZÀ-ÿ]/g, "");
+  if (letras.length < 3) return false;
+  const maiusculas = semNumero === semNumero.toUpperCase();
+  return maiusculas || INICIO_DISCIPLINA.test(semNumero);
+}
+
 /** Cabeçalho de matéria: "DIREITO PENAL", "Disciplina: X", "Língua Portuguesa:" */
 function nomeDeMateria(linha: string, materiaAberta = false): string | null {
   const bruto = linha.replace(/\u00a0/g, " ").trim();
@@ -82,9 +104,12 @@ function nomeDeMateria(linha: string, materiaAberta = false): string | null {
 
   // "1.1", "(2.3.1)" são tópicos de uma matéria, nunca cabeçalho.
   if (/^\(?\d+\.\d/.test(bruto)) return null;
-  // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele.
-  // Isso também cobre "7. Aspectos...:" — os dois-pontos são parte do tópico.
-  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto)) return null;
+  // Depois que um cabeçalho foi reconhecido, qualquer item numerado pertence a ele —
+  // exceto uma nova disciplina numerada ("2. NOÇÕES DE INFORMÁTICA", "3 Direito Penal").
+  if (materiaAberta && /^\(?\d+\)?[.)]?\s+/.test(bruto)) {
+    if (!novaDisciplina(bruto)) return null;
+    return limpar(bruto).replace(/:+$/, "").trim();
+  }
 
   const comPrefixo = bruto.match(PREFIXO_MATERIA);
   if (comPrefixo) {

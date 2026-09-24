@@ -624,9 +624,9 @@ function QuestoesPage() {
     : doPdfNaMateria;
 
   const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
-  const daIA = permitidas.filter(
-    (q) => !q.materia || q.materia.toLowerCase().includes(materiaAtiva.toLowerCase()),
-  );
+  // Só as questões da própria matéria selecionada (sem "parecido com").
+  const soNome = (t: string) => (t ?? "").split(/\s*[—–]\s*/)[0]?.trim().toLowerCase() ?? "";
+  const daIA = permitidas.filter((q) => soNome(q.materia) === soNome(materiaAtiva));
   const totalFavoritas = doPdfNaMateria.filter((q) => q.favorita).length;
   const base = fonteAtiva === "pdf" ? doPdf : daIA;
   const lista = soFavoritas ? base.filter((q) => q.favorita) : base;
