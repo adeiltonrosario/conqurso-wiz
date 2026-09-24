@@ -39,6 +39,8 @@ export type EditalEstado = {
   materias: MateriaEdital[];
   /** Cargos previstos no edital — usados como filtro na Trilha. */
   cargos: string[];
+  /** Banca de cada cargo (cargo → banca): o seletor muda os dois juntos. */
+  bancaDoCargo?: Record<string, string> | undefined;
   /** Bancas previstas/organizadoras do edital — usadas como filtro na Trilha. */
   bancas: string[];
   /** Banca do concurso em estudo — filtra matérias, tópicos e leis. */
@@ -123,17 +125,23 @@ export function useEdital() {
     aplicar({ materias: atual.materias.filter((m) => m.id !== id) });
   };
 
-  const adicionarCargo = (nome: string) => {
+  const adicionarCargo = (nome: string, banca?: string) => {
     const atual = lerEdital();
     const limpo = nome.trim();
     if (!limpo) return;
     if ((atual.cargos ?? []).some((c) => c.trim().toLowerCase() === limpo.toLowerCase())) return;
-    aplicar({ cargos: [...(atual.cargos ?? []), limpo] });
+    const b = (banca ?? "").trim();
+    aplicar({
+      cargos: [...(atual.cargos ?? []), limpo],
+      bancaDoCargo: { ...(atual.bancaDoCargo ?? {}), [limpo]: b },
+    });
   };
 
   const removerCargo = (nome: string) => {
     const atual = lerEdital();
-    aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome) });
+    const mapa = { ...(atual.bancaDoCargo ?? {}) };
+    delete mapa[nome];
+    aplicar({ cargos: (atual.cargos ?? []).filter((c) => c !== nome), bancaDoCargo: mapa });
   };
 
   const adicionarBanca = (nome: string) => {
@@ -220,6 +228,30 @@ export function cargosDoEdital(edital: EditalEstado) {
 /** Bancas do edital (sem repetições). */
 export function bancasDoEdital(edital: EditalEstado) {
   return unicos(edital.bancas ?? []);
+}
+
+/** Banca vinculada ao cargo (vazio quando o cargo vale para qualquer banca). */
+export function bancaDoCargo(edital: EditalEstado, cargo: string) {
+  const alvo = cargo.trim().toLowerCase();
+  for (const [nome, banca] of Object.entries(edital.bancaDoCargo ?? {})) {
+    if (nome.trim().toLowerCase() === alvo) return banca;
+  }
+  return "";
+}
+
+/**
+ * Cargos oferecidos no seletor para a banca escolhida: só os cargos vinculados
+ * a ela; se nenhum cargo estiver vinculado, mostra os sem vínculo. Sem banca
+ * escolhida, mostra todos.
+ */
+export function cargosDaBanca(edital: EditalEstado, banca: string) {
+  const cargos = cargosDoEdital(edital);
+  const f = banca.trim().toLowerCase();
+  if (!f) return cargos;
+  const comVinculo = cargos.filter((c) => (bancaDoCargo(edital, c) ?? "").trim());
+  if (!comVinculo.length) return cargos;
+  const ligados = comVinculo.filter((c) => bancaDoCargo(edital, c).trim().toLowerCase() === f);
+  return ligados;
 }
 
 function unicos(nomes: string[]) {
