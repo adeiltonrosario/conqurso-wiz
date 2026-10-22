@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai.functions";
 import { extrairMateriasDoTexto } from "@/lib/edital-parser";
 import {
+  bancaDoCargo,
   bancasDoEdital,
   cargosDoEdital,
   materiasAtivas,
@@ -97,6 +98,7 @@ export function EditalMaterias() {
   const [novoGrupo, setNovoGrupo] = useState<GrupoEdital>("Conhecimento Específico");
   const [topicoNovo, setTopicoNovo] = useState<Record<string, string>>({});
   const [novoCargo, setNovoCargo] = useState("");
+  const [bancaDoNovoCargo, setBancaDoNovoCargo] = useState("");
   const [novaBanca, setNovaBanca] = useState("");
   const [materiasAbertas, setMateriasAbertas] = useState<Set<string>>(() => new Set());
 
