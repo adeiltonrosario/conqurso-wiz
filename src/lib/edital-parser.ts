@@ -151,32 +151,129 @@ function topicosDaLinha(linha: string, manterNumeracao = true): string[] {
   return partes.map((t, i) => (i === 0 && numero ? `${numero} ${t}` : t));
 }
 
+/** Cabeçalhos de página/instituição e contadores que nunca são matéria nem tópico. */
+const RUIDO = [
+  /^\d{1,3}$/,
+  /^p\s?o\s?d\s?e\s?r\s+j\s?u\s?d/i,
+  /^(?:poder\s+judici[áa]rio|tribunal\s+(?:de\s+justi[çc]a|regional|superior)|minist[ée]rio\s+p[úu]blico|governo\s+do\s+estado|prefeitura|estado\s+d[eo])\b/i,
+  /^anexo\s+[ivxlc\d]+\b/i,
+  /^conte[úu]do\s+program[áa]tico\b/i,
+  /^\d+\s+quest[õo]es\b/i,
+  /^edital\b.{0,80}$/i,
+];
+
+const ehRuido = (l: string) => RUIDO.some((r) => r.test(l.replace(/\u00a0/g, " ").trim()));
+
+/** Junta linhas que o PDF quebrou no meio ("... 159" + "a 161; 176 ..."). */
+function juntarQuebras(linhas: string[]): string[] {
+  const saida: string[] = [];
+  for (const l of linhas) {
+    const ant = saida[saida.length - 1];
+    const continua =
+      ant !== undefined &&
+      !/^bloco\s+[ivx\d]+\b/i.test(l) &&
+      (/[-,]$/.test(ant) ||
+        /\s(?:e|a|de|da|do|n\.º)$/i.test(ant) ||
+        /^[a-zà-ÿ]/.test(l) ||
+        /^\d[\d.ºª-]*\s*(?:[;,)]|a\s|e\s|\.$|$)/.test(l));
+    if (continua) saida[saida.length - 1] = ant.endsWith("-") ? ant + l : `${ant} ${l}`;
+    else saida.push(l);
+  }
+  return saida;
+}
+
+/** "BLOCO II: Conhecimentos Específicos" → grupo e, se for disciplina, o nome. */
+function lerBloco(linha: string): { grupo?: GrupoEdital; materia?: string } | null {
+  const m = linha.match(/^bloco\s+[ivx\d]+\s*[:\-–—]?\s*(.*)$/i);
+  if (!m) return null;
+  const resto = limpar(m[1] ?? "").replace(/:+$/, "");
+  if (!resto) return {};
+  if (/^conhecimentos?\s+gerais/i.test(resto)) return { grupo: "Conhecimento Geral" };
+  if (/^conhecimentos?\s+espec[íi]ficos/i.test(resto)) return { grupo: "Conhecimento Específico" };
+  return { materia: resto };
+}
+
+/** "1. DIREITO PENAL: Código Penal – artigos…" → nome em maiúsculas antes dos dois-pontos. */
+function cabecalhoComConteudo(linha: string): { nome: string; resto: string } | null {
+  const m = linha.match(/^\(?\d{1,2}\)?[.)-]?\s+([A-ZÀ-Ý][A-ZÀ-Ý\s/,&-]{2,80}):\s*(.*)$/);
+  if (!m) return null;
+  const nome = m[1].trim();
+  if (nome.split(/\s+/).length > 7 || nome.replace(/[^A-ZÀ-Ý]/g, "").length < 3) return null;
+  return { nome, resto: m[2] ?? "" };
+}
+
+/** Disciplina sem número nem dois-pontos ("Atualidades", "Informática"). */
+function disciplinaSolta(linha: string) {
+  const l = linha.trim();
+  if (/[.;:,]$/.test(l) || /^\d/.test(l)) return false;
+  return l.split(/\s+/).length <= 6 && INICIO_DISCIPLINA.test(l);
+}
+
+/** Conteúdo corrido: "… arquivos. MS-Word: estrutura…" → um tópico por "Rótulo:". */
+function quebrarPorRotulos(linha: string): string[] {
+  if (linha.length < 200 || /^\d/.test(linha)) return [linha];
+  return linha
+    .split(/(?<=\.)\s+(?=[A-ZÀ-Ý][\wÀ-ÿ-]*(?:\s[A-ZÀ-Ýa-zà-ÿ][\wÀ-ÿ-]*){0,2}\s?:)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function extrairMateriasDoTexto(texto: string): MateriaExtraida[] {
-  const linhas = quebrarPorNumeracao(texto)
+  const brutas = (texto ?? "")
+    .replace(/\u00a0/g, " ")
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter(Boolean);
+    .filter((l) => l && !ehRuido(l));
+
+  const linhas = quebrarPorNumeracao(juntarQuebras(brutas).join("\n"))
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !ehRuido(l))
+    .flatMap(quebrarPorRotulos);
 
   const materias: MateriaExtraida[] = [];
   let atual: MateriaExtraida | null = null;
+  let grupoBloco: GrupoEdital | null = null;
+
+  const abrir = (nome: string) => {
+    const existente = materias.find((m) => m.nome.toLowerCase() === nome.toLowerCase());
+    const nova = existente ?? { nome, grupo: grupoBloco ?? grupoSugerido(nome), topicos: [] };
+    if (!existente) materias.push(nova);
+    return nova;
+  };
+  const somar = (alvo: MateriaExtraida, ts: string[]) => {
+    for (const t of ts) {
+      if (!alvo.topicos.some((x) => x.toLowerCase() === t.toLowerCase())) alvo.topicos.push(t);
+    }
+  };
 
   for (const linha of linhas) {
+    const bloco = lerBloco(linha);
+    if (bloco) {
+      grupoBloco = bloco.grupo ?? null;
+      atual = bloco.materia ? abrir(bloco.materia) : null;
+      continue;
+    }
+    const comConteudo = cabecalhoComConteudo(linha);
+    if (comConteudo) {
+      atual = abrir(comConteudo.nome);
+      somar(atual, topicosDaLinha(comConteudo.resto, false));
+      continue;
+    }
+    if (disciplinaSolta(linha)) {
+      atual = abrir(limpar(linha));
+      continue;
+    }
     const nome = nomeDeMateria(linha, atual !== null);
     if (nome) {
-      const existente = materias.find((m) => m.nome.toLowerCase() === nome.toLowerCase());
-      atual = existente ?? { nome, grupo: grupoSugerido(nome), topicos: [] };
-      if (!existente) materias.push(atual);
+      atual = abrir(nome);
       // Cabeçalho do tipo "Direito Penal: crimes contra a fé pública; ..."
       const resto = linha.includes(":") ? linha.slice(linha.indexOf(":") + 1) : "";
-      for (const t of topicosDaLinha(resto, false)) {
-        if (!atual.topicos.some((x) => x.toLowerCase() === t.toLowerCase())) atual.topicos.push(t);
-      }
+      somar(atual, topicosDaLinha(resto, false));
       continue;
     }
     if (!atual) continue;
-    for (const t of topicosDaLinha(linha)) {
-      if (!atual.topicos.some((x) => x.toLowerCase() === t.toLowerCase())) atual.topicos.push(t);
-    }
+    somar(atual, topicosDaLinha(linha));
   }
 
   return materias.filter((m) => m.nome.length >= 3);
