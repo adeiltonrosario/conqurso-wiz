@@ -158,7 +158,7 @@ const RUIDO = [
   /^(?:poder\s+judici[áa]rio|tribunal\s+(?:de\s+justi[çc]a|regional|superior)|minist[ée]rio\s+p[úu]blico|governo\s+do\s+estado|prefeitura|estado\s+d[eo])\b/i,
   /^anexo\s+[ivxlc\d]+\b/i,
   /^conte[úu]do\s+program[áa]tico\b/i,
-  /^\d+\s+quest[õo]es\b/i,
+  /^\d+\s+quest[õo]es\s*(?::|,\s*sendo|$)/i,
   /^edital\b.{0,80}$/i,
 ];
 
@@ -173,7 +173,7 @@ function juntarQuebras(linhas: string[]): string[] {
       ant !== undefined &&
       !/^bloco\s+[ivx\d]+\b/i.test(l) &&
       (/[-,]$/.test(ant) ||
-        /\s(?:e|a|de|da|do|n\.º|s[ãa]o|santo|santa)$/i.test(ant) ||
+        /\s(?:e|a|de|da|do|com|em|n\.º|s[ãa]o|santo|santa)$/i.test(ant) ||
         /^[a-zà-ÿ]/.test(l) ||
         /^\d[\d.ºª-]*\s*(?:[;,)]|a\s|e\s|\.$|$)/.test(l));
     if (continua) saida[saida.length - 1] = ant.endsWith("-") ? ant + l : `${ant} ${l}`;
