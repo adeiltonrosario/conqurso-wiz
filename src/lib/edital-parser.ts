@@ -197,7 +197,7 @@ function lerBloco(linha: string): { grupo?: GrupoEdital; materia?: string } | nu
 function cabecalhoComConteudo(linha: string): { nome: string; resto: string } | null {
   const m = linha.match(/^\(?\d{1,2}\)?[.)-]?\s+([A-ZÀ-Ý][A-ZÀ-Ý\s/,&-]{2,80}):\s*(.*)$/);
   if (!m) return null;
-  const nome = m[1].trim();
+  const nome = (m[1] ?? "").trim();
   if (nome.split(/\s+/).length > 7 || nome.replace(/[^A-ZÀ-Ý]/g, "").length < 3) return null;
   return { nome, resto: m[2] ?? "" };
 }
