@@ -283,7 +283,13 @@ export function extrairMateriasDoTexto(texto: string): MateriaExtraida[] {
 function recortarConteudo(texto: string): string {
   const t = texto.replace(/\[\[p:\d+\]\]\s*/g, "\n");
   const i = t.search(/conte[úu]do\s+program[áa]tico/i);
-  return i >= 0 ? t.slice(i) : t;
+  const corte = i >= 0 ? t.slice(i) : t;
+  // O PDF entrega uma linha por página: tira os cabeçalhos no meio e separa os blocos.
+  return corte
+    .replace(/conte[úu]do\s+program[áa]tico\s*/gi, "\n")
+    .replace(/poder\s+judici[áa]rio|tribunal\s+de\s+justi[çc]a(?:\s+do\s+estado\s+de\s+[a-zà-ÿ ]+?(?=\s[A-ZÀ-Ý]{2}))?|anexo\s+[ivxlc]+\b/gi, "\n")
+    .replace(/\s*(bloco\s+[ivx]+\b)/gi, "\n$1")
+    .replace(/(bloco\s+[ivx]+\s*[:\-–—]?\s*conhecimentos?\s+(?:gerais|espec[íi]ficos))\s*/gi, "$1\n");
 }
 
 /** Quebra tópicos de lei com vários trechos ("artigos 1º a 5º; 10 a 12") um por linha. */
