@@ -290,12 +290,13 @@ function recortarConteudo(texto: string): string {
 function desdobrarTopico(t: string): string[] {
   const corpo = t.replace(/^\d+(?:\.\d+)*\s+/, "");
   const lei = corpo.match(/^(.{3,80}?)\s*[–—-]\s*(artigos?|arts?\.)\s+(.+)$/i);
-  if (lei && lei[3].includes(";")) {
-    return lei[3]
+  if (lei && lei[1] && lei[3]?.includes(";")) {
+    const [, nomeLei, , trechos] = lei as unknown as [string, string, string, string];
+    return trechos
       .split(/\s*;\s*/)
       .map((p) => p.trim())
       .filter(Boolean)
-      .map((p) => `${lei[1]} – ${/^arts?/i.test(p) ? "" : "artigos "}${p}`.replace(/\s+/g, " "));
+      .map((p) => `${nomeLei} – ${/^arts?/i.test(p) ? "" : "artigos "}${p}`.replace(/\s+/g, " "));
   }
   if (!/^\d/.test(t) && corpo.includes(";") && corpo.length > 120) {
     return corpo.split(/\s*;\s*/).map((p) => p.trim()).filter((p) => p.length >= 3);
