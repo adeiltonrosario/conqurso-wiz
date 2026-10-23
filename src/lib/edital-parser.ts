@@ -278,3 +278,49 @@ export function extrairMateriasDoTexto(texto: string): MateriaExtraida[] {
 
   return materias.filter((m) => m.nome.length >= 3);
 }
+
+/** Remove o trecho anterior ao conteúdo programático (inscrição, taxas etc.). */
+function recortarConteudo(texto: string): string {
+  const t = texto.replace(/\[\[p:\d+\]\]\s*/g, "\n");
+  const i = t.search(/conte[úu]do\s+program[áa]tico/i);
+  const corte = i >= 0 ? t.slice(i) : t;
+  // O PDF entrega uma linha por página: tira os cabeçalhos no meio e separa os blocos.
+  return corte
+    .replace(/conte[úu]do\s+program[áa]tico\s*/gi, "\n")
+    .replace(/poder\s+judici[áa]rio|tribunal\s+de\s+justi[çc]a(?:\s+do\s+estado\s+de\s+[a-zà-ÿ ]+?(?=\s[A-ZÀ-Ý]{2}))?|anexo\s+[ivxlc]+\b/gi, "\n")
+    .replace(/\s*(bloco\s+[ivx]+\b)/gi, "\n$1")
+    .replace(/(bloco\s+[ivx]+\s*[:\-–—]?\s*conhecimentos?\s+(?:gerais|espec[íi]ficos))\s*/gi, "$1\n");
+}
+
+/** Quebra tópicos de lei com vários trechos ("artigos 1º a 5º; 10 a 12") um por linha. */
+function desdobrarTopico(t: string): string[] {
+  const corpo = t.replace(/^\d+(?:\.\d+)*\s+/, "");
+  const lei = corpo.match(/^(.{3,80}?)\s*[–—-]\s*(artigos?|arts?\.)\s+(.+)$/i);
+  if (lei && lei[1] && lei[3]?.includes(";")) {
+    const [, nomeLei, , trechos] = lei as unknown as [string, string, string, string];
+    return trechos
+      .split(/\s*;\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `${nomeLei} – ${/^arts?/i.test(p) ? "" : "artigos "}${p}`.replace(/\s+/g, " "));
+  }
+  if (!/^\d/.test(t) && corpo.includes(";") && corpo.length > 120) {
+    return corpo.split(/\s*;\s*/).map((p) => p.trim()).filter((p) => p.length >= 3);
+  }
+  return [corpo];
+}
+
+/**
+ * Organiza o texto bruto (ex.: lido do PDF) no formato
+ * "MATÉRIA:\n1. tópico\n2. tópico", pronto para "Extrair e limpar".
+ */
+export function organizarTextoEdital(texto: string): string {
+  const materias = extrairMateriasDoTexto(recortarConteudo(texto ?? ""));
+  return materias
+    .filter((m) => m.topicos.length)
+    .map((m) => {
+      const itens = m.topicos.flatMap(desdobrarTopico);
+      return `${m.nome.toUpperCase()}:\n${itens.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
+    })
+    .join("\n\n");
+}

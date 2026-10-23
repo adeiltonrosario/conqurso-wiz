@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, ListPlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
   LIMITE_BLOCO_EDITAL,
   LIMITE_EDITAL,
 } from "@/lib/ai.functions";
-import { extrairMateriasDoTexto } from "@/lib/edital-parser";
+import { extrairMateriasDoTexto, organizarTextoEdital } from "@/lib/edital-parser";
 import {
   bancaDoCargo,
   bancasDoEdital,
@@ -101,6 +101,27 @@ export function EditalMaterias() {
   const [bancaDoNovoCargo, setBancaDoNovoCargo] = useState("");
   const [novaBanca, setNovaBanca] = useState("");
   const [materiasAbertas, setMateriasAbertas] = useState<Set<string>>(() => new Set());
+  const pdfRef = useRef<HTMLInputElement | null>(null);
+  const [lendoPdf, setLendoPdf] = useState(false);
+
+  const carregarPdf = async (arquivo: File) => {
+    setLendoPdf(true);
+    try {
+      const { extrairTextoPdf } = await import("@/lib/pdf");
+      const { texto: bruto } = await extrairTextoPdf(arquivo);
+      const organizado = organizarTextoEdital(bruto);
+      if (!organizado) {
+        toast.error("Não encontrei matérias nesse PDF. Copie o conteúdo programático e cole na caixa.");
+        return;
+      }
+      setTexto(organizado.slice(0, LIMITE_EDITAL));
+      toast.success("Edital organizado na caixa — confira e clique em “Extrair e limpar”.");
+    } catch {
+      toast.error("Não consegui ler esse PDF.");
+    } finally {
+      setLendoPdf(false);
+    }
+  };
 
   const valor = texto ?? edital.texto;
   const cargos = edital.cargos ?? [];
@@ -220,6 +241,36 @@ export function EditalMaterias() {
 
       <div className="space-y-2">
         <Label htmlFor="edital-texto">Conteúdo programático do edital</Label>
+        <input
+          ref={pdfRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          aria-label="PDF do edital"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void carregarPdf(f);
+          }}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={lendoPdf}
+          onClick={() => pdfRef.current?.click()}
+        >
+          {lendoPdf ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <FileText className="mr-2 size-4" />
+          )}
+          {lendoPdf ? "Lendo o PDF…" : "Carregar do PDF do edital"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Lê o PDF no seu aparelho, sem gastar IA, e organiza as matérias e tópicos na caixa abaixo.
+          Confira e clique em “Extrair e limpar”.
+        </p>
         <CaixaCrescente
           id="edital-texto"
           valor={valor}
