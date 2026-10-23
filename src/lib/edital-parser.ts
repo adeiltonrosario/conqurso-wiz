@@ -66,7 +66,7 @@ function quebrarPorNumeracao(texto: string): string {
     // "… texto 1.1. Assunto" / "… texto (1.2) Assunto" → nova linha.
     // O marcador é preservado para aparecer no tópico salvo.
     .replace(
-      /(^|[\s;])\(?((?:\d+\.)*\d+)\)?[.)]?\s+(?=[A-ZÀ-Ý])/g,
+      /(^|[ \t;])\(?((?:\d+\.)*\d+)\)?[.)]?[ \t]+(?=[A-ZÀ-Ý])/gm,
       (_trecho, separador: string, numero: string) =>
         `${separador === ";" ? ";" : ""}\n${numero} `,
     );
@@ -173,7 +173,7 @@ function juntarQuebras(linhas: string[]): string[] {
       ant !== undefined &&
       !/^bloco\s+[ivx\d]+\b/i.test(l) &&
       (/[-,]$/.test(ant) ||
-        /\s(?:e|a|de|da|do|n\.º)$/i.test(ant) ||
+        /\s(?:e|a|de|da|do|n\.º|s[ãa]o|santo|santa)$/i.test(ant) ||
         /^[a-zà-ÿ]/.test(l) ||
         /^\d[\d.ºª-]*\s*(?:[;,)]|a\s|e\s|\.$|$)/.test(l));
     if (continua) saida[saida.length - 1] = ant.endsWith("-") ? ant + l : `${ant} ${l}`;
