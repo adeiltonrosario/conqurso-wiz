@@ -693,6 +693,7 @@ export function LeiIntegralPainel({
             aria-label="Lei salva (PDF ou texto colado)"
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
+            {!arquivoAtivo && <option value="">Escolha a lei deste concurso…</option>}
             {pdfsOrdenados.map((p) => (
               <option key={p.nome} value={p.nome}>
                 {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
