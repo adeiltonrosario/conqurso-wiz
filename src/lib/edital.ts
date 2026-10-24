@@ -483,9 +483,9 @@ function assuntosDoConcurso(edital: EditalEstado) {
     if (k.length > 4) termos.add(k);
     for (const n of numerosDeLei(texto)) numeros.add(n);
   };
+  // Só as leis cadastradas nas matérias do concurso em estudo contam —
+  // nomes de matérias/tópicos genéricos ("Direito Penal") não puxam leis de outro edital.
   for (const m of materiasAtivas(edital)) {
-    add(m.nome);
-    for (const t of m.topicos) add(t);
     for (const l of leisDaMateria(m)) {
       const anexo = (l.anexo ?? "").trim().toLowerCase();
       if (anexo) anexos.add(anexo);
@@ -496,9 +496,9 @@ function assuntosDoConcurso(edital: EditalEstado) {
 }
 
 /**
- * Uma lei salva no acervo vale para o concurso em estudo quando está anexada a
- * uma matéria ativa OU quando o assunto dela (nome/número da lei) aparece no
- * Detalhamento do edital ativo — assim a mesma lei serve para vários editais.
+ * Uma lei salva no acervo vale para o concurso em estudo somente quando está
+ * vinculada a uma matéria ativa (anexo) ou quando casa com o título/número de
+ * uma lei cadastrada nas matérias desse concurso.
  */
 export function leiDoConcurso(edital: EditalEstado, nomeArquivo: string) {
   if (!editalRestrito(edital)) return true;
@@ -507,7 +507,7 @@ export function leiDoConcurso(edital: EditalEstado, nomeArquivo: string) {
   const nome = chave(nomeArquivo);
   if (!nome) return false;
   for (const n of numerosDeLei(nomeArquivo)) if (numeros.has(n)) return true;
-  for (const t of termos) if (nome.includes(t) || t.includes(nome)) return true;
+  for (const t of termos) if (t.length > 8 && (nome.includes(t) || t.includes(nome))) return true;
   return false;
 }
 

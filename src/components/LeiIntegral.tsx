@@ -425,8 +425,12 @@ export function LeiIntegralPainel({
     [pdfsPermitidos, daMateria],
   );
 
+  // Nunca abre automaticamente uma lei de outro concurso: só a escolhida ou a desta matéria.
+  const escolhidoValido = arquivo && pdfsPermitidos.some((p) => p.nome === arquivo) ? arquivo : "";
   const arquivoAtivo =
-    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsPermitidos[0]?.nome || "";
+    escolhidoValido ||
+    leisDaMinhaMateria.nomes[0] ||
+    (editalRestrito(edital) ? "" : pdfsOrdenados[0]?.nome || "");
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
