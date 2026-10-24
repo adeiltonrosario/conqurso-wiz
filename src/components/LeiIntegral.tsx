@@ -425,8 +425,12 @@ export function LeiIntegralPainel({
     [pdfsPermitidos, daMateria],
   );
 
+  // Nunca abre automaticamente uma lei de outro concurso: só a escolhida ou a desta matéria.
+  const escolhidoValido = arquivo && pdfsPermitidos.some((p) => p.nome === arquivo) ? arquivo : "";
   const arquivoAtivo =
-    arquivo || leisDaMinhaMateria.nomes[0] || pdfsOrdenados[0]?.nome || pdfsPermitidos[0]?.nome || "";
+    escolhidoValido ||
+    leisDaMinhaMateria.nomes[0] ||
+    (editalRestrito(edital) ? "" : pdfsOrdenados[0]?.nome || "");
 
   const mutPdf = useMutation({
     mutationFn: async ({ nome, item }: { nome: string; item: string }) => {
@@ -689,6 +693,7 @@ export function LeiIntegralPainel({
             aria-label="Lei salva (PDF ou texto colado)"
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
+            {!arquivoAtivo && <option value="">Escolha a lei deste concurso…</option>}
             {pdfsOrdenados.map((p) => (
               <option key={p.nome} value={p.nome}>
                 {p.nome} ({p.chars.toLocaleString("pt-BR")} caracteres)
