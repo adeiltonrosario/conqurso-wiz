@@ -15,7 +15,14 @@ export async function extrairTextoPdf(file: File): Promise<PdfLido> {
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
 
   const buffer = await file.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+  // CMaps e fontes padrão: sem eles, letras acentuadas e "ç" viram caractere de erro.
+  const base = `https://unpkg.com/pdfjs-dist@${pdfjs.version}`;
+  const doc = await pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    cMapUrl: `${base}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `${base}/standard_fonts/`,
+  }).promise;
 
   const partes: string[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
@@ -24,6 +31,7 @@ export async function extrairTextoPdf(file: File): Promise<PdfLido> {
     const texto = conteudo.items
       .map((item) => ("str" in item ? item.str : ""))
       .join(" ")
+      .normalize("NFC")
       .replace(/\s+/g, " ")
       .trim();
     // A marca de página permite ir direto ao ponto de corte do mapa do Vade Mecum.
