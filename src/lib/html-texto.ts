@@ -59,11 +59,23 @@ const ENTIDADES: Record<string, string> = {
   rdquo: '"',
 };
 
+// Vogais acentuadas e cedilha: &Oacute; → Ó, &ccedil; → ç (maiúsculas e minúsculas).
+const ACENTOS: Record<string, string> = { acute: "\u0301", grave: "\u0300", circ: "\u0302", tilde: "\u0303", uml: "\u0308", cedil: "\u0327" };
+
+function entidade(nome: string) {
+  const fixa = ENTIDADES[nome] ?? ENTIDADES[nome.toLowerCase()];
+  if (fixa) return fixa;
+  const m = /^([A-Za-z])(acute|grave|circ|tilde|uml|cedil)$/.exec(nome);
+  if (m) return (m[1]! + ACENTOS[m[2]!]).normalize("NFC");
+  return null;
+}
+
 function decodificar(texto: string) {
   return texto
     .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
-    .replace(/&([a-z]+);/gi, (inteiro, nome: string) => ENTIDADES[nome.toLowerCase()] ?? inteiro);
+    .replace(/&([a-z]+);/gi, (inteiro, nome: string) => entidade(nome) ?? inteiro)
+    .normalize("NFC");
 }
 
 /** HTML → texto simples, preservando as quebras que separam artigos e questões. */
