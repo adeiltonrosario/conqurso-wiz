@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { FiltroConcurso } from "@/components/FiltroConcurso";
+import { ImportarPlanilhaEdital } from "@/components/ImportarPlanilhaEdital";
 
 const GRUPOS: GrupoEdital[] = ["Conhecimento Geral", "Conhecimento Específico"];
 const LIMITE_TOPICO = 1000;
@@ -238,6 +239,8 @@ export function EditalMaterias() {
       </div>
 
       <FiltroConcurso />
+
+      <ImportarPlanilhaEdital />
 
       <div className="space-y-2">
         <Label htmlFor="edital-texto">Conteúdo programático do edital</Label>
@@ -546,6 +549,7 @@ export function EditalMaterias() {
                     {m.nome}
                   </span>
                   <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-normal text-muted-foreground">
+                    {m.bloco && <span>{m.bloco}</span>}
                     <span>{m.grupo}</span>
                     <span>{m.banca || "Todas as bancas"}</span>
                     <span>{m.cargo || "Todos os cargos"}</span>
@@ -664,6 +668,7 @@ export function EditalMaterias() {
               </div>
               )}
             </li>
+            </Fragment>
           ))}
         </ul>
       )}
