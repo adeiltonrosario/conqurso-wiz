@@ -520,8 +520,14 @@ export function EditalMaterias() {
         </p>
       ) : (
         <ul className="space-y-3">
-          {materiasVisiveis.map((m) => (
-            <li key={m.id} className="overflow-hidden rounded-lg border border-border">
+          {materiasVisiveis.map((m, i) => (
+            <Fragment key={m.id}>
+            {m.bloco && m.bloco !== materiasVisiveis[i - 1]?.bloco && (
+              <li className="pt-2 font-display text-xs font-bold uppercase tracking-wide text-primary">
+                {m.bloco} · {m.grupo}
+              </li>
+            )}
+            <li className="overflow-hidden rounded-lg border border-border">
               <Button
                 type="button"
                 variant="ghost"
