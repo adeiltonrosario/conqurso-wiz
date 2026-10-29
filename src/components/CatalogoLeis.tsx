@@ -55,14 +55,14 @@ export function CatalogoLeis({ arquivos }: { arquivos: string[] }) {
     const t = titulo.trim();
     const u = url.trim();
     const a = anexo.trim();
-    if (t.length < 2) return toast.error("Informe o nome da lei.");
-    if (!u && !a) return toast.error("Informe o link ou escolha o arquivo da lei.");
-    if (u && !/^https?:\/\//i.test(u)) return toast.error("O link precisa começar com http:// ou https://");
+    if (t.length < 2) { toast.error("Informe o nome da lei."); return; }
+    if (!u && !a) { toast.error("Informe o link ou escolha o arquivo da lei."); return; }
+    if (u && !/^https?:\/\//i.test(u)) { toast.error("O link precisa começar com http:// ou https://"); return; }
     const nova: LeiCatalogo = { id: editando.id || novoId(), titulo: t, url: u || `acervo:${a}`, anexo: a || undefined };
     const atual = lerEdital();
     const chaveAntiga = editando.id ? chaveLei(editando) : "";
     const outra = catalogoDeLeis(atual, arquivos).find((l) => chaveLei(l) === chaveLei(nova) && chaveLei(l) !== chaveAntiga);
-    if (outra) return toast.error(`Essa lei já está no catálogo: ${outra.titulo}`);
+    if (outra) { toast.error(`Essa lei já está no catálogo: ${outra.titulo}`); return; }
     const catalogo = (atual.catalogoLeis ?? []).filter((l) => !chaveAntiga || chaveLei(l) !== chaveAntiga);
     // Atualiza também os vínculos já existentes nas matérias.
     const materias = chaveAntiga
