@@ -32,7 +32,12 @@ export type MateriaEdital = {
   relevanciaTopicos?: Record<string, number> | undefined;
   /** Links das leis desta matéria, informados pelo candidato. */
   leis?: LinkLei[] | undefined;
+  /** Bloco da prova (ex.: "BLOCO I"), quando o edital é dividido em blocos. */
+  bloco?: string | undefined;
 };
+
+/** Lei do catálogo central: cadastrada uma vez e vinculável a qualquer edital. */
+export type LeiCatalogo = { id: string; titulo: string; url: string; anexo?: string | undefined };
 
 export type EditalEstado = {
   texto: string;
@@ -47,6 +52,8 @@ export type EditalEstado = {
   bancaAtiva?: string | undefined;
   /** Cargo do concurso em estudo — filtra matérias, tópicos e leis. */
   cargoAtivo?: string | undefined;
+  /** Catálogo central de leis (link e/ou arquivo do acervo). */
+  catalogoLeis?: LeiCatalogo[] | undefined;
 };
 
 const KEY = "concurseiro:edital";
@@ -564,4 +571,100 @@ export function renomearAnexoNasLeis(antigo: string, novo: string) {
     return { ...m, leis: leis.map((l) => (l.anexo === antigo ? { ...l, anexo: novo } : l)) };
   });
   if (mudou) salvar({ ...estado, materias });
+}
+
+/**
+ * Inclui no edital os cargos lidos de uma planilha: cria banca e cargo já
+ * vinculados e troca as matérias daquele banca+cargo pelas da planilha
+ * (preservando leis já vinculadas a matérias de mesmo nome).
+ */
+export function importarCargosPlanilha(
+  edital: EditalEstado,
+  cargos: { cargo: string; banca: string; materias: { nome: string; grupo: GrupoEdital; bloco: string; topicos: string[] }[] }[],
+): Partial<EditalEstado> {
+  let materias = [...edital.materias];
+  const bancas = [...(edital.bancas ?? [])];
+  const lista = [...(edital.cargos ?? [])];
+  const mapa = { ...(edital.bancaDoCargo ?? {}) };
+  for (const c of cargos) {
+    const banca = c.banca.trim();
+    const cargo = c.cargo.trim();
+    if (!banca || !cargo) continue;
+    if (!bancas.some((b) => igual(b, banca))) bancas.push(banca);
+    const cargoExistente = lista.find((x) => igual(x, cargo));
+    // Mesmo nome de cargo em outra banca vira cargo próprio ("CARGO (BANCA)").
+    let nomeCargo = cargoExistente ?? cargo;
+    const bancaAtual = cargoExistente ? (mapa[cargoExistente] ?? "") : "";
+    if (cargoExistente && bancaAtual && !igual(bancaAtual, banca)) nomeCargo = `${cargo} (${banca})`;
+    if (!lista.some((x) => igual(x, nomeCargo))) lista.push(nomeCargo);
+    mapa[nomeCargo] = banca;
+    const doConcurso = (m: MateriaEdital) => igual(m.banca ?? "", banca) && igual(m.cargo ?? "", nomeCargo);
+    const antigas = materias.filter(doConcurso);
+    materias = materias.filter((m) => !doConcurso(m));
+    for (const m of c.materias) {
+      const antiga = antigas.find((a) => igual(a.nome, m.nome));
+      materias.push({
+        ...(antiga ?? {}),
+        id: antiga?.id ?? novoId(),
+        nome: m.nome,
+        grupo: m.grupo,
+        bloco: m.bloco,
+        topicos: m.topicos,
+        banca,
+        cargo: nomeCargo,
+      });
+    }
+  }
+  const primeiro = cargos.find((c) => c.banca && c.cargo);
+  const cargoAtivo = primeiro
+    ? (Object.keys(mapa).find((k) => igual(mapa[k] ?? "", primeiro.banca) && (igual(k, primeiro.cargo) || igual(k, `${primeiro.cargo} (${primeiro.banca})`))) ?? primeiro.cargo)
+    : edital.cargoAtivo;
+  return {
+    materias,
+    bancas,
+    cargos: lista,
+    bancaDoCargo: mapa,
+    bancaAtiva: primeiro?.banca ?? edital.bancaAtiva,
+    cargoAtivo,
+  };
+}
+
+/** Chave que identifica uma lei: arquivo do acervo, senão o link. */
+export function chaveLei(l: { anexo?: string | undefined; url: string }) {
+  return ((l.anexo ?? "").trim() || l.url.trim()).toLowerCase();
+}
+
+/** Catálogo completo: leis cadastradas + as que já estão vinculadas em matérias. */
+export function catalogoDeLeis(edital: EditalEstado, arquivos: string[] = []): LeiCatalogo[] {
+  const lista: LeiCatalogo[] = [];
+  const vistos = new Set<string>();
+  const add = (l: LeiCatalogo) => {
+    const k = chaveLei(l);
+    if (!k || vistos.has(k)) return;
+    vistos.add(k);
+    lista.push(l);
+  };
+  for (const l of edital.catalogoLeis ?? []) add(l);
+  for (const m of edital.materias) for (const l of leisDaMateria(m)) add({ ...l });
+  for (const a of arquivos) add({ id: `arq-${a}`, titulo: a, url: `acervo:${a}`, anexo: a });
+  return lista;
+}
+
+/** Matérias (de qualquer edital) que têm esta lei vinculada. */
+export function vinculosDaLei(edital: EditalEstado, lei: LeiCatalogo) {
+  const k = chaveLei(lei);
+  return edital.materias.filter((m) => leisDaMateria(m).some((l) => chaveLei(l) === k));
+}
+
+/** Define em quais matérias a lei fica vinculada (marca/desmarca de uma vez). */
+export function definirVinculosDaLei(edital: EditalEstado, lei: LeiCatalogo, idsMaterias: Set<string>) {
+  const k = chaveLei(lei);
+  return edital.materias.map((m) => {
+    const tem = leisDaMateria(m).some((l) => chaveLei(l) === k);
+    const quer = idsMaterias.has(m.id);
+    if (tem === quer) return m;
+    if (quer)
+      return { ...m, leis: [...leisDaMateria(m), { id: novoId(), titulo: lei.titulo, url: lei.url, anexo: lei.anexo }] };
+    return { ...m, leis: leisDaMateria(m).filter((l) => chaveLei(l) !== k) };
+  });
 }
