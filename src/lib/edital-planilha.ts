@@ -74,7 +74,13 @@ export function lerAbaEdital(nomeAba: string, linhas: unknown[][], bancaPadrao =
     if (/^n[ºo°]$/i.test(a) || /^progresso/i.test(a)) continue;
 
     if (b) {
-      if (b.endsWith(":") && ehMaiuscula(b.replace(/[^\p{L}]/gu, ""))) { nova(b); continue; }
+      // "DIREITO PENAL:" ou "1 | DIREITO PENAL: resumo…" (o resumo se repete nos subitens).
+      const prefixo = b.split(":")[0] ?? "";
+      const soLetras = prefixo.replace(/[^\p{L}]/gu, "");
+      if (soLetras.length >= 4 && prefixo.length <= 70 && ehMaiuscula(soLetras) && (b.endsWith(":") || /^\d+$/.test(a))) {
+        nova(prefixo);
+        continue;
+      }
       if (!atual) nova(bloco);
       (atual as MateriaPlanilha | null)?.topicos.push(b);
     }
