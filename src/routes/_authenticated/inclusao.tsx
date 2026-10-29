@@ -46,6 +46,7 @@ import { extrairTextoPdf, LIMITE_TRECHO_IA } from "@/lib/pdf";
 import { renomearLei, salvarLeiNoAcervo } from "@/lib/leis-salvar";
 import { removerTextoAnexo, salvarTextoAnexo } from "@/lib/anexos-store";
 import { separarQuestaoColada } from "@/lib/questao-colada";
+import { CatalogoLeis } from "@/components/CatalogoLeis";
 
 import {
   aplicarGabaritoNaProva,
@@ -560,6 +561,7 @@ function InclusaoPage() {
     .filter(ehAnexoDeLei)
     .filter((a) => !restringeLeis || leiDoConcurso(edital, nomeLimpo(a)));
   const provas = provasAnteriores(acervo);
+  const todasLeisPdf = acervo.provas.filter(ehAnexoDeLei).map(nomeLimpo);
 
   /** Salva as questões no banco da conta (fica disponível em qualquer aparelho). */
   const salvarNoBanco = (questoes: Questao[]) => {
@@ -924,6 +926,8 @@ function InclusaoPage() {
           </p>
         )}
       </section>
+
+      <CatalogoLeis arquivos={todasLeisPdf} />
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Leis, gramática, provas e edital</h2>
