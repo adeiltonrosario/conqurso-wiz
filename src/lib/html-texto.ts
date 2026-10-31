@@ -153,9 +153,10 @@ export async function baixarPagina(url: string): Promise<{ html?: string; erro?:
   const meta = /charset=["']?([\w-]+)/i.exec(utf8.slice(0, 4000))?.[1]?.toLowerCase();
   const declarado = charset ?? meta ?? "";
   const antigo = /8859|1252|latin/i.test(declarado);
-  if (!antigo && declarado.includes("utf") && !utf8.includes("\uFFFD")) return { html: utf8 };
+  if (!utf8.includes("\uFFFD") && !antigo) return { html: utf8 };
   const latin = decodificarLatin1(bytes);
   const erros = (s: string) => (s.match(/\uFFFD/g) ?? []).length;
-  const html = antigo || erros(latin) < erros(utf8) ? latin : utf8;
+  // latin-1 nunca gera caractere de erro: se o UTF-8 falhou, a página é cp1252.
+  const html = antigo || erros(utf8) > 0 || erros(latin) < erros(utf8) ? latin : utf8;
   return { html };
 }
