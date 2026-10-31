@@ -708,7 +708,7 @@ function InclusaoPage() {
       toast.error("Cole o texto da lei (a partir de “LEI Nº …” ou “Art. 1º”) antes de extrair.");
       return;
     }
-    const { artigos, titulo } = salvarLeiNoAcervo(texto);
+    const { artigos, titulo, defeitos } = salvarLeiNoAcervo(texto);
     if (!artigos) {
       toast.warning(
         "Nenhum artigo reconhecido. Confira se o texto começa em “LEI Nº …”, “CÓDIGO …” ou “Art. 1º”.",
@@ -717,6 +717,8 @@ function InclusaoPage() {
     }
     atualizar({ leis: "" });
     toast.success(`${titulo} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    if (defeitos)
+      toast.warning(`${defeitos} letra(s) do texto colado vieram sem acento (◆). Copie de novo da página oficial da lei.`);
   };
 
   return (

@@ -11,7 +11,7 @@ import { renomearLeiNosFavoritos } from "./favoritos";
 import { renomearLeiNosOcultos } from "./ocultos";
 import { renomearAnexoNasLeis } from "./edital";
 
-export type ResultadoLeiSalva = { artigos: number; titulo: string; nome: string };
+export type ResultadoLeiSalva = { artigos: number; titulo: string; nome: string; defeitos?: number };
 
 /**
  * `nomePreferido` é o nome cadastrado no Detalhamento do edital: quando existe,
@@ -42,7 +42,9 @@ export function salvarLeiNoAcervo(bruto: string, nomePreferido?: string): Result
 
   void salvarTextoAnexo(nome, texto);
   salvarAcervo({ ...acervo, provas });
-  return { artigos, titulo: nome, nome };
+  // Letras que a fonte do arquivo não deixou ler (aparecem como ◆).
+  const defeitos = (texto.match(/\uFFFD/g) ?? []).length;
+  return { artigos, titulo: nome, nome, defeitos };
 }
 
 /**
