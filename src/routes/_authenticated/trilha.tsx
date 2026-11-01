@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 
-import { bancasDoEdital, cargosDoEdital, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+import { bancasComMaterias, cargosDaBanca, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
   DESTINOS,
   diasAte,
@@ -56,8 +56,14 @@ function Pagina() {
   const [selecionado, setSelecionado] = useState(hojeIso());
   const { edital, definirFiltro } = useEdital();
   const MATERIAS = todasAsMaterias(edital);
-  const CARGOS = cargosDoEdital(edital);
-  const BANCAS_EDITAL = bancasDoEdital(edital);
+  const BANCAS_EDITAL = bancasComMaterias(edital);
+  const bancaSel = edital.bancaAtiva ?? "";
+  const CARGOS = cargosDaBanca(edital, bancaSel);
+  useEffect(() => {
+    if (trilha.banca !== bancaSel || trilha.cargo !== (edital.cargoAtivo ?? ""))
+      aplicar({ banca: bancaSel, cargo: edital.cargoAtivo ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bancaSel, edital.cargoAtivo]);
 
   const [materiaSel, setMateriaSel] = useState("");
   const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
