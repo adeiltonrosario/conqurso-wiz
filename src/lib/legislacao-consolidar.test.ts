@@ -26,7 +26,7 @@ describe("importação de legislação consolidada", () => {
 
   it("exclui só o inciso revogado, sem renumerar", () => {
     const r = importar(`<p>Art. 2º Caput.</p><p>I - primeiro;</p><p>II - (Revogado pela Lei nº 1/2000)</p><p>III - terceiro.</p>`);
-    expect(r.texto).not.toContain("II -");
+    expect(r.texto).not.toMatch(/^II -/m);
     expect(r.texto).toContain("I - primeiro;");
     expect(r.texto).toContain("III - terceiro.");
     expect(r.relatorio.revogados).toBe(1);
