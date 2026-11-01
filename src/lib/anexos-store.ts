@@ -114,6 +114,11 @@ export async function removerTextoAnexo(nome: string) {
   }
 }
 
+/** Apaga todos os textos de leis/PDFs guardados neste aparelho. */
+export async function limparTextosLocais() {
+  await transacao("readwrite", (store) => store.clear());
+}
+
 /** Nomes com texto guardado neste aparelho. */
 export async function nomesLocais(): Promise<string[]> {
   const chaves = await transacao<IDBValidKey[]>("readonly", (store) => store.getAllKeys());
