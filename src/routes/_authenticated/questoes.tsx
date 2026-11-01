@@ -40,6 +40,7 @@ import { useBancaPrevista } from "@/lib/trilha";
 import { daCadastrada } from "@/lib/prova-local";
 import { BancaAtual } from "@/components/BancaAtual";
 import { QuestoesPorLink } from "@/components/QuestoesPorLink";
+import { QuestoesQuestApi } from "@/components/QuestoesQuestApi";
 
 
 export const Route = createFileRoute("/_authenticated/questoes")({
@@ -645,6 +646,16 @@ function QuestoesPage() {
       <QuestoesPorLink
         edital={edital}
         banca={banca}
+        materias={materias}
+        materiaAtiva={materiaAtiva}
+        existentes={extraidas}
+        onImportar={importarDoLink}
+      />
+
+      <QuestoesQuestApi
+        edital={edital}
+        banca={banca}
+        {...(edital.cargoAtivo ? { cargo: edital.cargoAtivo } : {})}
         materias={materias}
         materiaAtiva={materiaAtiva}
         existentes={extraidas}
