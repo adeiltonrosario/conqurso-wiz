@@ -35,6 +35,15 @@ import {
 } from "@/lib/edital";
 import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
 import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
+import type { RelatorioLei } from "@/lib/legislacao-consolidar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ehAnexoDeLei, nomeLimpo, useAcervo } from "@/lib/acervo";
 import { useRevisao, type HistoricoRevisao } from "@/lib/revisao";
 import { useTrilha } from "@/lib/trilha";
@@ -156,6 +165,15 @@ function LeisDaMateria({
     );
   };
 
+  const [previa, setPrevia] = useState<{
+    lei: LinkLei;
+    base: LinkLei[];
+    titulo: string;
+    texto: string;
+    consultadoEm: string;
+    relatorio: RelatorioLei;
+  } | null>(null);
+
   const adicionar = () => {
     const endereco = url.trim();
     if (!/^https?:\/\//i.test(endereco)) {
@@ -170,10 +188,11 @@ function LeisDaMateria({
     onLeis(proximas);
     setTitulo("");
     setUrl("");
-    toast.success("Link salvo nesta matéria.");
+    toast.success("Link salvo. Lendo a lei…");
+    void buscar(proximas[proximas.length - 1]!, proximas);
   };
 
-  const buscar = async (l: LinkLei) => {
+  const buscar = async (l: LinkLei, base: LinkLei[] = leis) => {
     setBuscando(l.id);
     try {
       const r = await buscarLeiPorUrl({ data: { url: l.url } });
@@ -181,22 +200,33 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
-      const {
-        artigos,
-        titulo: nome,
-        nome: anexo,
-      } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
-      if (!artigos) {
-        toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
-        return;
-      }
-      onLeis(comLeiAlterada(materia, l.id, { anexo }));
-      toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+      setPrevia({
+        lei: l,
+        base,
+        titulo: l.titulo || r.titulo,
+        texto: r.texto,
+        consultadoEm: r.consultadoEm,
+        relatorio: r.relatorio,
+      });
     } catch {
-      toast.error("Não foi possível acessar esse endereço agora.");
+      toast.error(
+        "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
+      );
     } finally {
       setBuscando(null);
     }
+  };
+
+  const confirmar = () => {
+    if (!previa) return;
+    const { artigos, titulo: nome, nome: anexo } = salvarLeiNoAcervo(previa.texto, previa.titulo);
+    if (!artigos) {
+      toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
+      return;
+    }
+    onLeis(previa.base.map((x) => (x.id === previa.lei.id ? { ...x, anexo } : x)));
+    toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    setPrevia(null);
   };
 
   return (
@@ -338,6 +368,65 @@ function LeisDaMateria({
           <Plus className="mr-1 size-3.5" /> Salvar link
         </Button>
       </form>
+
+      <Dialog open={!!previa} onOpenChange={(v) => !v && setPrevia(null)}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
+          {previa && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Conferir antes de importar</DialogTitle>
+                <DialogDescription>
+                  {previa.titulo} · consultado em{" "}
+                  {new Date(previa.consultadoEm).toLocaleString("pt-BR")}
+                </DialogDescription>
+              </DialogHeader>
+              <p className="truncate text-[11px] text-muted-foreground">Fonte: {previa.lei.url}</p>
+              <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                {[
+                  ["Artigos identificados", previa.relatorio.artigosIdentificados],
+                  ["Artigos importados", previa.relatorio.artigosImportados],
+                  ["Revogados excluídos", previa.relatorio.revogados],
+                  ["Tachados excluídos", previa.relatorio.tachados],
+                  ["Duplicações eliminadas", previa.relatorio.duplicacoes],
+                ].map(([r, v]) => (
+                  <div key={r} className="rounded-md border border-border p-2">
+                    <dt className="text-muted-foreground">{r}</dt>
+                    <dd className="text-base font-semibold">{v}</dd>
+                  </div>
+                ))}
+                <div className="rounded-md border border-border p-2">
+                  <dt className="text-muted-foreground">Situação</dt>
+                  <dd className="font-semibold">
+                    {previa.relatorio.duvidas.length ? "Revisar" : "Pronto para importar"}
+                  </dd>
+                </div>
+              </dl>
+              {previa.relatorio.duvidas.length > 0 && (
+                <p className="text-xs text-destructive">
+                  Existem dispositivos cuja situação jurídica não pôde ser identificada com segurança.
+                  Revise o conteúdo antes de confirmar a importação.
+                </p>
+              )}
+              <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 font-sans text-xs leading-relaxed">
+                {previa.texto.slice(0, 20000)}
+              </pre>
+              <DialogFooter className="gap-2">
+                <Button variant="ghost" onClick={() => setPrevia(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={buscando === previa.lei.id}
+                  onClick={() => void buscar(previa.lei, previa.base)}
+                >
+                  Tentar novamente
+                </Button>
+                <Button onClick={confirmar}>Confirmar importação</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
