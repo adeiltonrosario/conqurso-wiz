@@ -273,11 +273,11 @@ export function bancaDoCargo(edital: EditalEstado, cargo: string) {
 export function cargosDaBanca(edital: EditalEstado, banca: string) {
   const f = banca.trim().toLowerCase();
   if (!f) return [];
-  return unicos(
-    (edital.materias ?? [])
-      .filter((m) => (m.banca ?? "").trim().toLowerCase() === f)
-      .map((m) => (m.cargo ?? "").trim()),
-  );
+  const daBanca = (edital.materias ?? []).filter((m) => (m.banca ?? "").trim().toLowerCase() === f);
+  const vinculados = Object.entries(edital.bancaDoCargo ?? {})
+    .filter(([, b]) => b.trim().toLowerCase() === f)
+    .map(([c]) => c.trim());
+  return unicos([...daBanca.map((m) => (m.cargo ?? "").trim()), ...(daBanca.length ? vinculados : [])]);
 }
 
 function unicos(nomes: string[]) {
