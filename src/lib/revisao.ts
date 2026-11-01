@@ -103,6 +103,34 @@ export function registrarResposta(questao: Questao, acertou: boolean, qualidade 
   });
 }
 
+/**
+ * Coloca questões na fila de revisão sem tocar no histórico das que já estão
+ * lá (acertos, erros e datas ficam intactos). Retorna quantas entraram.
+ */
+export function adicionarNaRevisao(questoes: Questao[]) {
+  const historico = lerHistorico();
+  const cards = { ...historico.cards };
+  let novas = 0;
+  for (const questao of questoes) {
+    const id = chave(questao);
+    if (cards[id]) continue;
+    cards[id] = {
+      questao,
+      materia: questao.materia || "Geral",
+      acertos: 0,
+      erros: 0,
+      facilidade: 2.5,
+      intervalo: 0,
+      sequencia: 0,
+      ultimaRevisao: 0,
+      proximaRevisao: Date.now(),
+    };
+    novas++;
+  }
+  if (novas) salvar({ ...historico, cards });
+  return novas;
+}
+
 export function removerCard(id: string) {
   const historico = lerHistorico();
   const cards = { ...historico.cards };
