@@ -71,10 +71,29 @@ export function lerEdital(): EditalEstado {
   if (typeof window === "undefined") return VAZIO;
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? { ...VAZIO, ...(JSON.parse(raw) as EditalEstado) } : VAZIO;
+    return raw ? validarFiltro({ ...VAZIO, ...(JSON.parse(raw) as EditalEstado) }) : VAZIO;
   } catch {
     return VAZIO;
   }
+}
+
+/**
+ * Banca/cargo ativos só valem se existirem matérias incluídas para eles;
+ * senão o seletor volta a ficar limpo.
+ */
+export function validarFiltro(e: EditalEstado): EditalEstado {
+  const banca = (e.bancaAtiva ?? "").trim();
+  const cargo = (e.cargoAtivo ?? "").trim();
+  const bancaOk = !banca || bancasComMaterias(e).some((b) => b.toLowerCase() === banca.toLowerCase());
+  const bancaFinal = bancaOk ? banca : "";
+  const cargoOk =
+    !cargo || (!!bancaFinal && cargosDaBanca(e, bancaFinal).some((c) => c.toLowerCase() === cargo.toLowerCase()));
+  return { ...e, bancaAtiva: bancaFinal, cargoAtivo: cargoOk ? cargo : "" };
+}
+
+/** Bancas que têm matérias incluídas no edital. */
+export function bancasComMaterias(e: EditalEstado) {
+  return unicos((e.materias ?? []).map((m) => (m.banca ?? "").trim()));
 }
 
 function salvar(estado: EditalEstado) {
