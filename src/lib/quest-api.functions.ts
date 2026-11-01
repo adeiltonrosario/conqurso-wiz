@@ -68,7 +68,7 @@ export const buscarQuestoesQuestApi = createServerFn({ method: "POST" })
     if (!chave) return { ok: false as const, erro: "A chave da Quest API não está configurada." };
     const headers = { "X-API-Key": chave, Accept: "application/json" };
 
-    const qs = new URLSearchParams({ page: String(data.pagina), per_page: "10", tipo: "multipla escolha" });
+    const qs = new URLSearchParams({ page: String(data.pagina), per_page: "10" });
     for (const k of ["banca", "materia", "cargo", "orgao", "ano"] as const) {
       const v = data[k];
       if (v) qs.set(k, v);
