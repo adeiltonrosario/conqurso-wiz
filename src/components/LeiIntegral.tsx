@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ArtigoIntegral, type LeiIntegral as LeiIntegralTipo } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
+import { SeloIncidencia, useIncidenciaDaNorma } from "@/components/SeloIncidencia";
 import {
   artigosDoCapitulo,
   artigosDosAssuntos,
@@ -480,6 +481,7 @@ export function LeiIntegralPainel({
 
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
+  const incidencia = useIncidenciaDaNorma(baseLegal);
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =
@@ -946,6 +948,10 @@ export function LeiIntegralPainel({
                                       {a.referencia}
                                     </span>
                                   </label>
+                                  <SeloIncidencia
+                                    item={incidencia.mapa.get(numeroArtigo(a))}
+                                    questoes={incidencia.questoes}
+                                  />
                                   <span className="flex items-center gap-2">
                                     <button
                                       type="button"

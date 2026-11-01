@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { ehDoEdital, todasAsMaterias, useEdital } from "@/lib/edital";
 import { analisarPadroes, conversarPadroes, type PadraoAnalise } from "@/lib/ai.functions";
 import { analisarPadroesLocal } from "@/lib/padroes-local";
+import { PainelIncidencia } from "@/components/PainelIncidencia";
 import {
   consolidarConteudo,
   imagensDe,
@@ -271,6 +272,13 @@ function AnalisePage() {
         )}
         <LegendaCores />
       </section>
+
+      <PainelIncidencia
+        analise={analise}
+        materia={materia}
+        prova={arquivos.map((a) => a.nome).join(", ") || "Texto colado"}
+        textoProva={textoTotal}
+      />
 
       {analise && (
         <>
