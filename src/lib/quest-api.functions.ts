@@ -49,6 +49,30 @@ function textoAssociado(t: unknown): string {
   return typeof v === "string" ? texto(v) : "";
 }
 
+const MINUSCULAS = new Set(["de", "da", "do", "das", "dos", "e", "em", "a", "o", "à", "ao", "na", "no", "para", "com"]);
+
+/** "DIREITO CONSTITUCIONAL" -> "Direito Constitucional" (formato do catálogo da Quest API). */
+export function tituloQuest(s: string) {
+  return s
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((p, i) => (i > 0 && MINUSCULAS.has(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)))
+    .join(" ");
+}
+
+/** Converte o nome da banca do edital para o nome usado na Quest API. */
+export function bancaQuest(b: string) {
+  const n = b.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/CEBRASPE|CESPE/.test(n)) return "CESPE CEBRASPE";
+  if (/AOCP/.test(n)) return "Instituto AOCP";
+  if (/VUNESP/.test(n)) return "VUNESP";
+  if (/^FCC|CARLOS CHAGAS/.test(n)) return "FCC";
+  if (/^FGV|GETULIO VARGAS/.test(n)) return "FGV";
+  if (n.length <= 6) return n;
+  return tituloQuest(b);
+}
+
 export const buscarQuestoesQuestApi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -69,10 +93,14 @@ export const buscarQuestoesQuestApi = createServerFn({ method: "POST" })
     const headers = { "X-API-Key": chave, Accept: "application/json" };
 
     const qs = new URLSearchParams({ page: String(data.pagina), per_page: "10" });
-    for (const k of ["banca", "materia", "cargo", "orgao", "ano"] as const) {
-      const v = data[k];
-      if (v) qs.set(k, v);
-    }
+    const valores = {
+      banca: data.banca ? bancaQuest(data.banca) : "",
+      materia: data.materia ? tituloQuest(data.materia) : "",
+      cargo: data.cargo ? tituloQuest(data.cargo) : "",
+      orgao: data.orgao ?? "",
+      ano: data.ano ?? "",
+    };
+    for (const [k, v] of Object.entries(valores)) if (v) qs.set(k, v);
 
     let lista: { total: number; items: ItemQuest[] };
     try {
