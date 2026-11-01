@@ -271,13 +271,13 @@ export function bancaDoCargo(edital: EditalEstado, cargo: string) {
  * escolhida, mostra todos.
  */
 export function cargosDaBanca(edital: EditalEstado, banca: string) {
-  const cargos = cargosDoEdital(edital);
   const f = banca.trim().toLowerCase();
-  if (!f) return cargos;
-  const comVinculo = cargos.filter((c) => (bancaDoCargo(edital, c) ?? "").trim());
-  if (!comVinculo.length) return cargos;
-  const ligados = comVinculo.filter((c) => bancaDoCargo(edital, c).trim().toLowerCase() === f);
-  return ligados;
+  if (!f) return [];
+  return unicos(
+    (edital.materias ?? [])
+      .filter((m) => (m.banca ?? "").trim().toLowerCase() === f)
+      .map((m) => (m.cargo ?? "").trim()),
+  );
 }
 
 function unicos(nomes: string[]) {
