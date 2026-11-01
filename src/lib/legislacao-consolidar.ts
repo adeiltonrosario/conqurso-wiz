@@ -52,7 +52,7 @@ export function removerTachados(html: string): { html: string; tachados: number 
 
 type Tipo = "estrutura" | "artigo" | "paragrafo" | "inciso" | "alinea" | "item" | "texto";
 
-const RE_ARTIGO = /^Art\.?\s*(\d+[\d.]*)\s*[º°o]?\s*(-\s*[A-Z]+)?\b/i;
+const RE_ARTIGO = /^Art\.?\s*(\d+(?:\.\d+)*)\s*[º°o]?\s*(-\s*[A-Z]+)?(?![A-Za-z0-9])/i;
 const RE_PARAGRAFO = /^(§\s*(\d+)\s*[º°o]?(-\s*[A-Z]+)?|Par[áa]grafo\s+[úu]nico)/i;
 const RE_INCISO = /^([IVXLC]+)(-[A-Z])?\s*[-–—]\s*/;
 const RE_ALINEA = /^([a-z])(-[A-Z])?\s*\)\s*/;
@@ -80,7 +80,7 @@ export function ehRevogado(linha: string, rotulo: string) {
   const corpo = linha
     .slice(rotulo.length)
     .replace(/\([^)]*\)/g, "")
-    .replace(/[\s.;:–—-]/g, "");
+    .replace(/[\s.;:–—ºª°-]/g, "");
   return corpo === "" || /^revogad[oa]s?$/i.test(corpo);
 }
 
