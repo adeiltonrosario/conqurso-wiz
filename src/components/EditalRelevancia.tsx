@@ -156,6 +156,15 @@ function LeisDaMateria({
     );
   };
 
+  const [previa, setPrevia] = useState<{
+    lei: LinkLei;
+    base: LinkLei[];
+    titulo: string;
+    texto: string;
+    consultadoEm: string;
+    relatorio: RelatorioLei;
+  } | null>(null);
+
   const adicionar = () => {
     const endereco = url.trim();
     if (!/^https?:\/\//i.test(endereco)) {
@@ -170,10 +179,11 @@ function LeisDaMateria({
     onLeis(proximas);
     setTitulo("");
     setUrl("");
-    toast.success("Link salvo nesta matéria.");
+    toast.success("Link salvo. Lendo a lei…");
+    void buscar(proximas[proximas.length - 1]!, proximas);
   };
 
-  const buscar = async (l: LinkLei) => {
+  const buscar = async (l: LinkLei, base: LinkLei[] = leis) => {
     setBuscando(l.id);
     try {
       const r = await buscarLeiPorUrl({ data: { url: l.url } });
@@ -181,22 +191,33 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
-      const {
-        artigos,
-        titulo: nome,
-        nome: anexo,
-      } = salvarLeiNoAcervo(r.texto, l.titulo || r.titulo);
-      if (!artigos) {
-        toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
-        return;
-      }
-      onLeis(comLeiAlterada(materia, l.id, { anexo }));
-      toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+      setPrevia({
+        lei: l,
+        base,
+        titulo: l.titulo || r.titulo,
+        texto: r.texto,
+        consultadoEm: r.consultadoEm,
+        relatorio: r.relatorio,
+      });
     } catch {
-      toast.error("Não foi possível acessar esse endereço agora.");
+      toast.error(
+        "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
+      );
     } finally {
       setBuscando(null);
     }
+  };
+
+  const confirmar = () => {
+    if (!previa) return;
+    const { artigos, titulo: nome, nome: anexo } = salvarLeiNoAcervo(previa.texto, previa.titulo);
+    if (!artigos) {
+      toast.warning("Nenhum artigo reconhecido nessa página — confira o endereço da lei.");
+      return;
+    }
+    onLeis(previa.base.map((x) => (x.id === previa.lei.id ? { ...x, anexo } : x)));
+    toast.success(`${nome} — ${artigos} artigo(s) salvos para leitura em Leis.`);
+    setPrevia(null);
   };
 
   return (
