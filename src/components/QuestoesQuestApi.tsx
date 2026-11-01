@@ -39,7 +39,8 @@ export function QuestoesQuestApi({
   const [topico, setTopico] = useState("");
   const [termo, setTermo] = useState("");
   const [bancaBusca, setBancaBusca] = useState(banca);
-  const [cargoBusca, setCargoBusca] = useState(cargo ?? "");
+  const [cargoBusca, setCargoBusca] = useState("");
+  void cargo;
   const [ano, setAno] = useState("");
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState<number | null>(null);
@@ -57,7 +58,7 @@ export function QuestoesQuestApi({
           pagina: p,
           ...(bancaBusca.trim() ? { banca: bancaBusca.trim() } : {}),
           ...(cargoBusca.trim() ? { cargo: cargoBusca.trim() } : {}),
-          ...(termo.trim() ? { materia: termo.trim() } : {}),
+          ...((termo.trim() || materiaSel) ? { materia: termo.trim() || materiaSel } : {}),
           ...(ano.trim() ? { ano: ano.trim() } : {}),
         },
       }),
