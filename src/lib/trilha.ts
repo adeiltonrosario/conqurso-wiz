@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as edital from "./edital";
 
 /**
  * Trilha de estudo: calendário montado manualmente pelo candidato, com cargo,
@@ -194,10 +195,19 @@ export function useBancaPrevista() {
   const [banca, setBanca] = useState<string>("");
 
   useEffect(() => {
-    const sync = () => setBanca(lerTrilha().banca);
+    // A banca escolhida no seletor do concurso (topo) manda em todo o app.
+    const sync = () => {
+      const { lerEdital } = edital;
+      const ativa = (lerEdital().bancaAtiva ?? "").trim();
+      setBanca(ativa || lerTrilha().banca);
+    };
     sync();
     window.addEventListener("trilha:mudou", sync);
-    return () => window.removeEventListener("trilha:mudou", sync);
+    window.addEventListener("edital:mudou", sync);
+    return () => {
+      window.removeEventListener("trilha:mudou", sync);
+      window.removeEventListener("edital:mudou", sync);
+    };
   }, []);
 
   return { banca: banca || BANCA_PADRAO, definida: Boolean(banca) };

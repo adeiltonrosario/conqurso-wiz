@@ -2,7 +2,7 @@
  * Painel "Buscar na Quest API": filtra por banca/cargo/matéria, mostra a prévia
  * e salva no acervo vinculado à matéria escolhida do edital.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -38,9 +38,15 @@ export function QuestoesQuestApi({
   const [materia, setMateria] = useState(materiaAtiva);
   const [topico, setTopico] = useState("");
   const [termo, setTermo] = useState("");
-  const [bancaBusca, setBancaBusca] = useState(banca);
-  const [cargoBusca, setCargoBusca] = useState("");
-  void cargo;
+  const [bancaBusca, setBancaBusca] = useState(edital.bancaAtiva || banca);
+  const [cargoBusca, setCargoBusca] = useState(cargo ?? "");
+  // Acompanha o seletor do concurso (topo) em tempo real.
+  useEffect(() => {
+    setBancaBusca(edital.bancaAtiva || banca);
+  }, [edital.bancaAtiva, banca]);
+  useEffect(() => {
+    setCargoBusca(cargo ?? "");
+  }, [cargo]);
   const [ano, setAno] = useState("");
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState<number | null>(null);
