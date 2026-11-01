@@ -24,6 +24,8 @@ import {
   type LeiCatalogo,
   type MateriaEdital,
 } from "@/lib/edital";
+import { ehAnexoDeLei, lerAcervo, nomeLimpo, salvarAcervo } from "@/lib/acervo";
+import { removerTextoAnexo } from "@/lib/anexos-store";
 
 const concursoDe = (m: MateriaEdital) =>
   `${(m.banca ?? "").trim() || "Todas as bancas"} · ${(m.cargo ?? "").trim() || "Todos os cargos"}`;
@@ -79,13 +81,26 @@ export function CatalogoLeis({ arquivos }: { arquivos: string[] }) {
   };
 
   const excluir = (lei: LeiCatalogo) => {
+    if (!window.confirm(`Excluir "${lei.titulo}" do catálogo, das matérias e do acervo?`)) return;
     const k = chaveLei(lei);
     const atual = lerEdital();
     aplicar({
       catalogoLeis: (atual.catalogoLeis ?? []).filter((l) => chaveLei(l) !== k),
       materias: atual.materias.map((m) => ({ ...m, leis: leisDaMateria(m).filter((l) => chaveLei(l) !== k) })),
     });
-    toast.success("Lei removida do catálogo e das matérias. O arquivo continua no acervo.");
+    // Remove também o arquivo do acervo, senão ele volta a aparecer na lista.
+    const arquivo = (lei.anexo ?? "").trim();
+    if (arquivo) {
+      const acervo = lerAcervo();
+      salvarAcervo({
+        ...acervo,
+        provas: acervo.provas.filter(
+          (a) => !(ehAnexoDeLei(a) && nomeLimpo(a).toLowerCase() === arquivo.toLowerCase()),
+        ),
+      });
+      void removerTextoAnexo(arquivo);
+    }
+    toast.success("Lei excluída.");
   };
 
   const abrirVinculos = (lei: LeiCatalogo) => {
