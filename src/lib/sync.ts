@@ -80,6 +80,7 @@ export function SincronizaEstado() {
           await limparAcervoLocal();
           if (await limparAcervoNaNuvem()) {
             for (const c of ["acervo", "revisao", "leituras"]) nuvem.delete(c);
+            await limparAcervoLocal(true);
           }
         } catch (erro) {
           console.error("Falha ao limpar o acervo", erro);

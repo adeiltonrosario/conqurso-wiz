@@ -69,8 +69,8 @@ export async function limparAcervoNaNuvem(): Promise<boolean> {
 }
 
 /** Apaga o cache local de questões e leis uma única vez neste aparelho. */
-export async function limparAcervoLocal() {
-  if (window.localStorage.getItem(FLAG_LOCAL) === LIMPEZA_ACERVO) return;
+export async function limparAcervoLocal(forcar = false) {
+  if (!forcar && window.localStorage.getItem(FLAG_LOCAL) === LIMPEZA_ACERVO) return;
   for (const [chave, valor] of Object.entries(LOCAIS)) {
     window.localStorage.setItem(chave, JSON.stringify(valor));
   }
