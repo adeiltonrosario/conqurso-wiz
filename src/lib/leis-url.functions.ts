@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { baixarPagina, htmlParaTexto, urlSchema } from "./html-texto";
+import { consolidarTexto, removerTachados } from "./legislacao-consolidar";
 
 export { htmlParaTexto };
 
@@ -28,13 +29,32 @@ export const buscarLeiPorUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ url: urlSchema }).parse(d))
   .handler(async ({ data }) => {
-    const r = await baixar(data.url);
-    if ("erro" in r) return { ok: false as const, erro: r.erro };
-    const texto = htmlParaTexto(r.html!);
-    if (texto.length < 200) {
+    let r: Awaited<ReturnType<typeof baixar>>;
+    try {
+      r = await baixar(data.url);
+    } catch {
+      r = { erro: "" };
+    }
+    if ("erro" in r)
       return {
         ok: false as const,
-        erro: "Não foi possível ler texto nessa página (pode exigir login ou ser só imagem).",
+        erro:
+          r.erro ||
+          "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
+      };
+    const { html, tachados } = removerTachados(r.html!);
+    const bruto = htmlParaTexto(html);
+    if (bruto.length < 200) {
+      return {
+        ok: false as const,
+        erro: "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
+      };
+    }
+    const { texto, relatorio } = consolidarTexto(bruto, tachados);
+    if (!relatorio.artigosImportados) {
+      return {
+        ok: false as const,
+        erro: "Não foi possível identificar com segurança a estrutura dos artigos. A importação automática foi interrompida para evitar erros no texto legal.",
       };
     }
     return {
@@ -43,6 +63,8 @@ export const buscarLeiPorUrl = createServerFn({ method: "POST" })
       texto,
       chars: texto.length,
       url: data.url,
+      relatorio,
+      consultadoEm: new Date().toISOString(),
     };
   });
 
