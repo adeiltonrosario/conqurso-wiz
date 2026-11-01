@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { CHAVES, carregarEstado, salvarEstado, type ChaveEstado } from "./sync.functions";
 import { migrarAnexosParaNuvem } from "./anexos-store";
+import { limparAcervoLocal, limparAcervoNaNuvem } from "./limpeza-acervo";
 
 /**
  * Sincroniza o estado de estudo (acervo, revisão, leituras e trilha) entre o
@@ -74,6 +75,16 @@ export function SincronizaEstado() {
         const nuvem = new Map(linhas.map((l) => [l.chave, l.json]));
 
         aplicando.current = true;
+        // Limpeza total do acervo (questões + leis), uma vez por conta e por aparelho.
+        try {
+          await limparAcervoLocal();
+          if (await limparAcervoNaNuvem()) {
+            for (const c of ["acervo", "revisao", "leituras"]) nuvem.delete(c);
+            await limparAcervoLocal(true);
+          }
+        } catch (erro) {
+          console.error("Falha ao limpar o acervo", erro);
+        }
         for (const chave of CHAVES) {
           const remoto = nuvem.get(chave) ?? null;
           const local = window.localStorage.getItem(MAPA[chave].storage);
