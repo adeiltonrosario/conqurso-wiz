@@ -107,7 +107,7 @@ function Pagina() {
                   disabled
                   className="mt-1 w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
                 >
-                  <option>Nenhum cargo no edital</option>
+                  <option>{bancaSel ? "Nenhum cargo nesta banca" : "Escolha a banca primeiro"}</option>
                 </select>
                 <Link to="/inclusao" className="mt-1 block text-xs font-semibold text-primary">
                   Cadastrar cargos do edital
@@ -115,11 +115,8 @@ function Pagina() {
               </>
             ) : (
               <select
-                value={CARGOS.includes(trilha.cargo) ? trilha.cargo : ""}
-                onChange={(e) => {
-                  aplicar({ cargo: e.target.value });
-                  definirFiltro({ cargo: e.target.value });
-                }}
+                value={CARGOS.includes(edital.cargoAtivo ?? "") ? edital.cargoAtivo : ""}
+                onChange={(e) => definirFiltro({ cargo: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Selecione o cargo</option>
@@ -147,11 +144,8 @@ function Pagina() {
               </>
             ) : (
               <select
-                value={BANCAS_EDITAL.includes(trilha.banca) ? trilha.banca : ""}
-                onChange={(e) => {
-                  aplicar({ banca: e.target.value });
-                  definirFiltro({ banca: e.target.value });
-                }}
+                value={BANCAS_EDITAL.includes(bancaSel) ? bancaSel : ""}
+                onChange={(e) => definirFiltro({ banca: e.target.value, cargo: "" })}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Selecione a banca</option>
