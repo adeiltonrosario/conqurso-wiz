@@ -356,16 +356,24 @@ export function EditalMaterias() {
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!bancaDoNovoCargo) {
-              toast.error("Escolha a banca deste cargo — o cargo fica vinculado a ela.");
+            const banca = bancaDoNovoCargo.trim();
+            if (!novoCargo.trim()) {
+              toast.error("Digite o nome do cargo.");
+              return;
+            }
+            if (!banca) {
+              toast.error("Digite ou escolha a banca deste cargo — o cargo fica vinculado a ela.");
               return;
             }
             if (cargos.some((c) => c.trim().toLowerCase() === novoCargo.trim().toLowerCase())) {
               toast.error("Esse cargo já está cadastrado.");
               return;
             }
-            if (!novoCargo.trim()) return;
-            adicionarCargo(novoCargo, bancaDoNovoCargo);
+            const bancaFinal =
+              bancas.find((b) => b.trim().toLowerCase() === banca.toLowerCase()) ?? banca;
+            adicionarBanca(bancaFinal);
+            adicionarCargo(novoCargo, bancaFinal);
+            toast.success(`Cargo “${novoCargo.trim()}” salvo na banca ${bancaFinal}.`);
             setNovoCargo("");
           }}
         >
@@ -376,19 +384,19 @@ export function EditalMaterias() {
             placeholder="Ex.: Escrivão de Polícia Civil"
             className="h-9"
           />
-          <select
+          <Input
             value={bancaDoNovoCargo}
-            onChange={(e) => setBancaDoNovoCargo(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+            onChange={(e) => setBancaDoNovoCargo(e.target.value.slice(0, 60))}
+            list="bancas-do-edital"
+            placeholder="Banca (ex.: VUNESP)"
+            className="h-9 w-40"
             aria-label="Banca deste cargo"
-          >
-            <option value="">Banca do cargo…</option>
+          />
+          <datalist id="bancas-do-edital">
             {bancasDisponiveis.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
+              <option key={b} value={b} />
             ))}
-          </select>
+          </datalist>
           <Button type="submit" variant="outline" aria-label="Adicionar cargo">
             <Plus className="size-4" />
           </Button>
