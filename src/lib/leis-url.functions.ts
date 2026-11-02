@@ -100,7 +100,8 @@ export const buscarLeiPorUrl = createServerFn({ method: "POST" })
         erro: "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
       };
     }
-    const { texto, relatorio } = consolidarTexto(bruto, tachados);
+    const inicio = bruto.search(/^(LEI|DECRETO|C[ÓO]DIGO|CONSTITUI)/m);
+    const { texto, relatorio } = consolidarTexto(inicio > 0 ? bruto.slice(inicio) : bruto, tachados);
     if (!relatorio.artigosImportados) {
       return {
         ok: false as const,

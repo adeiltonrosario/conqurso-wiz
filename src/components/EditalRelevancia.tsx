@@ -200,10 +200,19 @@ function LeisDaMateria({
         toast.error(r.erro);
         return;
       }
+      const titulo = l.titulo || r.titulo;
+      if (!r.relatorio.duvidas.length) {
+        const { artigos, titulo: nome, nome: anexo } = salvarLeiNoAcervo(r.texto, titulo);
+        if (artigos) {
+          onLeis(base.map((x) => (x.id === l.id ? { ...x, anexo } : x)));
+          toast.success(`${nome} — ${artigos} artigo(s) salvos automaticamente no acervo.`);
+          return;
+        }
+      }
       setPrevia({
         lei: l,
         base,
-        titulo: l.titulo || r.titulo,
+        titulo,
         texto: r.texto,
         consultadoEm: r.consultadoEm,
         relatorio: r.relatorio,
