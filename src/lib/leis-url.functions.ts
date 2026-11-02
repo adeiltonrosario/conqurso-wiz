@@ -18,10 +18,60 @@ function tituloDaLei(texto: string) {
   return (m?.[0] ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Ano das leis clássicas que ficam em /ccivil_03/leis/ (sem ano no endereço). */
+const ANOS: Record<string, number> = {
+  "9099": 1995, "10826": 2003, "8112": 1990, "8666": 1993, "8069": 1990, "8078": 1990,
+  "8429": 1992, "9455": 1997, "9605": 1998, "9784": 1999, "10406": 2002, "10741": 2003,
+  "2848": 1940, "3689": 1941, "7210": 1984, "8072": 1990, "11343": 2006, "11340": 2006,
+  "12850": 2013, "13869": 2019, "9503": 1997, "4898": 1965, "7716": 1989, "9613": 1998,
+  "12846": 2013, "12527": 2011, "13105": 2015, "5869": 1973, "8137": 1990, "9296": 1996,
+  "10257": 2001, "13146": 2015, "8935": 1994, "6015": 1973, "5172": 1966, "3365": 1941,
+  "13964": 2019, "14133": 2021, "13709": 2018, "10520": 2002, "7347": 1985, "4657": 1942,
+};
+
+/** Endereço do Planalto → URN oficial do LexML. */
+export function urnDoPlanalto(url: string): string | null {
+  if (!/planalto\.gov\.br/i.test(url)) return null;
+  const arq = /\/([a-z-]+?)(\d+)[^/]*\.htm/i.exec(url);
+  if (!arq) return null;
+  const pref = arq[1]!.toLowerCase();
+  const num = String(Number(arq[2]));
+  let tipo = "lei";
+  if (pref.startsWith("lcp")) tipo = "lei.complementar";
+  else if (pref.startsWith("del")) tipo = "decreto.lei";
+  else if (pref.startsWith("d")) tipo = "decreto";
+  else if (pref !== "l") return null;
+  const ano = Number(/\/(\d{4})\//.exec(url)?.[1]) || ANOS[num];
+  if (!ano) return null;
+  return `urn:lex:br:federal:${tipo}:${ano};${num}`;
+}
+
+/** Busca o mesmo texto no espelho oficial do Senado (via LexML). */
+async function baixarPeloSenado(url: string) {
+  const urn = urnDoPlanalto(url);
+  if (!urn) return null;
+  const lex = await baixarPagina(`https://www.lexml.gov.br/urn/${urn}`);
+  if (!lex.html) return null;
+  const pub = /https?:\/\/legis\.senado\.leg\.br\/norma\/\d+\/publicacao\/\d+/i.exec(lex.html)?.[0];
+  if (!pub) return null;
+  const r = await baixarPagina(pub.replace(/^http:/, "https:"));
+  return r.html ?? null;
+}
+
+const bloqueado = (html: string) => /Acesso Negado|requisi[çc][ãa]o foi bloqueada/i.test(html.slice(0, 3000));
+
 async function baixar(url: string) {
-  const r = await baixarPagina(url);
-  if (r.erro) return { erro: r.erro };
-  return { html: r.html };
+  let r: { html?: string; erro?: string };
+  try {
+    r = await baixarPagina(url);
+  } catch {
+    r = { erro: "" };
+  }
+  if (r.html && !bloqueado(r.html)) return { html: r.html };
+  const espelho = await baixarPeloSenado(url).catch(() => null);
+  if (espelho) return { html: espelho };
+  if (r.html) return { erro: "O site do Planalto bloqueou a leitura automática e não achei a lei no espelho oficial do Senado." };
+  return { erro: r.erro ?? "" };
 }
 
 /** Baixa uma URL informada pelo candidato e devolve o texto da lei. */
@@ -50,7 +100,8 @@ export const buscarLeiPorUrl = createServerFn({ method: "POST" })
         erro: "Não foi possível acessar o conteúdo da legislação. Verifique o endereço eletrônico ou tente novamente.",
       };
     }
-    const { texto, relatorio } = consolidarTexto(bruto, tachados);
+    const inicio = bruto.search(/^(LEI|DECRETO|C[ÓO]DIGO|CONSTITUI)/m);
+    const { texto, relatorio } = consolidarTexto(inicio > 0 ? bruto.slice(inicio) : bruto, tachados);
     if (!relatorio.artigosImportados) {
       return {
         ok: false as const,
