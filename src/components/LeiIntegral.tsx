@@ -30,7 +30,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ArtigoIntegral, type LeiIntegral as LeiIntegralTipo } from "@/lib/ai.functions";
 import { lerTextoAnexo } from "@/lib/anexos-store";
-import { SeloIncidencia, useIncidenciaDaNorma } from "@/components/SeloIncidencia";
+import { OrigemCobranca, SeloIncidencia, useIncidenciaDaNorma } from "@/components/SeloIncidencia";
+import { AnotacaoArtigo } from "@/components/AnotacaoArtigo";
+import { useAnotacoes } from "@/lib/anotacoes-lei";
 import {
   artigosDoCapitulo,
   artigosDosAssuntos,
@@ -355,6 +357,8 @@ export function LeiIntegralPainel({
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
   const [soAssuntos, setSoAssuntos] = useState(false);
+  const [modoLeitura, setModoLeitura] = useState<"todos" | "alta" | "incidencia" | "anotados">("todos");
+  const anotacoes = useAnotacoes();
   const [emFoco, setEmFoco] = useState<string | null>(null);
   const { favoritos } = useFavoritos();
   const [arquivo, setArquivo] = useState("");
@@ -548,6 +552,12 @@ export function LeiIntegralPainel({
           return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
         if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
+        if (modoLeitura !== "todos") {
+          const inc = incidencia.mapa.get(numeroArtigo(artigo));
+          if (modoLeitura === "alta" && inc?.estrelas !== 3) return false;
+          if (modoLeitura === "incidencia" && !inc) return false;
+          if (modoLeitura === "anotados" && !anotacoes[chaveFavorito(baseLegal, artigo)]) return false;
+        }
         if (limites) {
           const n = numeroArtigo(artigo);
           if (Number.isNaN(n) || n < limites[0] || n > limites[1]) return false;
@@ -564,6 +574,9 @@ export function LeiIntegralPainel({
     chavesFavoritas,
     soAssuntos,
     chavesAssuntos,
+    modoLeitura,
+    incidencia,
+    anotacoes,
     baseLegal,
     mostrarOcultos,
     artigosOcultos,
@@ -915,7 +928,11 @@ export function LeiIntegralPainel({
                                         alternarArtigoOculto(chave);
                                       }}
                                     >
-                                      {oculto ? (
+                                      <OrigemCobranca
+                                  item={incidencia.mapa.get(numeroArtigo(a))}
+                                  questoes={incidencia.questoes}
+                                />
+                                {oculto ? (
                                         <EyeOff className="size-4 text-muted-foreground" />
                                       ) : (
                                         <Eye className="size-4 text-muted-foreground" />
@@ -1015,6 +1032,12 @@ export function LeiIntegralPainel({
                                         })}
                                       </ul>
                                     )}
+                                    <AnotacaoArtigo
+                                      chave={chaveFavorito(baseLegal, a)}
+                                      lei={baseLegal}
+                                      referencia={a.referencia}
+                                      anotacao={anotacoes[chaveFavorito(baseLegal, a)]}
+                                    />
                                   </>
                                 )}
                               </li>
