@@ -19,6 +19,34 @@ export function useIncidenciaDaNorma(baseLegal: string) {
   }, [r, baseLegal]);
 }
 
+/** Linha "Cobrado em": banca, prova, anos e matéria de onde o artigo caiu. */
+export function OrigemCobranca({
+  item,
+  questoes,
+}: {
+  item: ItemIncidencia | undefined;
+  questoes: { hash: string; prova: string; ano?: number; materia: string; questao: { banca: string } }[];
+}) {
+  if (!item) return null;
+  const rel = questoes.filter((q) => item.questoes.includes(q.hash));
+  const bancas = [...new Set(rel.map((q) => q.questao.banca).filter(Boolean))];
+  const provas = [...new Set(rel.map((q) => q.prova).filter(Boolean))];
+  const materias = [...new Set(rel.map((q) => q.materia).filter(Boolean))];
+  const nivel = ["", "Baixa", "Média", "Alta"][item.estrelas];
+  return (
+    <div className="mt-1.5 rounded-md border border-mark-yellow/40 bg-mark-yellow/10 px-2 py-1 text-[11px] leading-snug">
+      <p className="font-semibold">
+        Cobrado em: {[bancas.join(", "), provas.slice(0, 3).join(" · ")].filter(Boolean).join(" — ") || "provas analisadas"}
+        {item.anos.length ? ` (${item.anos.join(", ")})` : ""}
+      </p>
+      <p className="text-muted-foreground">
+        Incidência {nivel} · {item.questoes.length} questão(ões) em {item.provas} prova(s)
+        {materias.length ? ` · ${materias.join(", ")}` : ""}
+      </p>
+    </div>
+  );
+}
+
 export function SeloIncidencia({
   item,
   questoes,
