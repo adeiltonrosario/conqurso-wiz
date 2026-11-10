@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** Chaves de estado guardadas na nuvem, uma linha por chave e por usuário. */
-export const CHAVES = ["acervo", "revisao", "leituras", "trilha", "edital", "incidencia"] as const;
+export const CHAVES = ["acervo", "revisao", "leituras", "trilha", "edital", "incidencia", "anotacoes"] as const;
 export type ChaveEstado = (typeof CHAVES)[number];
 
 /** Os dados trafegam como texto JSON para atravessar o RPC sem perda de tipo. */
