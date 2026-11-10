@@ -754,6 +754,28 @@ export function LeiIntegralPainel({
       {carregado && (
         <>
           <div className="space-y-2">
+            <div role="group" aria-label="Modo de leitura" className="flex flex-wrap gap-1.5">
+              {([
+                ["todos", "Todos os artigos"],
+                ["alta", "★★★ Mais importantes"],
+                ["incidencia", "★ Com incidência"],
+                ["anotados", "Com minhas explicações"],
+              ] as const).map(([v, rotulo]) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={modoLeitura === v}
+                  onClick={() => setModoLeitura(v)}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                    modoLeitura === v
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
             {baseLegal && (
               <p className="text-xs font-semibold text-muted-foreground">{baseLegal}</p>
             )}
