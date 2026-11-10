@@ -32,7 +32,7 @@ import { type ArtigoIntegral, type LeiIntegral as LeiIntegralTipo } from "@/lib/
 import { lerTextoAnexo } from "@/lib/anexos-store";
 import { OrigemCobranca, SeloIncidencia, useIncidenciaDaNorma } from "@/components/SeloIncidencia";
 import { AnotacaoArtigo } from "@/components/AnotacaoArtigo";
-import { useAnotacoes } from "@/lib/anotacoes-lei";
+import { estrelasDoArtigo, salvarEstrelas, useAnotacoes } from "@/lib/anotacoes-lei";
 import {
   artigosDoCapitulo,
   artigosDosAssuntos,
@@ -554,8 +554,9 @@ export function LeiIntegralPainel({
         if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (modoLeitura !== "todos") {
           const inc = incidencia.mapa.get(numeroArtigo(artigo));
-          if (modoLeitura === "alta" && inc?.estrelas !== 3) return false;
-          if (modoLeitura === "incidencia" && !inc) return false;
+          const minhas = estrelasDoArtigo(anotacoes, chaveFavorito(baseLegal, artigo));
+          if (modoLeitura === "alta" && inc?.estrelas !== 3 && minhas !== 3) return false;
+          if (modoLeitura === "incidencia" && !inc && minhas === 0) return false;
           if (modoLeitura === "anotados" && !anotacoes[chaveFavorito(baseLegal, artigo)]) return false;
         }
         if (limites) {
@@ -758,7 +759,7 @@ export function LeiIntegralPainel({
               {([
                 ["todos", "Todos os artigos"],
                 ["alta", "★★★ Mais importantes"],
-                ["incidencia", "★ Com incidência"],
+                ["incidencia", "★ Com estrelas"],
                 ["anotados", "Com minhas explicações"],
               ] as const).map(([v, rotulo]) => (
                 <button
@@ -935,6 +936,25 @@ export function LeiIntegralPainel({
                                     item={incidencia.mapa.get(numeroArtigo(a))}
                                     questoes={incidencia.questoes}
                                   />
+                                  <span role="group" aria-label={`Minha importância para ${a.referencia}`} className="flex items-center">
+                                    {[1, 2, 3].map((n) => {
+                                      const atual = estrelasDoArtigo(anotacoes, chaveFavorito(baseLegal, a));
+                                      return (
+                                        <button
+                                          key={n}
+                                          type="button"
+                                          aria-label={`${n} estrela${n > 1 ? "s" : ""}`}
+                                          aria-pressed={atual >= n}
+                                          onClick={() =>
+                                            salvarEstrelas(chaveFavorito(baseLegal, a), baseLegal, a.referencia, atual === n ? 0 : n)
+                                          }
+                                          className="p-0.5"
+                                        >
+                                          <Star className={`size-4 ${atual >= n ? "fill-mark-yellow text-mark-yellow" : "text-muted-foreground/50"}`} />
+                                        </button>
+                                      );
+                                    })}
+                                  </span>
                                   <span className="flex items-center gap-2">
                                     <button
                                       type="button"

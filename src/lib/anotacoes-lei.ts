@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
  * Explicações pessoais por artigo de lei. Gravadas no aparelho e espelhadas
  * na nuvem da conta pela sincronização (chave "anotacoes").
  */
-export type AnotacaoArtigo = { texto: string; lei: string; referencia: string; atualizadoEm: number };
+export type AnotacaoArtigo = { texto: string; lei: string; referencia: string; atualizadoEm: number; estrelas?: number };
 
 const KEY = "concurseiro:anotacoes";
 const EVENTO = "anotacoes:mudou";
@@ -40,4 +40,21 @@ export function useAnotacoes() {
     };
   }, []);
   return anotacoes;
+}
+
+/** Estrelas (0–3) que o próprio estudante dá ao artigo. Ficam no mesmo
+ * registro sincronizado das explicações, com chave prefixada por "★". */
+const PREFIXO_ESTRELA = "★";
+
+export function estrelasDoArtigo(anotacoes: Record<string, AnotacaoArtigo>, chave: string): number {
+  return anotacoes[PREFIXO_ESTRELA + chave]?.estrelas ?? 0;
+}
+
+export function salvarEstrelas(chave: string, lei: string, referencia: string, estrelas: number) {
+  const todas = lerAnotacoes();
+  const k = PREFIXO_ESTRELA + chave;
+  if (estrelas <= 0) delete todas[k];
+  else todas[k] = { texto: "", lei, referencia, estrelas: Math.min(3, estrelas), atualizadoEm: Date.now() };
+  window.localStorage.setItem(KEY, JSON.stringify(todas));
+  window.dispatchEvent(new Event(EVENTO));
 }
