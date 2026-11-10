@@ -15,7 +15,7 @@ export function AnotacaoArtigo({
   chave: string;
   lei: string;
   referencia: string;
-  anotacao?: Anotacao;
+  anotacao?: Anotacao | undefined;
 }) {
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState(false);
