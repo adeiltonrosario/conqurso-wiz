@@ -22,6 +22,9 @@ import {
   type Estrelas,
 } from "@/lib/incidencia";
 import { adicionarNaRevisao } from "@/lib/revisao";
+import { EDITAIS_MATERIAS, escopoDoConcurso, escoposPeso, filtrarPesosPorEdital, pesoDentroDaMateria, pesoPorBanca, rankingCompleto } from "@/lib/incidencia-provas";
+import { LEITURA_RESUMIDA, MATERIAS_POR_BLOCO, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
+import { QUESTOES_CRASE_TREINO, embaralharAlternativas } from "@/lib/treino-crase";
 import { listarCards, salvarCard } from "@/lib/cards.functions";
 import { lerCards, salvarCardsLocal } from "@/lib/cards";
 
@@ -40,6 +43,117 @@ export function EstrelasIcone({ n }: { n: Estrelas }) {
 
 function perguntaDoCard(q: Questao) {
   return `${q.enunciado}\n\n${q.alternativas.map((a) => `${a.letra}) ${a.texto}`).join("\n")}`.slice(0, 4000);
+}
+
+function TreinoCraseQuestao({
+  q,
+  ordem,
+  escolha,
+  mostrar,
+  onEscolha,
+  onRepetir,
+  onMostrar,
+}: {
+  q: (typeof QUESTOES_CRASE_TREINO)[number];
+  ordem: number;
+  escolha: string;
+  mostrar: boolean;
+  onEscolha: (letra: string) => void;
+  onRepetir: () => void;
+  onMostrar: () => void;
+}) {
+  const embaralhadas = useMemo(() => embaralharAlternativas(q), [q, ordem]);
+  const revelado = mostrar || !!escolha;
+  return (
+    <li className="rounded-lg border border-border p-2">
+      <span className="font-medium">
+        {q.prova} {q.ano} — Q{q.numero} ·{" "}
+        {q.modelo === "crase-direta"
+          ? "Crase pedida"
+          : q.modelo === "regencia"
+            ? "Regência (crase mascarada)"
+            : "Outro assunto (crase como distrator)"}
+      </span>
+      <span className="block text-muted-foreground">{q.comando}</span>
+      <span className="block font-semibold">Como descobrir: {q.insight}</span>
+      <div className="mt-2 space-y-1">
+        {embaralhadas.map((a) => (
+          <button
+            key={a.letra + a.texto}
+            type="button"
+            onClick={() => onEscolha(a.letra)}
+            className={`block w-full rounded-lg border px-2 py-1.5 text-left ${
+              escolha === a.letra
+                ? a.correta
+                  ? "border-green-600 bg-green-50 dark:bg-green-950"
+                  : "border-red-600 bg-red-50 dark:bg-red-950"
+                : "border-border"
+            }`}
+          >
+            <b>{a.letra})</b> {a.texto}
+            {revelado && (
+              <span className="block text-muted-foreground">
+                {a.correta ? "✓ Certa — " : "✗ Errada — "}
+                {a.porQue}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <span className="mt-2 flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onRepetir}>
+          Repetir embaralhando
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onMostrar}>
+          Ver explicação
+        </Button>
+      </span>
+      <span className="block text-muted-foreground">Gabarito: {q.gabaritoVersao} (pelo texto da alternativa, não pela letra).</span>
+    </li>
+  );
+}
+
+/**
+ * Treino de Crase: cada questão traz o insight de como descobrir a certa
+ * pelo comando, e um botão "Repetir embaralhando" troca as alternativas
+ * de lugar — a resposta certa muda de letra, então só acerta quem julga
+ * o conteúdo. A explicação de cada alternativa só aparece depois que o
+ * usuário escolhe uma (ou toca em "Ver explicação").
+ */
+function TreinoCrase() {
+  const [ordem, setOrdem] = useState<Record<string, number>>({});
+  const [escolha, setEscolha] = useState<Record<string, string>>({});
+  const [mostrar, setMostrar] = useState<Record<string, boolean>>({});
+
+  return (
+    <details className="mb-2 rounded-lg border border-border p-2 text-xs" open>
+      <summary className="cursor-pointer font-semibold">
+        Treino de Crase — como descobrir a certa ({QUESTOES_CRASE_TREINO.length} questões verificadas)
+      </summary>
+      <p className="mt-1 text-muted-foreground">
+        Leia o insight antes de responder. Depois, repita com as alternativas embaralhadas — a letra certa muda,
+        o conteúdo não.
+      </p>
+      <ol className="mt-2 space-y-3">
+        {QUESTOES_CRASE_TREINO.map((q) => (
+          <TreinoCraseQuestao
+            key={q.id}
+            q={q}
+            ordem={ordem[q.id] ?? 0}
+            escolha={escolha[q.id] ?? ""}
+            mostrar={mostrar[q.id] ?? false}
+            onEscolha={(letra) => setEscolha((s) => ({ ...s, [q.id]: letra }))}
+            onRepetir={() => {
+              setEscolha((s) => ({ ...s, [q.id]: "" }));
+              setMostrar((s) => ({ ...s, [q.id]: false }));
+              setOrdem((o) => ({ ...o, [q.id]: (o[q.id] ?? 0) + 1 }));
+            }}
+            onMostrar={() => setMostrar((s) => ({ ...s, [q.id]: true }))}
+          />
+        ))}
+      </ol>
+    </details>
+  );
 }
 
 export function PainelIncidencia({
@@ -174,6 +288,35 @@ export function PainelIncidencia({
   const fora = questoes.filter((q) => q.foraDoEdital).length;
   const provas = new Set(questoes.map((q) => q.prova)).size;
   const origens = [...new Set(questoes.map((q) => (q.questao.origem ?? "").split(" · ")[0] || "Sem origem"))];
+  // Peso por matéria a partir de provas anteriores contadas no Qconcursos
+  // (src/lib/incidencia-provas.ts) — contagem real, sem IA. Mostra o escopo
+  // do concurso ativo; sem banca/cargo ativo, mostra todos os escopos.
+  const escopoAtivo = escopoDoConcurso(banca, cargo);
+  const escoposContados = escopoAtivo ? [escopoAtivo] : escoposPeso();
+  // Mesma banca, outros cargos: questões semelhantes entram para mostrar
+  // como a banca cobra cada assunto — o estilo se repete entre cargos.
+  const bancaGeral = pesoPorBanca(banca);
+  // Só entra o que é do mesmo assunto cobrado no edital ativo: matérias
+  // de outro cargo que não estão no edital ficam de fora, e o app mostra
+  // quais foram excluídas.
+  const materiasEdital = materiasAtivas(edital).map((m) => m.nome);
+  const escoposNoEdital = escoposContados.map((e) => {
+    const f = filtrarPesosPorEdital(e.pesos, materiasEdital);
+    return { ...e, pesos: f.dentro, fora: f.fora };
+  });
+  const bancaNoEdital = bancaGeral
+    ? { ...bancaGeral, ...filtrarPesosPorEdital(bancaGeral.pesos, materiasEdital) }
+    : null;
+  // Ranking completo: todas as matérias do edital, do maior peso para o
+  // menor, com as sem contagem no fim — nunca fora do treino. Sem edital
+  // importado, usa a lista do edital do cargo ativo (Anexo VIII / Anexo I).
+  const materiasRanking =
+    materiasEdital.length > 0
+      ? materiasEdital
+      : (Object.entries(EDITAIS_MATERIAS).find(([k]) => cargo && k.toLowerCase().includes(cargo.toLowerCase().split(" ")[0]!))?.[1] ??
+        EDITAIS_MATERIAS["TJ-SP · Escrevente Técnico Judiciário"]!);
+  const pesosRanking = escopoAtivo ? escopoAtivo.pesos : (bancaNoEdital?.dentro ?? []);
+  const ranking = rankingCompleto(pesosRanking, materiasRanking);
 
   const numero = (v: string) => Math.max(1, Math.min(99, Number(v) || 1));
 
@@ -219,6 +362,200 @@ export function PainelIncidencia({
         {processando ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
         Recalcular e alimentar Revisão e Cards
       </Button>
+
+      <div>
+        <h3 className="mb-1 text-sm font-semibold">Peso por matéria — provas anteriores contadas</h3>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Contagem real no Qconcursos, prova por prova, sem IA. O peso é a
+          porcentagem de questões da matéria nas provas em que ela foi contada.
+        </p>
+        {escoposNoEdital.map((escopo) => (
+          <details key={`${escopo.banca}|${escopo.instituicao}|${escopo.cargo}`} open={!!escopoAtivo} className="mb-2 rounded-lg border border-border p-2 text-xs">
+            <summary className="cursor-pointer font-semibold">
+              {escopo.banca} · {escopo.instituicao} · {escopo.cargo} — {escopo.provas.length} prova(s)
+            </summary>
+            <ul className="mt-2 space-y-1">
+              {escopo.pesos.map((p) => (
+                <li key={p.materia} className="flex items-center justify-between gap-2 rounded-lg border border-border px-2 py-1.5">
+                  <span className="min-w-0">
+                    <span className="font-medium">{p.materia}</span>
+                    <span className="block text-muted-foreground">
+                      {p.questoes} questão(ões) em {p.provas} prova(s) · {p.totalContado} questões contadas
+                    </span>
+                  </span>
+                  <b className="shrink-0">{p.peso.toLocaleString("pt-BR")}%</b>
+                </li>
+              ))}
+            </ul>
+            {escopo.fora.length > 0 && (
+              <p className="mt-2 text-muted-foreground">
+                Fora do edital deste concurso, por isso não entrou: {escopo.fora.map((p) => p.materia).join(", ")}.
+              </p>
+            )}
+            <p className="mt-2 text-muted-foreground">
+              Provas: {escopo.provas.map((p) => `${p.ano} (${p.aplicadaEm})`).join(", ")}. Fontes no Qconcursos — ver
+              src/lib/incidencia-provas.ts.
+            </p>
+          </details>
+        ))}
+        <details open className="mb-2 rounded-lg border border-border p-2 text-xs">
+          <summary className="cursor-pointer font-semibold">
+            Ranking de incidência — todas as matérias do edital ({ranking.length} matérias)
+          </summary>
+          <p className="mt-1 text-muted-foreground">
+            Do maior peso para o menor. Dentro de cada matéria, os assuntos também estão em ranking, do mais cobrado
+            para o menos — é assim que fica objetivo o que estudar primeiro. Matéria sem contagem nas provas
+            verificadas fica no fim, marcada — ela ainda entra no treino e na repetição.
+          </p>
+          <ol className="mt-2 space-y-1">
+            {ranking.map((r, i) => (
+              <li key={r.materia} className="rounded-lg border border-border px-2 py-1.5">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{i + 1}. {r.materia}</span>
+                  <b className="shrink-0">{r.contada ? `${r.peso.toLocaleString("pt-BR")}%` : "sem contagem"}</b>
+                </span>
+                <span className="block text-muted-foreground">
+                  {r.contada ? `${r.questoes} questão(ões) em ${r.provas} prova(s)` : "Não contada nas provas verificadas — buscar questões variadas na Quest API para treinar."}
+                </span>
+                {r.assuntos.length > 0 && (
+                  <div className="mt-1">
+                    <span className="font-semibold">Ranking dentro da matéria:</span>
+                    <ul className="mt-1 space-y-1">
+                      {r.assuntos.map((a, j) => (
+                        <li key={a.assunto} className="rounded border border-border px-2 py-1">
+                          <span className="font-medium">
+                            {j + 1}º — {a.assunto} — {a.questoes} questão(ões) em {a.provas} prova(s)
+                            {r.materia === "Língua Portuguesa" && pesoDentroDaMateria(a, 136) !== null
+                              ? ` — ${pesoDentroDaMateria(a, 136)!.toLocaleString("pt-BR")}% do Português`
+                              : ""}
+                          </span>
+                          {a.separacaoCraseRegencia && (
+                            <span className="block">
+                              Separado por comando — Crase pedida: {a.separacaoCraseRegencia.craseDireta} · Regência (crase mascarada):{" "}
+                              {a.separacaoCraseRegencia.regenciaMascarada}
+                              {a.separacaoCraseRegencia.outroAssuntoMascarada
+                                ? ` · Outro assunto (crase como distrator): ${a.separacaoCraseRegencia.outroAssuntoMascarada}`
+                                : ""}
+                            </span>
+                          )}
+                          {a.comoCobra && <span className="block text-muted-foreground">{a.comoCobra}</span>}
+                          {a.alertaMascarado && (
+                            <span className="block font-semibold text-foreground">
+                              ⚠ Prioridade alta — muito cobrado, mascarado pela regência: {a.alertaMascarado}
+                            </span>
+                          )}
+                          {a.observacao && <span className="block text-muted-foreground">{a.observacao}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {r.assuntos.length === 0 && (
+                  <span className="block text-muted-foreground">
+                    Sem contagem por assunto nas provas verificadas — treinar pelos assuntos do edital.
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </details>
+        <details open className="mb-2 rounded-lg border border-border p-2 text-xs">
+          <summary className="cursor-pointer font-semibold">
+            Leitura resumida — só o que foi cobrado ({LEITURA_RESUMIDA.length} itens)
+          </summary>
+          <p className="mt-1 text-muted-foreground">
+            Todas as matérias do edital, na ordem dos blocos da prova. Cada item tem uma linha só: o que diz e como a
+            banca cobrou. Só entra o que foi verificado em prova real contada questão por questão; o que está no edital
+            e nunca foi identificado vai para a lista de &quot;nunca cobrado&quot; da matéria, para estudar do zero.
+          </p>
+          {MATERIAS_POR_BLOCO.map(({ bloco, materias }) => (
+            <div key={bloco}>
+              <h4 className="mt-3 text-sm font-semibold">{bloco}</h4>
+              {materias.map((materia) => {
+                const itens = itensDaMateria(materia);
+                const nunca = nuncaCobradosDaMateria(materia);
+                return (
+                  <details key={materia} className="mb-2 rounded-lg border border-border p-2 text-xs">
+                    <summary className="cursor-pointer font-semibold">
+                      {materia} — {itens.length} item(ns) cobrado(s)
+                      {nunca.length > 0 ? ` · ${nunca.length} no edital, nunca cobrado(s)` : ""}
+                    </summary>
+                    <ol className="mt-2 space-y-1">
+                      {itens.map((item) => (
+                        <li key={`${item.materia}|${item.artigo}`} className="rounded border border-border px-2 py-1">
+                          <span className="font-medium">
+                            {item.artigo} — cobrado em {item.provas} prova(s)
+                            {item.questoes ? ` · ${item.questoes} questão(ões)` : ""}
+                          </span>
+                          <span className="block text-muted-foreground">{item.resumo}</span>
+                          {item.exemplo && <span className="block text-muted-foreground">Como cobrou: {item.exemplo}</span>}
+                          {item.separacaoCraseRegencia && (
+                            <span className="block">
+                              Separado por comando — Crase pedida: {item.separacaoCraseRegencia.craseDireta} · Regência
+                              (crase mascarada): {item.separacaoCraseRegencia.regenciaMascarada}
+                              {item.separacaoCraseRegencia.outroAssuntoMascarada
+                                ? ` · Outro assunto (crase como distrator): ${item.separacaoCraseRegencia.outroAssuntoMascarada}`
+                                : ""}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                    {nunca.length > 0 && (
+                      <div className="mt-2">
+                        <span className="font-semibold">No edital, nunca cobrado — estudar do zero:</span>
+                        <ul className="mt-1 space-y-1">
+                          {nunca.map((n) => (
+                            <li key={`${n.materia}|${n.artigo}`} className="rounded border border-border px-2 py-1">
+                              <span className="font-medium">{n.artigo}</span>
+                              <span className="block text-muted-foreground">{n.motivo}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </details>
+                );
+              })}
+            </div>
+          ))}
+        </details>
+        <TreinoCrase />
+        {bancaNoEdital && bancaNoEdital.provas.length > (escopoAtivo?.provas.length ?? 0) && (
+          <details className="mb-2 rounded-lg border border-border p-2 text-xs">
+            <summary className="cursor-pointer font-semibold">
+              Mesma banca, outros cargos — como a {banca} cobra cada assunto ({bancaNoEdital.provas.length} provas)
+            </summary>
+            <p className="mt-1 text-muted-foreground">
+              Inclui questões semelhantes de cargo diferente, porque o estilo da banca se repete: os assuntos mais
+              cobrados e o jeito de perguntar são os mesmos. Só entra o assunto que também está no seu edital.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {bancaNoEdital.dentro.slice(0, 10).map((p) => (
+                <li key={p.materia} className="flex items-center justify-between gap-2 rounded-lg border border-border px-2 py-1.5">
+                  <span className="min-w-0">
+                    <span className="font-medium">{p.materia}</span>
+                    <span className="block text-muted-foreground">
+                      {p.questoes} questão(ões) em {p.provas} prova(s) · {p.totalContado} questões contadas
+                    </span>
+                  </span>
+                  <b className="shrink-0">{p.peso.toLocaleString("pt-BR")}%</b>
+                </li>
+              ))}
+            </ul>
+            {bancaNoEdital.fora.length > 0 && (
+              <p className="mt-2 text-muted-foreground">
+                Fora do seu edital, por isso não entrou: {bancaNoEdital.fora.map((p) => p.materia).join(", ")}.
+              </p>
+            )}
+            <p className="mt-2 text-muted-foreground">
+              Cargos incluídos: {[...new Set(bancaNoEdital.provas.map((p) => `${p.cargo} (${p.instituicao} ${p.ano})`))].join(", ")}.
+              As pegadinhas em si — o texto de cada questão — ainda não estão aqui: esta tabela conta disciplinas e
+              assuntos. Para ver a pegadinha, importe as questões da prova no acervo.
+            </p>
+          </details>
+        )}
+      </div>
 
       {questoes.length > 0 && (
         <>

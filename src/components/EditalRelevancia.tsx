@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Calculator,
   Check,
   ChevronDown,
   ChevronRight,
@@ -13,13 +12,11 @@ import {
   Loader2,
   Pencil,
   Plus,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { estimarRelevanciaEdital } from "@/lib/ai.functions";
 import {
   comLeiAdicionada,
   comLeiAlterada,
@@ -33,6 +30,9 @@ import {
   type LinkLei,
   type MateriaEdital,
 } from "@/lib/edital";
+import { calcularRelevanciaContada, macrosDoConcurso } from "@/lib/relevancia-contada";
+import { LEITURA_RESUMIDA, NUNCA_COBRADOS } from "@/lib/leis-resumidas";
+import { chaveMateria } from "@/lib/incidencia-provas";
 import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
 import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
 import type { RelatorioLei } from "@/lib/legislacao-consolidar";
@@ -456,6 +456,16 @@ function LinhaMateria({
   const [aberta, setAberta] = useState(false);
   const geral = desempenho(historico, materia.nome);
   const topicos = topicosPorRelevancia(materia);
+  /**
+   * Só o artigo cobrado: número exato + relevância contada + onde caiu.
+   * Comparação por chave normalizada porque o nome da matéria no edital
+   * pode variar ("Português" = "Língua Portuguesa", "Informática" =
+   * "Noções de Informática"). O que nunca caiu fica numa lista separada,
+   * fora do fluxo principal de leitura.
+   */
+  const chave = chaveMateria(materia.nome);
+  const artigosCobrados = LEITURA_RESUMIDA.filter((i) => chaveMateria(i.materia) === chave);
+  const nuncaCobrados = NUNCA_COBRADOS.filter((i) => chaveMateria(i.materia) === chave);
 
   return (
     <li className="border-l-4 border-accent/70">
@@ -540,6 +550,38 @@ function LinhaMateria({
               </tbody>
             </table>
           )}
+          {artigosCobrados.length > 0 && (
+            <div className="mt-3 rounded-lg border border-border p-3">
+              <p className="text-xs font-semibold">Só o artigo cobrado — leia só isto</p>
+              <p className="text-xs text-muted-foreground">
+                Número exato do artigo, relevância contada e onde ele caiu. O resto do edital não
+                entra aqui.
+              </p>
+              <ul className="mt-2 space-y-2">
+                {artigosCobrados.map((item) => (
+                  <li key={item.artigo} className="rounded-md border border-border/70 px-2 py-1.5 text-xs">
+                    <span className="font-semibold">{item.artigo}</span>
+                    <span className="block text-muted-foreground">{item.resumo}</span>
+                    <span className="block font-semibold">
+                      Relevância:{" "}
+                      {item.questoes != null
+                        ? `${item.questoes} questões em ${item.provas} provas`
+                        : `em ${item.provas} provas`}
+                    </span>
+                    {item.exemplo && (
+                      <span className="block text-muted-foreground">{item.exemplo}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {nuncaCobrados.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Estudar do zero — nunca caiu:{" "}
+              {nuncaCobrados.map((i) => i.artigo).join("; ")}.
+            </p>
+          )}
           <LeisDaMateria materia={materia} onLeis={onLeis} />
         </div>
       )}
@@ -552,7 +594,6 @@ export function EditalRelevancia() {
   const { edital, definirMaterias, atualizarMateria } = useEdital();
   const { historico } = useRevisao();
   const { trilha } = useTrilha();
-  const estimar = useServerFn(estimarRelevanciaEdital);
 
   const definirRelevanciaMateria = (m: MateriaEdital, valor: number | undefined) =>
     atualizarMateria(m.id, valor == null ? { relevancia: undefined } : { relevancia: valor });
@@ -564,41 +605,43 @@ export function EditalRelevancia() {
     atualizarMateria(m.id, { relevanciaTopicos: mapa });
   };
 
-  const mut = useMutation({
-    mutationFn: () =>
-      estimar({
-        data: {
-          banca: trilha.banca || undefined,
-          cargo: trilha.cargo || undefined,
-          materias: materiasAtivas(edital).map((m) => ({
-            nome: m.nome,
-            topicos: m.topicos,
-          })),
-        },
+  const banca = trilha.banca || edital.bancaAtiva || undefined;
+  const cargo = trilha.cargo || edital.cargoAtivo || undefined;
+  const macros = macrosDoConcurso(banca, cargo);
+
+  /**
+   * Relevância CONTADA de provas reais — sem IA e sem créditos. Preenche
+   * os mesmos campos (`relevancia`, `relevanciaTopicos`) que a estimativa
+   * da IA preenchia. Tópico sem contagem verificada fica em branco e
+   * continua na lista, para estudar do zero. Valores manuais digitados
+   * nos campos % são preservados onde não há contagem.
+   */
+  const calcularContada = () => {
+    if (!banca || !cargo) {
+      toast.error("Escolha banca e cargo na Trilha antes de calcular a relevância.");
+      return;
+    }
+    const contada = calcularRelevanciaContada(banca, cargo, materiasAtivas(edital));
+    const comContagem = contada.filter(
+      (c) => c.relevancia != null || Object.keys(c.relevanciaTopicos).length > 0,
+    );
+    if (!comContagem.length) {
+      toast.error("Sem provas contadas para essa banca e cargo — a relevância fica em branco.");
+      return;
+    }
+    definirMaterias(
+      edital.materias.map((m) => {
+        const c = contada.find((x) => x.materia === m.nome);
+        if (!c) return m;
+        return {
+          ...m,
+          relevancia: c.relevancia ?? m.relevancia,
+          relevanciaTopicos: { ...(m.relevanciaTopicos ?? {}), ...c.relevanciaTopicos },
+        };
       }),
-    onSuccess: (resultado) => {
-      if (!resultado.length) {
-        toast.error("A IA não retornou relevâncias.");
-        return;
-      }
-      definirMaterias(
-        edital.materias.map((m) => {
-          const achada = resultado.find((r) => normaliza(r.nome) === normaliza(m.nome));
-          if (!achada) return m;
-          const relevanciaTopicos: Record<string, number> = {};
-          for (const t of achada.topicos ?? []) {
-            const topico = m.topicos.find((x) => normaliza(x) === normaliza(t.nome));
-            if (topico && typeof t.relevancia_disciplina === "number") {
-              relevanciaTopicos[topico] = t.relevancia_disciplina;
-            }
-          }
-          return { ...m, relevancia: achada.relevancia, relevanciaTopicos };
-        }),
-      );
-      toast.success("Relevâncias do edital atualizadas.");
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao calcular a relevância."),
-  });
+    );
+    toast.success("Relevância contada das provas atualizada — sem IA e sem créditos.");
+  };
 
   if (!materiasAtivas(edital).length) return null;
 
@@ -609,27 +652,42 @@ export function EditalRelevancia() {
           <h2 className="font-display text-base font-bold">Detalhamento do edital</h2>
           <p className="text-xs text-muted-foreground">
             Relevância de cada matéria na prova e de cada assunto dentro da matéria, com o seu
-            desempenho e atalho para praticar.
+            desempenho e atalho para praticar. A relevância vem da contagem de provas reais
+            (Qconcursos + PDFs enviados), sem IA e sem créditos — tópico sem contagem fica em
+            branco e continua na lista, para estudar do zero.
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={mut.isPending}
-          onClick={() => mut.mutate()}
-        >
-          {mut.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Calculando…
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 size-4" /> Calcular relevância
-            </>
-          )}
+        <Button type="button" size="sm" variant="outline" onClick={calcularContada}>
+          <Calculator className="mr-2 size-4" /> Calcular relevância contada
         </Button>
       </div>
+
+      {macros.length > 0 && (
+        <div className="rounded-lg border border-border p-3">
+          <p className="text-sm font-semibold">Foque primeiro — macros contados das provas</p>
+          <p className="text-xs text-muted-foreground">
+            O que estudar primeiro, direto ao ponto, só com contagem verificada de provas reais.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {macros.map((macro) => (
+              <li
+                key={macro.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 px-2 py-1.5 text-xs"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="font-semibold">{macro.titulo}</span>
+                  <span className="block text-muted-foreground">{macro.descricao}</span>
+                  <span className="block font-semibold">{macro.pesoTexto}</span>
+                  {macro.observacao && (
+                    <span className="block text-muted-foreground">{macro.observacao}</span>
+                  )}
+                </span>
+                <IrParaQuestoes materia={macro.materia} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
         {materiasPorRelevancia(edital).map((m) => (
