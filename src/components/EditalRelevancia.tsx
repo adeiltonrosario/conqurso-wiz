@@ -31,7 +31,12 @@ import {
   type MateriaEdital,
 } from "@/lib/edital";
 import { calcularRelevanciaContada, macrosDoConcurso } from "@/lib/relevancia-contada";
-import { LEITURA_RESUMIDA, NUNCA_COBRADOS } from "@/lib/leis-resumidas";
+import {
+  LEITURA_RESUMIDA,
+  NUNCA_COBRADOS,
+  ehTop5,
+  ordenarPorCobranca,
+} from "@/lib/leis-resumidas";
 import { chaveMateria } from "@/lib/incidencia-provas";
 import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
 import { salvarLeiNoAcervo } from "@/lib/leis-salvar";
@@ -464,7 +469,10 @@ function LinhaMateria({
    * fora do fluxo principal de leitura.
    */
   const chave = chaveMateria(materia.nome);
-  const artigosCobrados = LEITURA_RESUMIDA.filter((i) => chaveMateria(i.materia) === chave);
+  /** Todos os cobrados, ordenados do mais para o menos cobrado; Top 5 é destaque, não corte. */
+  const artigosCobrados = ordenarPorCobranca(
+    LEITURA_RESUMIDA.filter((i) => chaveMateria(i.materia) === chave),
+  );
   const nuncaCobrados = NUNCA_COBRADOS.filter((i) => chaveMateria(i.materia) === chave);
 
   return (
@@ -554,13 +562,20 @@ function LinhaMateria({
             <div className="mt-3 rounded-lg border border-border p-3">
               <p className="text-xs font-semibold">Só o artigo cobrado — leia só isto</p>
               <p className="text-xs text-muted-foreground">
-                Número exato do artigo, relevância contada e onde ele caiu. O resto do edital não
-                entra aqui.
+                Todos os cobrados, do mais para o menos cobrado. Os 5 primeiros são o Top 5 da
+                matéria. Número exato do artigo, relevância contada e onde ele caiu.
               </p>
               <ul className="mt-2 space-y-2">
-                {artigosCobrados.map((item) => (
+                {artigosCobrados.map((item, indice) => (
                   <li key={item.artigo} className="rounded-md border border-border/70 px-2 py-1.5 text-xs">
-                    <span className="font-semibold">{item.artigo}</span>
+                    <span className="font-semibold">
+                      {indice + 1}. {item.artigo}
+                      {ehTop5(item) && (
+                        <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-primary-foreground">
+                          TOP 5
+                        </span>
+                      )}
+                    </span>
                     <span className="block text-muted-foreground">{item.resumo}</span>
                     <span className="block font-semibold">
                       Relevância:{" "}

@@ -23,7 +23,7 @@ import {
 } from "@/lib/incidencia";
 import { adicionarNaRevisao } from "@/lib/revisao";
 import { EDITAIS_MATERIAS, escopoDoConcurso, escoposPeso, filtrarPesosPorEdital, pesoDentroDaMateria, pesoPorBanca, rankingCompleto } from "@/lib/incidencia-provas";
-import { LEITURA_RESUMIDA, MATERIAS_POR_BLOCO, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
+import { LEITURA_RESUMIDA, MATERIAS_POR_BLOCO, TOP5_LEITURA, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
 import { QUESTOES_CRASE_TREINO, embaralharAlternativas } from "@/lib/treino-crase";
 import {
   QUESTOES_CADERNO_MUSE,
@@ -627,6 +627,8 @@ export function PainelIncidencia({
             Todas as matérias do edital, na ordem dos blocos da prova. Cada item tem uma linha só: o que diz e como a
             banca cobrou. Só entra o que foi verificado em prova real contada questão por questão; o que está no edital
             e nunca foi identificado vai para a lista de &quot;nunca cobrado&quot; da matéria, para estudar do zero.
+            Dentro de cada matéria, todos os cobrados aparecem ordenados do mais para o menos cobrado — os 5
+            primeiros são o Top 5.
           </p>
           {MATERIAS_POR_BLOCO.map(({ bloco, materias }) => (
             <div key={bloco}>
@@ -641,10 +643,16 @@ export function PainelIncidencia({
                       {nunca.length > 0 ? ` · ${nunca.length} no edital, nunca cobrado(s)` : ""}
                     </summary>
                     <ol className="mt-2 space-y-1">
-                      {itens.map((item) => (
+                      {itens.map((item, indice) => (
                         <li key={`${item.materia}|${item.artigo}`} className="rounded border border-border px-2 py-1">
                           <span className="font-medium">
-                            {item.artigo} — cobrado em {item.provas} prova(s)
+                            {indice + 1}. {item.artigo}
+                            {indice < TOP5_LEITURA && (
+                              <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-primary-foreground">
+                                TOP 5
+                              </span>
+                            )}
+                            {" "}— cobrado em {item.provas} prova(s)
                             {item.questoes ? ` · ${item.questoes} questão(ões)` : ""}
                           </span>
                           <span className="block text-muted-foreground">{item.resumo}</span>

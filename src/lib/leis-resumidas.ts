@@ -907,9 +907,33 @@ export const MATERIAS_POR_BLOCO: { bloco: BlocoEdital; materias: string[] }[] = 
 /** Todas as matérias com leitura resumida, na ordem dos blocos. */
 export const MATERIAS_LEITURA_RESUMIDA: string[] = MATERIAS_POR_BLOCO.flatMap((b) => b.materias);
 
+/** Quantos itens formam o Top 5 de cada matéria na leitura resumida. */
+export const TOP5_LEITURA = 5;
+
+/**
+ * Ordena do mais para o menos cobrado: primeiro por nº de questões,
+ * depois por nº de provas. Mantém TODOS os cobrados — o Top 5 é só
+ * um destaque, nunca um corte.
+ */
+export function ordenarPorCobranca(itens: ItemLeitura[]): ItemLeitura[] {
+  return [...itens].sort(
+    (a, b) => (b.questoes ?? 0) - (a.questoes ?? 0) || b.provas - a.provas,
+  );
+}
+
 /** Itens da leitura resumida de uma matéria, na ordem do mais para o menos cobrado. */
 export function itensDaMateria(materia: string): ItemLeitura[] {
-  return LEITURA_RESUMIDA.filter((i) => i.materia === materia);
+  return ordenarPorCobranca(LEITURA_RESUMIDA.filter((i) => i.materia === materia));
+}
+
+/** Os 5 mais cobrados de uma matéria — destaque, sem cortar o resto. */
+export function top5DaMateria(materia: string): ItemLeitura[] {
+  return itensDaMateria(materia).slice(0, TOP5_LEITURA);
+}
+
+/** Se um item está no Top 5 da sua matéria. */
+export function ehTop5(item: ItemLeitura): boolean {
+  return top5DaMateria(item.materia).some((t) => t.artigo === item.artigo);
 }
 
 /** Bloco de uma matéria da leitura resumida. */

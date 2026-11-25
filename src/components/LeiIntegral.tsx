@@ -470,18 +470,28 @@ export function LeiIntegralPainel({
     onError: (e: Error) => toast.error(e.message || "Falha ao ler o PDF anexado."),
   });
 
-  /** Abre sozinha a lei cadastrada nesta matéria, sem precisar tocar em nada. */
+  /**
+   * Selecionar a lei já abre os artigos e o texto abaixo, como antes:
+   * a seleção é o start, sem precisar clicar em botão e sem IA.
+   * O botão abaixo fica só como start/recarregar manual.
+   * Só recarrega quando a lei selecionada muda — trocar de matéria
+   * e voltar recarrega, digitar o capítulo não recarrega.
+   */
   const lidoRef = useRef("");
   useEffect(() => {
-    const alvo = leisDaMinhaMateria.nomes[0];
-    if (!alvo) return;
-    if (arquivo && arquivo !== alvo) return;
+    const alvo = arquivoAtivo;
+    if (!alvo) {
+      lidoRef.current = "";
+      setLeisPdf([]);
+      setLeiPdfSel("");
+      return;
+    }
     if (lidoRef.current === alvo) return;
+    if (mutPdf.isPending) return;
     lidoRef.current = alvo;
-    if (!arquivo) setArquivo(alvo);
     mutPdf.mutate({ nome: alvo, item: itemAtivo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leisDaMinhaMateria.nomes, arquivo]);
+  }, [arquivoAtivo]);
 
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
@@ -726,12 +736,12 @@ export function LeiIntegralPainel({
           >
             {mutPdf.isPending ? (
               <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Extraindo os artigos do PDF…
+                <Loader2 className="mr-2 size-4 animate-spin" /> Abrindo a lei…
               </>
             ) : leisPdf.length ? (
-              "Reler o PDF"
+              "Abrir a lei novamente"
             ) : (
-              "Extrair o texto integral do PDF"
+              "Abrir lei"
             )}
           </Button>
 

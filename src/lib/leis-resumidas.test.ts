@@ -5,9 +5,11 @@ import {
   MATERIAS_POR_BLOCO,
   NUNCA_COBRADOS,
   blocoDaMateria,
+  ehTop5,
   itensDaMateria,
   materiasComNuncaCobrados,
   nuncaCobradosDaMateria,
+  top5DaMateria,
 } from "./leis-resumidas";
 
 /** Todas as matérias do edital do Escrevente (Anexo VIII, Edital nº 02/2026). */
@@ -166,6 +168,38 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
       "Arts. 1º a 13 (atendimento prioritário)",
       "Arts. 34 a 38 (direito ao trabalho)",
     ]);
+  });
+
+  it("mantém todos os cobrados, ordenados do mais para o menos cobrado, com Top 5 por matéria", () => {
+    // Português: 10 cobrados, ordenados por questões (45, 39, 22, 18, 15, 9, 7, 7, 5, 4).
+    const port = itensDaMateria("Língua Portuguesa");
+    expect(port).toHaveLength(10);
+    expect(port.map((i) => i.artigo)).toEqual([
+      "Interpretação de Textos",
+      "Sintaxe (concordância, regência e colocação)",
+      "Significação Contextual de Palavras e Expressões",
+      "Morfologia (classes de palavras)",
+      "Crase",
+      "Concordância verbal e nominal",
+      "Pontuação",
+      "Noções Gerais de Compreensão e Interpretação de Texto",
+      "Colocação pronominal",
+      "Regência verbal e nominal",
+    ]);
+    expect(top5DaMateria("Língua Portuguesa").map((i) => i.artigo)).toEqual([
+      "Interpretação de Textos",
+      "Sintaxe (concordância, regência e colocação)",
+      "Significação Contextual de Palavras e Expressões",
+      "Morfologia (classes de palavras)",
+      "Crase",
+    ]);
+    expect(ehTop5(port[0]!)).toBe(true);
+    expect(ehTop5(port[5]!)).toBe(false);
+    // Constitucional: art. 5º no topo, Top 5 não corta o art. 92 (6º, raro).
+    const consti = itensDaMateria("Direito Constitucional");
+    expect(consti).toHaveLength(6);
+    expect(top5DaMateria("Direito Constitucional")).toHaveLength(5);
+    expect(ehTop5(consti.find((i) => i.artigo.includes("Art. 92"))!)).toBe(false);
   });
 
   it("6 matérias têm lista de nunca cobrados; Português, Proc. Civil, PcD, RL, Atualidades e Legislação Interna não têm", () => {
