@@ -33,6 +33,7 @@ import { lerTextoAnexo } from "@/lib/anexos-store";
 import { OrigemCobranca, SeloIncidencia, useIncidenciaDaNorma } from "@/components/SeloIncidencia";
 import { AnotacaoArtigo } from "@/components/AnotacaoArtigo";
 import { estrelasDoArtigo, salvarEstrelas, useAnotacoes } from "@/lib/anotacoes-lei";
+import { definirLeiAtual } from "@/lib/tempo-estudo";
 import {
   artigosDoCapitulo,
   artigosDosAssuntos,
@@ -496,6 +497,11 @@ export function LeiIntegralPainel({
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
   const incidencia = useIncidenciaDaNorma(baseLegal);
+
+  /** Informa ao relógio automático qual lei está aberta (ou nenhuma). */
+  useEffect(() => {
+    definirLeiAtual(baseLegal || arquivoAtivo || null);
+  }, [baseLegal, arquivoAtivo]);
 
   const brutos = useMemo<ArtigoIntegral[]>(() => {
     const base =

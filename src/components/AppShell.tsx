@@ -5,6 +5,8 @@ import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { limparEstadoLocal } from "@/lib/sync";
+import { useRastreadorTempoEstudo } from "@/lib/tempo-estudo";
+import { RelogioEstudo } from "@/components/RelogioEstudo";
 
 const NAV = [
   { to: "/trilha", label: "Trilha", icon: CalendarDays },
@@ -31,6 +33,8 @@ export function AppShell({
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Único rastreador do relógio automático: deriva a atividade da rota.
+  useRastreadorTempoEstudo();
 
   async function sair() {
     await queryClient.cancelQueries();
@@ -65,6 +69,9 @@ export function AppShell({
               entrar
             </Link>
           )}
+        </div>
+        <div className="mx-auto max-w-3xl px-4 pb-2">
+          <RelogioEstudo variante="compacto" />
         </div>
       </header>
 

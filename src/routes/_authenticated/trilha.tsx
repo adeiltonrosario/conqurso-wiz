@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { RelogioEstudo } from "@/components/RelogioEstudo";
 
 import { bancasComMaterias, cargosDaBanca, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
 import {
@@ -94,6 +95,8 @@ function Pagina() {
       titulo="Trilha de estudo"
       descricao="Cargo, data da prova e o plano de cada dia — sem perder o direcionamento."
     >
+      <RelogioEstudo variante="resumo" />
+
       <section className="rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="flex items-center gap-2 font-display text-base font-bold">
           <Target className="size-4 text-accent" /> Meu objetivo
