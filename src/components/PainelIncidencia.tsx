@@ -25,6 +25,15 @@ import { adicionarNaRevisao } from "@/lib/revisao";
 import { EDITAIS_MATERIAS, escopoDoConcurso, escoposPeso, filtrarPesosPorEdital, pesoDentroDaMateria, pesoPorBanca, rankingCompleto } from "@/lib/incidencia-provas";
 import { LEITURA_RESUMIDA, MATERIAS_POR_BLOCO, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
 import { QUESTOES_CRASE_TREINO, embaralharAlternativas } from "@/lib/treino-crase";
+import {
+  QUESTOES_CADERNO_MUSE,
+  embaralharAlternativasCadernoMuse,
+  materiasComTreino,
+  questoesPendentes,
+  questoesPorMateria,
+  questoesTreinaveis,
+  type QuestaoCadernoMuse,
+} from "@/lib/caderno-muse";
 import { listarCards, salvarCard } from "@/lib/cards.functions";
 import { lerCards, salvarCardsLocal } from "@/lib/cards";
 
@@ -152,6 +161,157 @@ function TreinoCrase() {
           />
         ))}
       </ol>
+    </details>
+  );
+}
+
+function TreinoCadernoMuseQuestao({
+  q,
+  ordem,
+  escolha,
+  mostrar,
+  onEscolha,
+  onRepetir,
+  onMostrar,
+}: {
+  q: QuestaoCadernoMuse;
+  ordem: number;
+  escolha: string;
+  mostrar: boolean;
+  onEscolha: (letra: string) => void;
+  onRepetir: () => void;
+  onMostrar: () => void;
+}) {
+  const embaralhadas = useMemo(() => embaralharAlternativasCadernoMuse(q), [q, ordem]);
+  const revelado = mostrar || !!escolha;
+  return (
+    <li className="rounded-lg border border-border p-2">
+      <span className="font-medium">
+        {q.prova} {q.ano} — Q{q.numero ?? "?"} · {q.materia}
+        {q.assunto ? ` · ${q.assunto}` : ""}
+      </span>
+      {q.artigo && <span className="block text-muted-foreground">{q.artigo}</span>}
+      <span className="block whitespace-pre-wrap">{q.enunciado}</span>
+      <span className="block font-semibold">Como descobrir: {q.insight}</span>
+      <div className="mt-2 space-y-1">
+        {embaralhadas.map((a) => (
+          <button
+            key={a.letra + a.texto}
+            type="button"
+            onClick={() => onEscolha(a.letra)}
+            className={`block w-full rounded-lg border px-2 py-1.5 text-left ${
+              escolha === a.letra
+                ? a.correta
+                  ? "border-green-600 bg-green-50 dark:bg-green-950"
+                  : "border-red-600 bg-red-50 dark:bg-red-950"
+                : "border-border"
+            }`}
+          >
+            <b>{a.letra})</b> {a.texto}
+            {revelado && (
+              <span className="block text-muted-foreground">
+                {a.correta ? "✓ Certa — " : "✗ Errada — "}
+                {a.porQue ?? "Por que não determinado nos dados coletados — veja o insight e o gabarito."}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <span className="mt-2 flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onRepetir}>
+          Repetir embaralhando
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onMostrar}>
+          Ver explicação
+        </Button>
+      </span>
+      <span className="block text-muted-foreground">
+        Gabarito: {q.gabaritoFonte} (pelo texto da alternativa, não pela letra).
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Treino Caderno Muse: as 111 questões confirmadas do caderno, com
+ * enunciado, alternativas e gabarito oficial — mesmo modelo do Treino de
+ * Crase (insight antes de responder, repetição com alternativas
+ * embaralhadas). Filtro por matéria; as pendentes (texto parcial por
+ * imagem, sem como resolver) aparecem só numa lista, sem treino.
+ */
+function TreinoCadernoMuse() {
+  const [materia, setMateria] = useState("Todas");
+  const [ordem, setOrdem] = useState<Record<string, number>>({});
+  const [escolha, setEscolha] = useState<Record<string, string>>({});
+  const [mostrar, setMostrar] = useState<Record<string, boolean>>({});
+  const treinaveis = useMemo(
+    () => (materia === "Todas" ? questoesTreinaveis() : questoesPorMateria(materia)),
+    [materia],
+  );
+  const pendentes = questoesPendentes();
+  const materias = materiasComTreino();
+
+  return (
+    <details className="mb-2 rounded-lg border border-border p-2 text-xs" open>
+      <summary className="cursor-pointer font-semibold">
+        Treino Caderno Muse — questões reais da VUNESP 2025 ({treinaveis.length} nesta matéria ·{" "}
+        {questoesTreinaveis().length} treináveis de {QUESTOES_CADERNO_MUSE.length} confirmadas)
+      </summary>
+      <p className="mt-1 text-muted-foreground">
+        As 111 questões confirmadas do caderno, com enunciado, alternativas e gabarito oficial. Leia o insight antes
+        de responder. Depois, repita com as alternativas embaralhadas — a letra certa muda, o conteúdo não. Só entram
+        as confirmadas; as 20 extras marcadas &quot;pertinência a confirmar&quot; ficaram fora.
+      </p>
+      <label className="mt-2 block">
+        <span className="font-semibold">Matéria: </span>
+        <select
+          value={materia}
+          onChange={(e) => setMateria(e.target.value)}
+          className="rounded border border-border bg-background px-1 py-0.5"
+        >
+          <option value="Todas">Todas as matérias</option>
+          {materias.map((m) => (
+            <option key={m} value={m}>
+              {m} ({questoesPorMateria(m).length})
+            </option>
+          ))}
+        </select>
+      </label>
+      <ol className="mt-2 space-y-3">
+        {treinaveis.map((q) => (
+          <TreinoCadernoMuseQuestao
+            key={q.id}
+            q={q}
+            ordem={ordem[q.id] ?? 0}
+            escolha={escolha[q.id] ?? ""}
+            mostrar={mostrar[q.id] ?? false}
+            onEscolha={(letra) => setEscolha((s) => ({ ...s, [q.id]: letra }))}
+            onRepetir={() => {
+              setEscolha((s) => ({ ...s, [q.id]: "" }));
+              setMostrar((s) => ({ ...s, [q.id]: false }));
+              setOrdem((o) => ({ ...o, [q.id]: (o[q.id] ?? 0) + 1 }));
+            }}
+            onMostrar={() => setMostrar((s) => ({ ...s, [q.id]: true }))}
+          />
+        ))}
+      </ol>
+      {pendentes.length > 0 && (
+        <details className="mt-2 rounded-lg border border-border p-2 text-xs">
+          <summary className="cursor-pointer font-semibold">
+            Aguardando gabarito/alternativas ({pendentes.length} — sem treino)
+          </summary>
+          <ul className="mt-1 space-y-1">
+            {pendentes.map((q) => (
+              <li key={q.id} className="rounded border border-border px-2 py-1">
+                <span className="font-medium">
+                  {q.id} · {q.prova} {q.ano} — Q{q.numero ?? "?"} · {q.materia}
+                </span>
+                <span className="block text-muted-foreground">{q.motivoPendente}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </details>
   );
 }
@@ -521,6 +681,7 @@ export function PainelIncidencia({
           ))}
         </details>
         <TreinoCrase />
+        <TreinoCadernoMuse />
         {bancaNoEdital && bancaNoEdital.provas.length > (escopoAtivo?.provas.length ?? 0) && (
           <details className="mb-2 rounded-lg border border-border p-2 text-xs">
             <summary className="cursor-pointer font-semibold">
