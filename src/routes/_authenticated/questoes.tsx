@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Pencil, Plus, Star, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Star, Trash2, XCircle } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { AbasGrupo } from "@/components/AbasGrupo";
@@ -13,7 +13,7 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { CampoFormatado } from "@/components/CampoFormatado";
-import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
+import { lerAcervo, useAcervo } from "@/lib/acervo";
 import {
   assuntosComQuestoes,
   provasExtraidas,
@@ -27,7 +27,6 @@ import {
   salvarQuestoesExtraidas,
 } from "@/lib/questoes-banco.functions";
 import {
-  contextoDoEdital,
   ehDoEdital,
   grupoDaMateria,
   materiasPorGrupo,
@@ -36,10 +35,11 @@ import {
   topicosDaMateria,
   useEdital,
 } from "@/lib/edital";
-import { explicarQuestao, gerarQuestoes, type Questao } from "@/lib/ai.functions";
+import { type Questao } from "@/lib/ai.functions";
 import { registrarResposta } from "@/lib/revisao";
 import { useBancaPrevista } from "@/lib/trilha";
-import { daCadastrada } from "@/lib/prova-local";
+import { daCadastrada, daCadernoMuse, ehDoCaderno } from "@/lib/prova-local";
+import { questoesTreinaveis } from "@/lib/caderno-muse";
 import { BancaAtual } from "@/components/BancaAtual";
 import { QuestoesPorLink } from "@/components/QuestoesPorLink";
 import { QuestoesQuestApi } from "@/components/QuestoesQuestApi";
@@ -54,16 +54,16 @@ export const Route = createFileRoute("/_authenticated/questoes")({
   head: () => ({
 
     meta: [
-      { title: "Questões FCC comentadas pela IA | Concurseiro Inteligente" },
+      { title: "Questões do banco por matéria | Concurseiro Inteligente" },
       {
         name: "description",
         content:
-          "Questões no padrão FCC com 5 alternativas, filtro por Conhecimento Geral e Específico e explicação passo a passo do agente de IA.",
+          "Questões das suas provas, cadastradas e do Caderno Muse, por matéria do edital, com gabarito.",
       },
-      { property: "og:title", content: "Questões FCC comentadas pela IA" },
+      { property: "og:title", content: "Questões do banco por matéria" },
       {
         property: "og:description",
-        content: "Resolva, veja o gabarito e entenda cada alternativa com os erros grifados.",
+        content: "Resolva as questões da matéria, veja o gabarito e anote sua explicação.",
       },
     ],
   }),
@@ -78,7 +78,6 @@ function CartaoQuestao({
   onAtualizar,
   onExcluir,
   onFavoritar,
-  contexto,
 }: {
   questao: Questao;
   numero: number;
@@ -88,7 +87,6 @@ function CartaoQuestao({
   onExcluir?: (q: Questao) => void;
   /** Marca/desmarca a estrela de estudo direcionado. */
   onFavoritar?: (q: Questao) => void;
-  contexto?: string | null;
 }) {
   const [escolha, setEscolha] = useState<string | null>(null);
   const [minha, setMinha] = useState("");
@@ -96,7 +94,6 @@ function CartaoQuestao({
   const [rascunho, setRascunho] = useState<Questao>(questao);
   const respondida = escolha !== null;
   const correta = questao.alternativas.find((a) => a.correta);
-  const explicarIA = useServerFn(explicarQuestao);
 
   const LETRAS = "ABCDEFGH";
   const rascunhoValido =
@@ -123,35 +120,6 @@ function CartaoQuestao({
     toast.success("Questão salva.");
   }
 
-
-  const explicacaoIA = useMutation({
-    mutationFn: () =>
-      explicarIA({
-        data: {
-          banca: questao.banca,
-          materia: questao.assunto ? `${questao.materia} — ${questao.assunto}` : questao.materia,
-          enunciado: questao.enunciado,
-          alternativas: questao.alternativas.map((a) => ({
-            letra: a.letra,
-            texto: a.texto,
-            correta: a.correta,
-          })),
-          contexto: contexto ?? null,
-        },
-      }),
-    onSuccess: (res) => {
-      onAtualizar?.({
-        ...questao,
-        explicacao: res.explicacao,
-        alternativas: questao.alternativas.map((a) => ({
-          ...a,
-          explicacao: res.alternativas?.find((x) => x.letra === a.letra)?.explicacao ?? a.explicacao,
-        })),
-      });
-      toast.success("Explicação gerada.");
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao explicar a questão."),
-  });
 
   function escolher(letra: string) {
     setEscolha(letra);
@@ -444,20 +412,6 @@ function CartaoQuestao({
             >
               Salvar minha explicação
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={explicacaoIA.isPending}
-              onClick={() => explicacaoIA.mutate()}
-            >
-              {explicacaoIA.isPending ? (
-                <>
-                  <Loader2 className="mr-2 size-3.5 animate-spin" /> Explicando…
-                </>
-              ) : (
-                "Explicar com IA"
-              )}
-            </Button>
           </div>
         </div>
       )}
@@ -474,15 +428,14 @@ function QuestoesPage() {
   );
   const [materia, setMateria] = useState(busca.materia ?? "");
   const { banca, definida: bancaDefinida } = useBancaPrevista();
-  const gerar = useServerFn(gerarQuestoes);
 
   const materias = materiasPorGrupo(edital, grupo);
   const materiaAtiva = materias.includes(materia) ? materia : (materias[0] ?? "");
-  const foco = busca.assunto && materiaAtiva === busca.materia ? busca.assunto : null;
   const semMaterias = materias.length === 0;
 
-  // Banco local: questões dos PDFs + questões cadastradas à mão no acervo,
-  // ambas classificadas por matéria/assunto do edital (sem IA).
+  // Banco: questões dos PDFs + questões cadastradas à mão no acervo +
+  // questões treináveis do Caderno Muse, todas classificadas por
+  // matéria/assunto do edital (sem IA).
   const extraidas = useMemo(() => {
     const mapa = new Map<string, Questao>();
     for (const q of acervo.extraidas) mapa.set(q.id, q);
@@ -490,51 +443,12 @@ function QuestoesPage() {
       const convertida = daCadastrada(edital, q);
       if (!mapa.has(convertida.id)) mapa.set(convertida.id, convertida);
     }
+    for (const q of questoesTreinaveis()) {
+      const convertida = daCadernoMuse(edital, q);
+      if (!mapa.has(convertida.id)) mapa.set(convertida.id, convertida);
+    }
     return Array.from(mapa.values());
   }, [acervo.extraidas, acervo.questoes, edital]);
-  const [fonte, setFonte] = useState<"pdf" | "ia">(extraidas.length ? "pdf" : "ia");
-  const fonteAtiva = fonte === "pdf" && !extraidas.length ? "ia" : fonte;
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      gerar({
-        data: {
-          materia: foco ? `${materiaAtiva} — ${foco}` : materiaAtiva,
-          grupo,
-          banca,
-          quantidade: 5,
-          formato: "multipla",
-          contexto:
-            [
-              foco ? `Gere questões APENAS sobre o assunto do edital: ${foco}.` : "",
-              contextoDoEdital(edital, materiaAtiva),
-              contextoDoAcervo(acervo),
-            ]
-              .filter(Boolean)
-              .join("\n\n") || null,
-        },
-      }),
-
-    onSuccess: (resultado) => {
-      if (resultado.indisponivel) {
-        toast.error(resultado.indisponivel);
-        if (lerAcervo().extraidas.length) {
-          setFonte("pdf");
-          toast.info("Mostrando as questões extraídas dos seus PDFs (sem IA).");
-        }
-        return;
-      }
-      atualizar({ simulado: resultado.questoes });
-    },
-    onError: (e: Error) => {
-      const semCredito = /cr[ée]dito/i.test(e.message);
-      toast.error(e.message || "Falha ao gerar as questões.");
-      if (semCredito && lerAcervo().extraidas.length) {
-        setFonte("pdf");
-        toast.info("Mostrando as questões extraídas dos seus PDFs (sem IA).");
-      }
-    },
-  });
 
 
   const [assuntoSel, setAssuntoSel] = useState<string | null>(busca.assunto ?? null);
@@ -557,10 +471,6 @@ function QuestoesPage() {
     if (juntas.length !== local.length) atualizar({ extraidas: juntas });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [banco.data, excluidas]);
-
-  const contextoIA =
-    [contextoDoEdital(edital, materiaAtiva), contextoDoAcervo(acervo)].filter(Boolean).join("\n\n") ||
-    null;
 
   const queryClient = useQueryClient();
 
@@ -608,7 +518,6 @@ function QuestoesPage() {
     const mapa = new Map(atuais.map((q) => [q.id, q]));
     for (const q of novas) mapa.set(q.id, q);
     atualizar({ extraidas: Array.from(mapa.values()) });
-    setFonte("pdf");
     void salvar({ data: { questoes: novas } })
       .then(() => queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] }))
       .catch(() => toast.error("Não deu para salvar na nuvem agora; ficaram salvas no aparelho."));
@@ -616,31 +525,27 @@ function QuestoesPage() {
 
 
   // Filtro estrito: só as questões da matéria selecionada e permitidas pelo edital/banca/cargo.
-  const permitidasPdf = extraidas.filter((q) => questaoPermitida(edital, q));
+  const permitidasBanco = extraidas.filter((q) => questaoPermitida(edital, q));
   const pendentes = questoesPendentes(extraidas);
-  const doPdfNaMateria = questoesDaMateria(permitidasPdf, materiaAtiva);
-  const assuntosDisponiveis = assuntosComQuestoes(doPdfNaMateria);
+  const doBancoNaMateria = questoesDaMateria(permitidasBanco, materiaAtiva);
+  const assuntosDisponiveis = assuntosComQuestoes(doBancoNaMateria);
   const assuntoAtivo =
     assuntoSel && assuntosDisponiveis.some((a) => a.assunto === assuntoSel) ? assuntoSel : null;
-  const doPdf = assuntoAtivo
-    ? doPdfNaMateria.filter((q) => q.assunto === assuntoAtivo)
-    : doPdfNaMateria;
+  const doBanco = assuntoAtivo
+    ? doBancoNaMateria.filter((q) => q.assunto === assuntoAtivo)
+    : doBancoNaMateria;
 
-  const permitidas = acervo.simulado.filter((q) => questaoPermitida(edital, q));
-  // Só as questões da própria matéria selecionada (sem "parecido com").
-  const soNome = (t: string) => (t ?? "").split(/\s*[—–]\s*/)[0]?.trim().toLowerCase() ?? "";
-  const daIA = permitidas.filter((q) => soNome(q.materia) === soNome(materiaAtiva));
-  const totalFavoritas = doPdfNaMateria.filter((q) => q.favorita).length;
-  const base = fonteAtiva === "pdf" ? doPdf : daIA;
+  const totalFavoritas = doBancoNaMateria.filter((q) => q.favorita).length;
+  const base = doBanco;
   const lista = soFavoritas ? base.filter((q) => q.favorita) : base;
   const assuntos = agruparAssuntos(lista);
-  const provas = provasExtraidas(extraidas);
+  const provas = provasExtraidas(extraidas.filter((q) => q.id.startsWith("pdf:")));
 
 
   return (
     <AppShell
       titulo="Questões e explicações"
-      descricao={`Padrão ${banca} com 5 alternativas e gabarito comentado passo a passo pela IA.`}
+      descricao={`Questões do banco de ${materiaAtiva || "cada matéria"}, com gabarito e explicação.`}
     >
       <AbasGrupo abas={ABAS_TREINAR} />
       <BancaAtual banca={banca} definida={bancaDefinida} />
@@ -666,28 +571,11 @@ function QuestoesPage() {
       />
 
       <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
-        <div className="flex gap-2">
-          {(["pdf", "ia"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFonte(f)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-                fonteAtiva === f
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              {f === "pdf" ? `Das minhas provas (${extraidas.length})` : "Geradas por IA"}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs font-semibold">Banco de questões</p>
         <p className="text-xs text-muted-foreground">
-          {fonteAtiva === "pdf"
-            ? extraidas.length
-              ? `Questões extraídas automaticamente dos PDFs${provas.length ? `: ${provas.join(", ")}` : ""} — sem gastar crédito de IA.`
-              : "Nenhuma questão extraída ainda. Anexe o PDF da prova em “Incluir → Provas anteriores”."
-            : "Questões criadas pela IA no padrão da banca prevista."}
+          {extraidas.length
+            ? `${extraidas.length} questões no banco — das suas provas, cadastradas e do Caderno Muse${provas.length ? ` · provas: ${provas.join(", ")}` : ""}.`
+            : "Nenhuma questão no banco ainda. Anexe o PDF da prova em “Incluir → Provas anteriores” ou importe por link."}
         </p>
       </section>
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
@@ -740,25 +628,10 @@ function QuestoesPage() {
           </div>
         )}
 
-        <Button
-          className="w-full"
-          disabled={mutation.isPending || semMaterias}
-          onClick={() => mutation.mutate()}
-        >
-          {mutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Montando questões…
-            </>
-          ) : semMaterias ? (
-            "Selecione um edital com matérias"
-          ) : (
-            foco ? `Gerar questões de ${foco}` : `Gerar questões de ${materiaAtiva}`
-          )}
-        </Button>
         <LegendaCores />
       </section>
 
-      {fonteAtiva === "pdf" && assuntosDisponiveis.length > 0 && (
+      {assuntosDisponiveis.length > 0 && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
           <p className="text-xs font-semibold text-muted-foreground">
             Assunto do edital em {materiaAtiva}
@@ -773,7 +646,7 @@ function QuestoesPage() {
                   : "border-border text-muted-foreground"
               }`}
             >
-              Todos ({doPdfNaMateria.length})
+              Todos ({doBancoNaMateria.length})
             </button>
             {assuntosDisponiveis.map((a) => (
               <button
@@ -793,7 +666,7 @@ function QuestoesPage() {
         </section>
       )}
 
-      {fonteAtiva === "pdf" && doPdfNaMateria.length > 0 && (
+      {doBancoNaMateria.length > 0 && (
         <section className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-card">
           <button
             type="button"
@@ -825,15 +698,15 @@ function QuestoesPage() {
 
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          {fonteAtiva === "pdf"
-            ? `Nenhuma questão das suas provas em ${materiaAtiva || "esta matéria"}${
-                assuntoAtivo ? ` — assunto ${assuntoAtivo}` : ""
-              }. Anexe outra prova em “Incluir” ou classifique as questões pendentes abaixo.`
-            : "Nenhuma questão ainda. Gere um simulado acima ou cadastre conteúdo em “Incluir”."}
+          {`Nenhuma questão das suas provas em ${materiaAtiva || "esta matéria"}${
+            assuntoAtivo ? ` — assunto ${assuntoAtivo}` : ""
+          }. Anexe outra prova em “Incluir” ou classifique as questões pendentes abaixo.`}
         </p>
       ) : (
         lista.map((q, i) =>
-          fonteAtiva === "pdf" ? (
+          ehDoCaderno(q) ? (
+            <CartaoQuestao key={q.id || i} questao={q} numero={q.numero ?? i + 1} />
+          ) : (
             <CartaoQuestao
               key={q.id || i}
               questao={q}
@@ -841,15 +714,12 @@ function QuestoesPage() {
               onAtualizar={atualizarExtraida}
               onExcluir={excluirExtraida}
               onFavoritar={favoritarExtraida}
-              contexto={contextoIA}
             />
-          ) : (
-            <CartaoQuestao key={q.id || i} questao={q} numero={i + 1} />
           ),
         )
       )}
 
-      {fonteAtiva === "pdf" && pendentes.length > 0 && (
+      {pendentes.length > 0 && (
         <section className="space-y-3 rounded-xl border border-dashed border-border bg-card p-4 shadow-card">
           <h2 className="font-display text-base font-bold">
             Pendentes de classificação ({pendentes.length})

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { AbasGrupo } from "@/components/AbasGrupo";
 import { ABAS_TREINAR } from "@/lib/navegacao";
@@ -12,16 +12,9 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { contextoDoAcervo, lerAcervo, useAcervo } from "@/lib/acervo";
-import {
-  contextoDoEdital,
-  ehDoEdital,
-  grupoDaMateria,
-  questaoPermitida,
-  todasAsMaterias,
-  useEdital,
-} from "@/lib/edital";
-import { gerarQuestoes, type Questao } from "@/lib/ai.functions";
+import { lerAcervo, useAcervo } from "@/lib/acervo";
+import { ehDoEdital, questaoPermitida, todasAsMaterias, useEdital } from "@/lib/edital";
+import { type Questao } from "@/lib/ai.functions";
 import { listarQuestoesExtraidas } from "@/lib/questoes-banco.functions";
 import { bancoLocal, montarProvaLocal } from "@/lib/prova-local";
 import { provasExtraidas, temGabarito } from "@/lib/questoes-pdf";
@@ -36,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/prova-interativa")({
       {
         name: "description",
         content:
-          "Prova simulada com 20 questões por matéria do edital, extraídas dos PDFs das suas provas sem gastar IA, com gabarito e explicações já resolvidas.",
+          "Prova simulada com 20 questões por matéria do edital, principalmente do Top 5, tiradas do seu banco, com gabarito e explicações já resolvidas.",
       },
       { property: "og:title", content: "Prova interativa em PDF" },
       {
@@ -50,7 +43,6 @@ export const Route = createFileRoute("/_authenticated/prova-interativa")({
 });
 
 const ALVO = 20;
-const LOTE = 10;
 
 function ProvaPage() {
   const { acervo, atualizar } = useAcervo();
@@ -64,7 +56,6 @@ function ProvaPage() {
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [corrigida, setCorrigida] = useState<Record<string, boolean>>({});
   const { banca, definida: bancaDefinida } = useBancaPrevista();
-  const gerar = useServerFn(gerarQuestoes);
 
   // Banco na nuvem das questões extraídas dos PDFs, sincronizado com o aparelho.
   const listar = useServerFn(listarQuestoesExtraidas);
@@ -108,44 +99,10 @@ function ProvaPage() {
     );
   }
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const alvo = Math.max(ALVO, questoes.length + LOTE);
-      const acumulado: Questao[] = [...questoes];
-      while (acumulado.length < alvo) {
-        const resultado = await gerar({
-          data: {
-            materia,
-            grupo: grupoDaMateria(edital, materia),
-            banca,
-            quantidade: Math.min(LOTE, alvo - acumulado.length),
-            formato: "multipla",
-            contexto:
-              [contextoDoEdital(edital, materia), contextoDoAcervo(acervo)]
-                .filter(Boolean)
-                .join("\n\n") || null,
-          },
-        });
-        if (resultado.indisponivel) return { acumulado, indisponivel: resultado.indisponivel };
-        const lote = resultado.questoes;
-        if (!lote.length) break;
-        acumulado.push(
-          ...lote.map((q, i) => ({ ...q, id: q.id || `${materia}-${acumulado.length + i}` })),
-        );
-      }
-      return { acumulado };
-    },
-    onSuccess: ({ acumulado, indisponivel }) => {
-      if (acumulado.length) setProvas((p) => ({ ...p, [materia]: acumulado }));
-      if (indisponivel) toast.error(indisponivel);
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao completar a prova."),
-  });
-
   return (
     <AppShell
       titulo="Prova interativa"
-      descricao={`20 questões por matéria do edital, tiradas dos seus PDFs e do acervo — no formato da banca ${banca}.`}
+      descricao={`20 questões por matéria do edital, principalmente do Top 5, tiradas do seu banco — no formato da banca ${banca}.`}
     >
       <AbasGrupo abas={ABAS_TREINAR} />
       <BancaAtual banca={banca} definida={bancaDefinida} />
@@ -212,23 +169,6 @@ function ProvaPage() {
             ? "Selecione um edital com matérias"
             : `Montar prova de ${materia} — ${Math.min(ALVO, previa.disponiveis)} de ${ALVO} questões (sem IA)`}
         </Button>
-
-        {previa.faltam > 0 && (
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={mutation.isPending || semMaterias}
-            onClick={() => mutation.mutate()}
-          >
-            {mutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Completando com IA…
-              </>
-            ) : (
-              `Completar as ${previa.faltam} que faltam com IA (usa crédito)`
-            )}
-          </Button>
-        )}
 
         <div className="grid gap-2 sm:grid-cols-2">
           <Button
