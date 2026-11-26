@@ -4,6 +4,8 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  FilePlus2,
+  PenLine,
   Plus,
   Trash2,
   Target,
@@ -92,7 +94,7 @@ function Pagina() {
 
   return (
     <AppShell
-      titulo="Trilha de estudo"
+      titulo="Hoje"
       descricao="Cargo, data da prova e o plano de cada dia — sem perder o direcionamento."
     >
       <RelogioEstudo variante="resumo" />
@@ -416,6 +418,27 @@ function Pagina() {
             <Plus className="size-4" /> Adicionar ao dia
           </button>
         </form>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-4 shadow-card">
+        <h2 className="font-display text-base font-bold">Mais</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          O que não é do estudo do dia fica aqui — continua a no máximo 2 toques.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Link
+            to="/redacao"
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold"
+          >
+            <PenLine className="size-4 text-accent" /> Redação
+          </Link>
+          <Link
+            to="/inclusao"
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold"
+          >
+            <FilePlus2 className="size-4 text-accent" /> Adicionar conteúdo
+          </Link>
+        </div>
       </section>
     </AppShell>
   );

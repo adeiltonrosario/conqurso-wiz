@@ -1,23 +1,20 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { PenLine, FilePlus2, ScanSearch, ListChecks, FileText, Brain, BookOpen, CalendarDays, Layers, LogIn, LogOut } from "lucide-react";
+import { ListChecks, Brain, BookOpen, CalendarDays, LogIn, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { limparEstadoLocal } from "@/lib/sync";
 import { useRastreadorTempoEstudo } from "@/lib/tempo-estudo";
 import { RelogioEstudo } from "@/components/RelogioEstudo";
+import { ROTA_DA_TELA, telaDaRota, type Tela } from "@/lib/navegacao";
 
-const NAV = [
-  { to: "/trilha", label: "Trilha", icon: CalendarDays },
-  { to: "/leis", label: "Leis", icon: BookOpen },
-  { to: "/redacao", label: "Redação", icon: PenLine },
-  { to: "/inclusao", label: "Incluir", icon: FilePlus2 },
-  { to: "/analise-padroes", label: "Padrões", icon: ScanSearch },
-  { to: "/questoes", label: "Questões", icon: ListChecks },
-  { to: "/flashcards", label: "Cards", icon: Layers },
-  { to: "/revisao", label: "Revisão", icon: Brain },
-  { to: "/prova-interativa", label: "Prova", icon: FileText },
+/** Menu de baixo: só 4 telas — Hoje, Leis, Treinar, Revisar. */
+const NAV: readonly { tela: Tela; label: string; icon: typeof CalendarDays }[] = [
+  { tela: "hoje", label: "Hoje", icon: CalendarDays },
+  { tela: "leis", label: "Leis", icon: BookOpen },
+  { tela: "treinar", label: "Treinar", icon: ListChecks },
+  { tela: "revisar", label: "Revisar", icon: Brain },
 ] as const;
 
 
@@ -35,6 +32,10 @@ export function AppShell({
   const queryClient = useQueryClient();
   // Único rastreador do relógio automático: deriva a atividade da rota.
   useRastreadorTempoEstudo();
+  // Tela ativa do menu: Treinar fica ativo em Questões, Prova e Padrões;
+  // Revisar em Revisão e Cards; Hoje em / e /trilha.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const telaAtiva = telaDaRota(pathname);
 
   async function sair() {
     await queryClient.cancelQueries();
@@ -84,12 +85,15 @@ export function AppShell({
 
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {NAV.map(({ tela, label, icon: Icon }) => (
             <Link
-              key={to}
-              to={to}
-              className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground transition-colors"
-              activeProps={{ className: "text-primary font-semibold" }}
+              key={tela}
+              to={ROTA_DA_TELA[tela]}
+              className={
+                telaAtiva === tela
+                  ? "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-primary transition-colors"
+                  : "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground transition-colors"
+              }
             >
               <Icon className="size-5" strokeWidth={1.9} />
               {label}

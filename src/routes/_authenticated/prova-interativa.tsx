@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AbasGrupo } from "@/components/AbasGrupo";
+import { ABAS_TREINAR } from "@/lib/navegacao";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
@@ -145,6 +147,7 @@ function ProvaPage() {
       titulo="Prova interativa"
       descricao={`20 questões por matéria do edital, tiradas dos seus PDFs e do acervo — no formato da banca ${banca}.`}
     >
+      <AbasGrupo abas={ABAS_TREINAR} />
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">

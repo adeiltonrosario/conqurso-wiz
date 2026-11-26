@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Eye, Layers, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { AbasGrupo } from "@/components/AbasGrupo";
+import { ABAS_REVISAR } from "@/lib/navegacao";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CardForm } from "@/components/CardForm";
@@ -166,6 +168,7 @@ function FlashcardsPage() {
       titulo="Flash cards"
       descricao="Crie seus cards com pergunta, resposta e imagem, ou revise as questões do seu acervo por matéria."
     >
+      <AbasGrupo abas={ABAS_REVISAR} />
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold">

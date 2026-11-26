@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, Pencil, Plus, Star, Trash2, XCircle } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
+import { AbasGrupo } from "@/components/AbasGrupo";
+import { ABAS_TREINAR } from "@/lib/navegacao";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
@@ -640,6 +642,7 @@ function QuestoesPage() {
       titulo="Questões e explicações"
       descricao={`Padrão ${banca} com 5 alternativas e gabarito comentado passo a passo pela IA.`}
     >
+      <AbasGrupo abas={ABAS_TREINAR} />
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <FiltroConcurso compacto />
 

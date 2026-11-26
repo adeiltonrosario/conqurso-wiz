@@ -18,6 +18,8 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AbasGrupo } from "@/components/AbasGrupo";
+import { ABAS_TREINAR } from "@/lib/navegacao";
 import { FiltroConcurso } from "@/components/FiltroConcurso";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
@@ -134,6 +136,7 @@ function AnalisePage() {
       titulo="Análise de padrões"
       descricao="Envie PDF, Word ou fotos da prova: o app grifa os padrões e gera o PDF respondido para impressão."
     >
+      <AbasGrupo abas={ABAS_TREINAR} />
       <FiltroConcurso compacto />
       <section className="no-print space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <Label>Arquivos de referência (PDF, Word, imagens)</Label>

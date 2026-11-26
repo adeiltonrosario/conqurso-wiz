@@ -13,6 +13,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AbasGrupo } from "@/components/AbasGrupo";
+import { ABAS_REVISAR } from "@/lib/navegacao";
 import { BancaAtual } from "@/components/BancaAtual";
 import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Button } from "@/components/ui/button";
@@ -262,6 +264,7 @@ function RevisaoPage() {
       titulo="Revisão espaçada"
       descricao="A fila é montada sozinha a partir do seu histórico: o que você erra volta rápido, o que você domina volta bem depois."
     >
+      <AbasGrupo abas={ABAS_REVISAR} />
       <BancaAtual banca={banca} definida={bancaDefinida} />
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex items-center gap-2 text-sm font-semibold">
