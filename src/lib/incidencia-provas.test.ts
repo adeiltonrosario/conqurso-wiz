@@ -13,8 +13,8 @@ import {
 } from "./incidencia-provas";
 
 describe("peso por matéria — provas contadas no Qconcursos", () => {
-  it("tem as 17 provas contadas, com URL de origem em cada uma", () => {
-    expect(PROVAS_CONTADAS).toHaveLength(17);
+  it("tem as 22 provas contadas, com URL de origem em cada uma", () => {
+    expect(PROVAS_CONTADAS).toHaveLength(22);
     for (const p of PROVAS_CONTADAS) {
       // Qconcursos (página pública da prova) ou PCI Concursos (página de
       // download) — as duas provas de 2025 vieram em PDF enviado pelo
@@ -80,12 +80,42 @@ describe("peso por matéria — provas contadas no Qconcursos", () => {
 
   it("peso por banca soma cargos diferentes da mesma banca", () => {
     const vunesp = pesoPorBanca("VUNESP")!;
-    // Escrevente 10 + Oficial 2 + PC-SP Investigador 1 + PC-BA Investigador 1 + Analista 1 = 15 provas
-    expect(vunesp.provas).toHaveLength(15);
+    // Escrevente 10 + Oficial 2 + PC-SP Investigador 1 + PC-BA Investigador 1 + Analista 1
+    // + Assistente Social 1 + Psicólogo 1 + Juiz 1 + Titular Provimento 1 + Titular Remoção 1 = 20 provas
+    expect(vunesp.provas).toHaveLength(20);
     const portugues = vunesp.pesos.find((p) => p.materia === "Língua Portuguesa")!;
-    // 232 (Escrevente) + 40 (Oficial) + 15 (PC-SP) + 10 (Analista 2025) = 297, sem contagem completa em PC-BA 2018
-    expect(portugues.questoes).toBe(297);
-    expect(portugues.provas).toBe(14);
+    // 232 (Escrevente) + 40 (Oficial) + 15 (PC-SP) + 10 (Analista 2025) + 12 (Assistente 2024) + 12 (Psicólogo 2024) = 321,
+    // sem contagem completa em PC-BA 2018 e sem Português em Juiz/Titular
+    expect(portugues.questoes).toBe(321);
+    expect(portugues.provas).toBe(16);
+  });
+
+  it("Oficial 2024 soma 100 (Processo Civil 10, não 12) e as 5 provas novas de 2024 entram", () => {
+    // Correção 26/11/2026: a lista por disciplina soma 100; o 12 era do
+    // painel "mais cobradas" e faltavam 6 disciplinas de 1 questão.
+    const oficial2024 = PROVAS_CONTADAS.find(
+      (p) => p.cargo === "Oficial de Justiça" && p.ano === 2024,
+    )!;
+    expect(oficial2024.disciplinas.reduce((s, d) => s + d.questoes, 0)).toBe(100);
+    expect(oficial2024.disciplinas.find((d) => d.materia === "Direito Processual Civil")!.questoes).toBe(10);
+    expect(oficial2024.disciplinas.find((d) => d.materia === "Atualidades")!.questoes).toBe(1);
+    // 5 entradas novas de 2024, todas somando o total da prova.
+    for (const cargo of [
+      "Assistente Social Judiciário",
+      "Psicólogo Judiciário",
+      "Juiz Substituto",
+      "Titular de Serviços de Notas e de Registros — Provimento",
+      "Titular de Serviços de Notas e de Registros — Remoção",
+    ]) {
+      const prova = PROVAS_CONTADAS.find((p) => p.cargo === cargo && p.ano === 2024)!;
+      expect(prova).toBeDefined();
+      expect(prova.disciplinas.reduce((s, d) => s + d.questoes, 0)).toBe(prova.totalQuestoes);
+    }
+    // O Simulado do Qconcursos (17/07/2024) NÃO entra — só provas oficiais.
+    expect(PROVAS_CONTADAS.some((p) => p.cargo.includes("Simulado"))).toBe(false);
+    // Escopos novos existem (1 prova cada).
+    expect(escoposPeso().find((e) => e.cargo === "Assistente Social Judiciário")?.provas).toHaveLength(1);
+    expect(escoposPeso().find((e) => e.cargo === "Psicólogo Judiciário")?.provas).toHaveLength(1);
   });
 
   it("só entra o que é do mesmo assunto cobrado no edital", () => {
@@ -123,25 +153,25 @@ describe("peso por matéria — provas contadas no Qconcursos", () => {
       "Interpretação de Textos",
       "Noções Gerais de Compreensão e Interpretação de Texto",
       "Sintaxe",
-      "Crase",
       "Significação Contextual de Palavras e Expressões",
+      "Crase",
       "Morfologia",
     ]);
-    // Crase: 15 em 282 questões de Português contadas (mesma banca:
+    // Crase: 17 em 306 questões de Português contadas (mesma banca:
     // 24×9 Escrevente + 20×2 Oficial + 16 Escrevente 2025 + 10 Analista
-    // 2025) = 5,3% dentro da matéria.
+    // 2025 + 12 Assistente 2024 + 12 Psicólogo 2024) = 5,6% dentro da matéria.
     const crase = dentro.find((a) => a.assunto === "Crase")!;
-    expect(pesoDentroDaMateria(crase, 282)).toBe(5.3);
-    // Separado por comando: crase pedida (7) x regência mascarada (1)
+    expect(pesoDentroDaMateria(crase, 306)).toBe(5.6);
+    // Separado por comando: crase pedida (7) x regência mascarada (3)
     // x outro assunto com crase como distrator (1) x lacunas a/à (6,
     // incorporadas por decisão do usuário em 23/11/2026).
     expect(crase.separacaoCraseRegencia).toEqual({
       craseDireta: 7,
-      regenciaMascarada: 1,
+      regenciaMascarada: 3,
       outroAssuntoMascarada: 1,
       lacunas: 6,
     });
-    expect(pesoDentroDaMateria(dentro[0]!, 282)).toBe(25.5);
+    expect(pesoDentroDaMateria(dentro[0]!, 306)).toBe(31.4);
     // Mas a contagem explícita subestima: Crase está mascarada pela
     // regência, então o app marca prioridade alta, não só o número.
     expect(crase.alertaMascarado).toMatch(/mascarad/i);
@@ -156,8 +186,8 @@ describe("peso por matéria — provas contadas no Qconcursos", () => {
     expect(ranking[0]!.materia).toBe("Língua Portuguesa");
     const portugues = ranking.find((r) => r.materia === "Língua Portuguesa")!;
     const crase = portugues.assuntos.find((a) => a.assunto === "Crase")!;
-    expect(crase.questoes).toBe(15);
-    expect(crase.provas).toBe(13);
+    expect(crase.questoes).toBe(17);
+    expect(crase.provas).toBe(15);
     expect(crase.comoCobra).toMatch(/regência/i);
     // Matéria sem contagem nas provas verificadas continua no ranking,
     // marcada como não contada, para não sumir do treino: aqui, com só

@@ -29,6 +29,21 @@
  * O denominador do peso por matéria só soma as provas onde a matéria
  * foi contada, então a Analista não infla o peso das matérias que ela
  * não contou.
+ *
+ * Atualização 26/11/2026: entraram as 8 provas oficiais VUNESP de
+ * 2024 (Escrevente 08/09, Escrevente reaplicação, Oficial 14/12,
+ * Assistente Social 03/02, Psicólogo 03/02, Juiz 29/09, Titular
+ * Provimento 07/07 e Titular Remoção 14/07), lidas questão por questão
+ * no Qconcursos (só leitura) — ver os relatórios em
+ * ~/workspace/cadernos-vunesp/vunesp-2024-escrevente-oficial-mapeamento.md
+ * e vunesp-2024-outras-provas-mapeamento.md. O Simulado do Qconcursos
+ * (Escrevente 1º Simulado, 17/07/2024) NÃO entra, por decisão do
+ * usuário (25/11/2026, "só as provas oficiais"): não é prova oficial
+ * da VUNESP. Correções junto: Oficial 2024 Processo Civil 12 → 10
+ * (a lista por disciplina soma 100; o painel "mais cobradas" diz 12
+ * por engano) e Crase 15 → 17 (só Assistente Q12 e Psicólogo Q12 são
+ * novas — 08/09 Q18 e reaplicação Q20 já estavam no 15 como lacunas).
+ * Total: 22 provas contadas.
  */
 
 export type DisciplinaContada = {
@@ -131,7 +146,7 @@ export const PROVAS_CONTADAS: ProvaContada[] = [
     url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-oficial-de-justica",
     disciplinas: [
       { materia: "Língua Portuguesa", questoes: 20 },
-      { materia: "Direito Processual Civil", questoes: 12 },
+      { materia: "Direito Processual Civil", questoes: 10 },
       { materia: "Direito Processual Penal", questoes: 10 },
       { materia: "Direito Penal", questoes: 8 },
       { materia: "Direito Constitucional", questoes: 8 },
@@ -143,7 +158,16 @@ export const PROVAS_CONTADAS: ProvaContada[] = [
       { materia: "Matemática", questoes: 3 },
       { materia: "Direito Administrativo", questoes: 2 },
       { materia: "Estatuto da Pessoa com Deficiência", questoes: 2 },
+      { materia: "Administração Pública", questoes: 1 },
+      { materia: "Direito Empresarial", questoes: 1 },
+      { materia: "Direito Tributário", questoes: 1 },
+      { materia: "Economia", questoes: 1 },
+      { materia: "Atualidades", questoes: 1 },
+      { materia: "Matemática Financeira", questoes: 1 },
     ],
+    // Processo Civil 12 → 10 em 26/11/2026: a seção "Questões por
+    // disciplinas" da própria página diz 10 e fecha 100; o 12 era do
+    // painel "mais cobradas". As 6 disciplinas de 1 questão faltavam.
     assuntosTopo: ["Interpretação de Textos 5%", "Noções Gerais de Compreensão e Interpretação de Texto 2%", "Significação Contextual de Palavras e Expressões 2%"],
   },
   {
@@ -288,6 +312,11 @@ export const PROVAS_CONTADAS: ProvaContada[] = [
     instituicao: "TJ-SP",
     cargo: "Escrevente Técnico Judiciário",
     ano: 2024,
+    // Data mantida em 24/11/2024: o gabarito oficial da VUNESP (004,
+    // Versão 4, em ~/workspace/user/files/GABARITO_TSP_2024_NOVEMBRO.pdf)
+    // é datado de 24.11.2024; a página da prova no Qconcursos diz
+    // 23/11/2024 e a capa do caderno de prova não traz data no texto
+    // extraído. Divergência anotada — vale o documento oficial.
     aplicadaEm: "24/11/2024",
     totalQuestoes: 100,
     url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-escrevente-tecnico-judiciario-reaplicacao",
@@ -307,6 +336,153 @@ export const PROVAS_CONTADAS: ProvaContada[] = [
       { materia: "Estatuto da Pessoa com Deficiência", questoes: 2 },
     ],
     assuntosTopo: ["Sintaxe 7%", "Interpretação de Textos 6%", "Noções Gerais de Compreensão e Interpretação de Texto 6%"],
+  },
+  {
+    banca: "VUNESP",
+    instituicao: "TJ-SP",
+    cargo: "Assistente Social Judiciário",
+    ano: 2024,
+    aplicadaEm: "03/02/2024",
+    totalQuestoes: 70,
+    url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-assistente-social-judiciario/questoes",
+    disciplinas: [
+      { materia: "Serviço Social", questoes: 26 },
+      { materia: "Língua Portuguesa", questoes: 12 },
+      { materia: "ECA", questoes: 10 },
+      { materia: "Raciocínio Lógico", questoes: 6 },
+      { materia: "Matemática", questoes: 4 },
+      { materia: "Direito Civil", questoes: 3 },
+      { materia: "Noções de Informática", questoes: 3 },
+      { materia: "Direito Administrativo", questoes: 2 },
+      { materia: "Sociologia", questoes: 1 },
+      { materia: "Estatuto da Pessoa Idosa", questoes: 1 },
+      { materia: "Atualidades", questoes: 1 },
+      { materia: "Legislação Estadual", questoes: 1 },
+    ],
+    // Soma: 26+12+10+6+4+3+3+2+1+1+1+1 = 70. Serviço Social 26 (não 28)
+    // e ECA 10 (não 8): recontado questão por questão no mapeamento.
+    assuntosTopo: ["ECA 14%", "Interpretação de Textos 9%", "Código de Ética do Serviço Social 6%"],
+  },
+  {
+    banca: "VUNESP",
+    instituicao: "TJ-SP",
+    cargo: "Psicólogo Judiciário",
+    ano: 2024,
+    aplicadaEm: "03/02/2024",
+    totalQuestoes: 70,
+    url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-psicologo-judiciario/questoes",
+    disciplinas: [
+      { materia: "Psicologia", questoes: 30 },
+      { materia: "Língua Portuguesa", questoes: 12 },
+      { materia: "Raciocínio Lógico", questoes: 6 },
+      { materia: "ECA", questoes: 5 },
+      { materia: "Matemática", questoes: 4 },
+      { materia: "Legislação Estadual", questoes: 2 },
+      { materia: "Noções de Informática", questoes: 3 },
+      { materia: "Direito Notarial e Registral", questoes: 1 },
+      { materia: "Criminologia", questoes: 1 },
+      { materia: "Direito Processual Penal", questoes: 1 },
+      { materia: "Direito Penal", questoes: 1 },
+      { materia: "Direito Civil", questoes: 1 },
+      { materia: "Direito Internacional", questoes: 1 },
+      { materia: "Atualidades", questoes: 1 },
+      { materia: "Direito Administrativo", questoes: 1 },
+    ],
+    // Soma: 30+12+6+5+4+2+3+1+1+1+1+1+1+1+1 = 70. Anuladas: Q29, Q52,
+    // Q63 (contam na disciplina, não no artigo/subtópico). Atualidades
+    // é a Q54: a página rotula "Conhecimentos Gerais" (economia /
+    // reforma tributária); o conteúdo é Atualidades.
+    assuntosTopo: ["Interpretação de Textos 9%", "ECA 7%", "Psicologia Jurídica 27%"],
+  },
+  {
+    banca: "VUNESP",
+    instituicao: "TJ-SP",
+    cargo: "Juiz Substituto",
+    ano: 2024,
+    aplicadaEm: "29/09/2024",
+    totalQuestoes: 100,
+    url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-juiz-substituto/questoes",
+    disciplinas: [
+      { materia: "Direito Civil", questoes: 12 },
+      { materia: "Direito Penal", questoes: 12 },
+      { materia: "Direito Processual Civil", questoes: 10 },
+      { materia: "Direito Constitucional", questoes: 10 },
+      { materia: "Direito Tributário", questoes: 9 },
+      { materia: "Direito Processual Penal", questoes: 8 },
+      { materia: "Direito Empresarial", questoes: 8 },
+      { materia: "Direito Administrativo", questoes: 7 },
+      { materia: "Direito do Consumidor", questoes: 5 },
+      { materia: "ECA", questoes: 5 },
+      { materia: "Direito Eleitoral", questoes: 5 },
+      { materia: "Direito Ambiental", questoes: 4 },
+      { materia: "Direitos Humanos", questoes: 3 },
+      { materia: "Legislação dos TRFs", questoes: 1 },
+      { materia: "Filosofia", questoes: 1 },
+    ],
+    // Soma: 12+12+10+10+9+8+8+7+5+5+5+4+3+1+1 = 100. Anuladas: Q58, Q75.
+    // Desatualizadas: Q48, Q62, Q76.
+    assuntosTopo: ["Direito Civil 12%", "Direito Penal 12%", "Direito Processual Civil 10%"],
+  },
+  {
+    banca: "VUNESP",
+    instituicao: "TJ-SP",
+    cargo: "Titular de Serviços de Notas e de Registros — Provimento",
+    ano: 2024,
+    aplicadaEm: "07/07/2024",
+    totalQuestoes: 100,
+    url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-titular-de-servicos-de-notas-e-de-registros-provimento/questoes",
+    disciplinas: [
+      { materia: "Direito Notarial e Registral", questoes: 31 },
+      { materia: "Direito Civil", questoes: 16 },
+      { materia: "Legislação dos Tribunais de Justiça (TJs)", questoes: 11 },
+      { materia: "Direito Constitucional", questoes: 6 },
+      { materia: "Direito Empresarial", questoes: 6 },
+      { materia: "Legislação dos TRFs", questoes: 5 },
+      { materia: "Direito Tributário", questoes: 5 },
+      { materia: "Direito Administrativo", questoes: 4 },
+      { materia: "Direito Processual Civil", questoes: 4 },
+      { materia: "Legislação Estadual", questoes: 2 },
+      { materia: "Direito Urbanístico", questoes: 2 },
+      { materia: "Direito Penal", questoes: 2 },
+      { materia: "Direito Digital", questoes: 1 },
+      { materia: "Legislação Federal", questoes: 1 },
+      { materia: "Direitos Humanos", questoes: 1 },
+      { materia: "Direito Processual Penal", questoes: 1 },
+      { materia: "Direito Econômico", questoes: 1 },
+      { materia: "Conhecimentos Gerais", questoes: 1 },
+    ],
+    // Soma: 31+16+11+6+6+5+5+4+4+2+2+2+1+1+1+1+1+1 = 100. Anuladas: Q80,
+    // Q92. Desatualizadas: Q23, Q40, Q60.
+    assuntosTopo: ["Direito Notarial e Registral 31%", "Direito Civil 16%", "Legislação dos TJs 11%"],
+  },
+  {
+    banca: "VUNESP",
+    instituicao: "TJ-SP",
+    cargo: "Titular de Serviços de Notas e de Registros — Remoção",
+    ano: 2024,
+    aplicadaEm: "14/07/2024",
+    totalQuestoes: 100,
+    url: "https://www.qconcursos.com/questoes-de-concursos/provas/vunesp-2024-tj-sp-titular-de-servicos-de-notas-e-de-registros-remocao/questoes",
+    disciplinas: [
+      { materia: "Direito Notarial e Registral", questoes: 31 },
+      { materia: "Direito Civil", questoes: 15 },
+      { materia: "Legislação dos Tribunais de Justiça (TJs)", questoes: 11 },
+      { materia: "Direito Constitucional", questoes: 9 },
+      { materia: "Direito Empresarial", questoes: 8 },
+      { materia: "Direito Tributário", questoes: 5 },
+      { materia: "Direito Processual Civil", questoes: 5 },
+      { materia: "Direito Administrativo", questoes: 4 },
+      { materia: "Legislação dos TRFs", questoes: 3 },
+      { materia: "Legislação Estadual", questoes: 2 },
+      { materia: "Direito Urbanístico", questoes: 2 },
+      { materia: "Direito Penal", questoes: 2 },
+      { materia: "Direito Digital", questoes: 1 },
+      { materia: "Direito Processual Penal", questoes: 1 },
+      { materia: "Conhecimentos Gerais", questoes: 1 },
+    ],
+    // Soma: 31+15+11+9+8+5+5+4+3+2+2+2+1+1+1 = 100. Anulada: Q46.
+    // Desatualizadas: Q71, Q91.
+    assuntosTopo: ["Direito Notarial e Registral 31%", "Direito Civil 15%", "Legislação dos TJs 11%"],
   },
   {
     banca: "VUNESP",
@@ -647,25 +823,34 @@ export type AssuntoContado = {
  * Significação 1, Crase direta 1) e lacunas a/à incorporadas por decisão
  * do usuário — Crase total 15 em 13 provas (direta 7, regência 1,
  * outro assunto 1, lacunas 6).
+ * Atualização 26/11/2026: + Oficial 2024 (20 de Português), Assistente
+ * 2024 (12) e Psicólogo 2024 (12) — Crase 15 → 17 em 15 provas
+ * (direta 7, regência mascarada 3, outro assunto 1, lacunas 6): só
+ * Assistente Q12 e Psicólogo Q12 são novas; 08/09 Q18 e reaplicação
+ * Q20 já estavam no 15 como lacunas. Assistente Q12 conta em Sintaxe
+ * (etiqueta "Sintaxe (crase/regência)"); nenhuma das duas Q12 conta
+ * em Morfologia. Assistente Q04 ("Ortografia/Pontuação") não foi
+ * contada em Pontuação — o enunciado não está no mapeamento e
+ * Ortografia não é item do edital de 2027.
  */
 export const ASSUNTOS_CONTADOS: AssuntoContado[] = [
-  { assunto: "Interpretação de Textos", materia: "Língua Portuguesa", questoes: 72, provas: 11, comoCobra: "Texto longo (jornal, literatura) + alternativa que resume ou conclui o que o texto diz; a pegadinha troca o sentido ou generaliza." },
-  { assunto: "Noções Gerais de Compreensão e Interpretação de Texto", materia: "Língua Portuguesa", questoes: 33, provas: 7 },
-  { assunto: "Sintaxe", materia: "Língua Portuguesa", questoes: 18, provas: 5 },
-  { assunto: "Significação Contextual de Palavras e Expressões", materia: "Língua Portuguesa", questoes: 12, provas: 4 },
-  { assunto: "Morfologia", materia: "Língua Portuguesa", questoes: 3, provas: 1 },
+  { assunto: "Interpretação de Textos", materia: "Língua Portuguesa", questoes: 96, provas: 14, comoCobra: "Texto longo (jornal, literatura) + alternativa que resume ou conclui o que o texto diz; a pegadinha troca o sentido ou generaliza." },
+  { assunto: "Noções Gerais de Compreensão e Interpretação de Texto", materia: "Língua Portuguesa", questoes: 38, provas: 8 },
+  { assunto: "Sintaxe", materia: "Língua Portuguesa", questoes: 29, provas: 8 },
+  { assunto: "Significação Contextual de Palavras e Expressões", materia: "Língua Portuguesa", questoes: 19, provas: 6 },
+  { assunto: "Morfologia", materia: "Língua Portuguesa", questoes: 11, provas: 4 },
   {
     assunto: "Crase",
     materia: "Língua Portuguesa",
-    questoes: 15,
-    provas: 13,
+    questoes: 17,
+    provas: 15,
     comoCobra: "Sempre dentro de um texto: julgar se a crase está certa, se ela se mantém ao trocar o verbo, ou onde ela caberia. É regência verbal/nominal disfarçada de crase. Ex.: Escrevente 2023-05-28 Q10, direta, com as 5 alternativas testando 'à' ('à uma melhora', 'à procura', 'à ela', 'à todos', 'à 7,9%'); Oficial 2023 'O uso do acento indicativo da crase atende à norma-padrão em:'; Escrevente 2021 Q04 'a crase mantém-se se a expressão destacada for substituída por…'. E as lacunas a/à (6): o comando pede para preencher as lacunas e a crase é uma das opções.",
-    observacao: "Contagem separada, por comando: (1) Crase direta, comando pede crase — 7: 2023-07-02 (2), 2017 (1), Oficial 2023 (1), 2021 Q04 (1), 2023-05-28 Q10 (1), Analista 2025 Q10 (1). (2) Regência mascarada, comando pede regência e a crase decide nas alternativas — 1: 2024-11-24 Q24, regência nominal ('ajuda à dona Tetê' / 'em relação às redes sociais'). (3) Outro assunto mascarado — 1: 2023-07-02, questão de pronome com a alternativa errada 'Tratava à ele'. (4) Lacunas a/à — 6: 2018 Q19, 2021 Q06 e Q23, 2024-09-08 Q18, 2024-11-24 Q20, 2025 Q02 — incorporadas por decisão do usuário (23/11/2026). Total 15 em 13 provas. Em 2018 e 2024-09-08 o assunto está listado na prova, sem a palavra no enunciado — por isso 15 ainda é um piso, não o total.",
+    observacao: "Contagem separada, por comando: (1) Crase direta, comando pede crase — 7: 2023-07-02 (2), 2017 (1), Oficial 2023 (1), 2021 Q04 (1), 2023-05-28 Q10 (1), Analista 2025 Q10 (1). (2) Regência mascarada, comando pede regência e a crase decide nas alternativas — 3: 2024-11-24 Q24, regência nominal ('ajuda à dona Tetê' / 'em relação às redes sociais'); Assistente 2024 Q12 (Q3543227) e Psicólogo 2024 Q12 (Q3543297), crase/regência. (3) Outro assunto mascarado — 1: 2023-07-02, questão de pronome com a alternativa errada 'Tratava à ele'. (4) Lacunas a/à — 6: 2018 Q19, 2021 Q06 e Q23, 2024-09-08 Q18, 2024-11-24 Q20, 2025 Q02 — incorporadas por decisão do usuário (23/11/2026). Total 17 em 15 provas. Em 2018 e 2024-09-08 o assunto está listado na prova, sem a palavra no enunciado — por isso 17 ainda é um piso, não o total.",
     alertaMascarado:
       "Crase é muito mais cobrada do que a contagem explícita mostra: ela está mascarada pela regência. Muitas questões de Regência e Sintaxe testam a crase nas alternativas — 'à' contra 'a' — sem dizer 'crase' no enunciado. Ex.: Escrevente 2023, questão de pronome com a alternativa errada 'Tratava à ele'; Escrevente 2024-11-24 Q24, de regência nominal, com 'ajuda à dona Tetê'. Por isso, no estudo, tratar Crase como alta incidência (★★★), junto com Interpretação, mesmo que o número explícito seja menor.",
     separacaoCraseRegencia: {
       craseDireta: 7,
-      regenciaMascarada: 1,
+      regenciaMascarada: 3,
       outroAssuntoMascarada: 1,
       lacunas: 6,
     },

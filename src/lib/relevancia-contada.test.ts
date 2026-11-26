@@ -128,8 +128,8 @@ describe("relevância contada por matéria — VUNESP Escrevente", () => {
 });
 
 describe("relevância contada por tópico — dentro da matéria", () => {
-  it("Interpretação é 25,5% do Português", () => {
-    expect(relevanciaTopicoContada("Língua Portuguesa", "Interpretação de Textos")).toBe(25.5);
+  it("Interpretação é 31,4% do Português", () => {
+    expect(relevanciaTopicoContada("Língua Portuguesa", "Interpretação de Textos")).toBe(31.4);
   });
 
   it("art. 5º é o maior tópico do Constitucional (45%)", () => {
@@ -144,8 +144,8 @@ describe("relevância contada por tópico — dentro da matéria", () => {
     expect(r.relevanciaTopicos["Constituição Federal — artigo 92"]).toBe(2.5);
   });
 
-  it("Crase fica com 5,3% do Português (15 em 282)", () => {
-    expect(relevanciaTopicoContada("Língua Portuguesa", "Crase")).toBe(5.3);
+  it("Crase fica com 5,6% do Português (17 em 306)", () => {
+    expect(relevanciaTopicoContada("Língua Portuguesa", "Crase")).toBe(5.6);
   });
 
   it("tópico sem contagem verificada fica undefined — não zero, não excluído", () => {
@@ -157,35 +157,65 @@ describe("relevância contada por tópico — dentro da matéria", () => {
     expect(matematica.semContagem).toContain("MMC e MDC");
     // ...mas a matéria continua no resultado, com os tópicos contados
     expect(matematica.relevancia).toBe(6);
-    expect(matematica.relevanciaTopicos["Porcentagem e juros simples"]).toBe(20.6);
+    expect(matematica.relevanciaTopicos["Porcentagem e juros simples"]).toBe(24.4);
 
     const legislacao = r.find((x) => x.materia === "Legislação Interna")!;
     // Os 4 itens novos caíram na 2025 (1 questão cada) e a Corregedoria
-    // soma 21 em 25 — nada aqui fica sem contagem.
-    expect(legislacao.relevanciaTopicos["Res. TJSP 850/2021 (teletrabalho)"]).toBe(4);
-    expect(legislacao.relevanciaTopicos["Res. TJSP 963/2025 (eproc)"]).toBe(4);
-    expect(legislacao.relevanciaTopicos["Normas da Corregedoria Geral da Justiça"]).toBe(84);
+    // soma 26 em 30 — nada aqui fica sem contagem.
+    expect(legislacao.relevanciaTopicos["Res. TJSP 850/2021 (teletrabalho)"]).toBe(3.3);
+    expect(legislacao.relevanciaTopicos["Res. TJSP 963/2025 (eproc)"]).toBe(3.3);
+    expect(legislacao.relevanciaTopicos["Normas da Corregedoria Geral da Justiça"]).toBe(86.7);
     expect(legislacao.semContagem).toHaveLength(0);
     expect(legislacao.relevancia).toBe(5.3);
   });
 
-  it("Lei 10.261 arts. 239–323 pesa 56,4% do Administrativo; faixa 1–86 agora tem contagem; 171–175 segue sem", () => {
+  it("Lei 10.261 arts. 239–323 pesa 59,6% do Administrativo; faixa 1–86 agora tem contagem; 171–175 segue sem", () => {
     const r = relevanciaEscrevente().find((x) => x.materia === "Direito Administrativo")!;
-    expect(r.relevanciaTopicos["Lei n.º 10.261/68 — artigos 239 a 323"]).toBe(56.4);
-    expect(r.relevanciaTopicos["Lei Federal n.º 8.429/92 (Lei de Improbidade Administrativa)."]).toBe(43.6);
-    // Arts. 30, 60 e 75 cobrados na 2025 (Q36–Q38): 3 em 39 = 7,7%
+    expect(r.relevanciaTopicos["Lei n.º 10.261/68 — artigos 239 a 323"]).toBe(59.6);
+    expect(r.relevanciaTopicos["Lei Federal n.º 8.429/92 (Lei de Improbidade Administrativa)."]).toBe(40.4);
+    // Arts. 30, 60 e 75 cobrados na 2025 (Q36–Q38) + art. 3º na Oficial 2024 Q55: 4 em 52 = 7,7%
     expect(r.relevanciaTopicos["Lei n.º 10.261/68 — artigos 1º a 86"]).toBe(7.7);
     expect(r.relevanciaTopicos["Lei n.º 10.261/68 — artigos 171 a 175"]).toBeUndefined();
+  });
+
+  it("Orientação Espacial e Temporal tem regra nova (2 em 80 de RL)", () => {
+    expect(relevanciaTopicoContada("Raciocínio Lógico", "Orientação Espacial e Temporal")).toBe(2.5);
   });
 });
 
 describe("macros diretos — o que estudar primeiro", () => {
-  it("Bloco servidor: 13 a 14 por prova no formato antigo; 7 em 2025", () => {
+  it("Bloco servidor: 13 a 14 por prova no formato antigo; 12 no Oficial 2024; 7 em 2025", () => {
     const macro = MACROS_ESCREVENTE.find((m) => m.id === "bloco-servidor")!;
     expect(macro.questoesPorProvaMin).toBe(7);
     expect(macro.questoesPorProvaMax).toBe(14);
-    expect(macro.pesoTexto).toBe("13 a 14 por prova no formato antigo; 7 em 2025 (11 com toda a Legislação Interna)");
+    expect(macro.provas).toBe(6);
+    expect(macro.pesoTexto).toBe("13 a 14 por prova no formato antigo; 12 no Oficial 2024; 7 em 2025 (11 com toda a Legislação Interna)");
     expect(macro.materias).toEqual(["Direito Administrativo", "Legislação Interna"]);
+  });
+
+  it("macros atualizados com a 2024: dedução 66, trio 52, sintaxe 48, interpretação 96, contas 26, noticiário 22", () => {
+    const macro = (id: string) => MACROS_ESCREVENTE.find((m) => m.id === id)!;
+    expect(macro("deducao-sequencias-negacao").questoes).toBe(66);
+    expect(macro("deducao-sequencias-negacao").provas).toBe(10);
+    expect(macro("trio-escritorio").questoes).toBe(52);
+    expect(macro("trio-escritorio").provas).toBe(9);
+    expect(macro("sintaxe-reescrita").questoes).toBe(48);
+    expect(macro("sintaxe-reescrita").provas).toBe(9);
+    expect(macro("interpretacao").questoes).toBe(96);
+    expect(macro("interpretacao").provas).toBe(14);
+    expect(macro("contas-matematica").questoes).toBe(26);
+    expect(macro("contas-matematica").provas).toBe(9);
+    expect(macro("noticiario").questoes).toBe(22);
+    expect(macro("noticiario").provas).toBe(9);
+    expect(macro("normas-corregedoria").provas).toBe(6);
+    expect(macro("improbidade").provas).toBe(6);
+    expect(macro("improbidade").questoesPorProvaMin).toBe(2);
+    expect(macro("improbidade").questoesPorProvaMax).toBe(3);
+    expect(macro("fe-publica-funcionario").questoes).toBe(10);
+    expect(macro("pcd-prioritario-trabalho").questoes).toBe(8);
+    expect(macro("pcd-prioritario-trabalho").provas).toBe(5);
+    expect(macro("tutela-provisoria").questoes).toBe(4);
+    expect(macro("tutela-provisoria").provas).toBe(4);
   });
 
   it("macros existem para as 12 matérias de Escrevente (sem inventar fora do escopo)", () => {
@@ -205,7 +235,7 @@ describe("macros diretos — o que estudar primeiro", () => {
     expect(acoes.questoes).toBe(8);
     expect(acoes.materia).toBe("Direito Constitucional");
     const crase = MACROS_ESCREVENTE.find((m) => m.id === "crase-mascarada")!;
-    expect(crase.questoes).toBe(15);
-    expect(crase.provas).toBe(13);
+    expect(crase.questoes).toBe(17);
+    expect(crase.provas).toBe(15);
   });
 });

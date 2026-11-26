@@ -97,17 +97,41 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
     );
   });
 
-  it("Crase mantém a separação por comando (7 diretas, 1 regência, 1 outro assunto, 6 lacunas)", () => {
+  it("Crase mantém a separação por comando (7 diretas, 3 regência, 1 outro assunto, 6 lacunas)", () => {
     const crase = itensDaMateria("Língua Portuguesa").find((i) => i.artigo === "Crase")!;
     expect(crase).toBeDefined();
-    expect(crase.questoes).toBe(15);
-    expect(crase.provas).toBe(13);
+    expect(crase.questoes).toBe(17);
+    expect(crase.provas).toBe(15);
     expect(crase.separacaoCraseRegencia).toEqual({
       craseDireta: 7,
-      regenciaMascarada: 1,
+      regenciaMascarada: 3,
       outroAssuntoMascarada: 1,
       lacunas: 6,
     });
+  });
+
+  it("NUNCA_COBRADOS tem 14 itens: art. 274 e Regra de três saíram (caíram nas provas de 2024)", () => {
+    expect(NUNCA_COBRADOS).toHaveLength(14);
+    const pp = nuncaCobradosDaMateria("Direito Processual Penal").map((n) => n.artigo);
+    expect(pp).toEqual(["Arts. 531 a 538", "Arts. 541 a 548"]);
+    const mat = nuncaCobradosDaMateria("Matemática").map((n) => n.artigo);
+    expect(mat).toEqual(["MMC e MDC", "Equação do 2º grau", "Sistemas de medidas usuais"]);
+    // Os dois viraram itens cobrados.
+    expect(itensDaMateria("Direito Processual Penal").map((i) => i.artigo)).toContain(
+      "Art. 274 (suspeição estendida aos serventuários)",
+    );
+    expect(itensDaMateria("Matemática").map((i) => i.artigo)).toContain("Regra de três simples e composta");
+  });
+
+  it("itens novos de 2024: LIA arts. 13 e 16, Lei 10.261 art. 3º e Orientação Espacial e Temporal", () => {
+    const item = (materia: string, artigo: string) =>
+      itensDaMateria(materia).find((i) => i.artigo === artigo)!;
+    expect(item("Direito Administrativo", "Art. 13 (declaração de bens)").provas).toBe(1);
+    expect(item("Direito Administrativo", "Art. 16 (indisponibilidade de bens)").provas).toBe(1);
+    expect(item("Direito Administrativo", "Art. 3º (conceito de funcionário público)").provas).toBe(1);
+    const orientacao = item("Raciocínio Lógico", "Orientação Espacial e Temporal");
+    expect(orientacao.provas).toBe(2);
+    expect(orientacao.questoes).toBe(2);
   });
 
   it("Direito Constitucional tem o art. 5º no topo (18 em 6 provas) e o art. 92 como raro (1 em 6)", () => {
@@ -123,42 +147,63 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
     expect(consti.find((i) => i.artigo.includes("Art. 12"))!.questoes).toBe(5);
   });
 
-  it("totais atualizados para a base de 6 provas Escrevente + Analista (2025)", () => {
-    // Somas conferidas nos relatórios workspace/prova-2025/relatorio-2025.md
-    // e workspace/prova-analista-2025/relatorio-analista-2025.md.
+  it("totais atualizados para a base de 6 provas Escrevente + Analista (2025) + 2024 oficial", () => {
+    // Somas conferidas nos relatórios workspace/prova-2025/relatorio-2025.md,
+    // workspace/prova-analista-2025/relatorio-analista-2025.md e
+    // workspace/cadernos-vunesp/vunesp-2024-escrevente-oficial-mapeamento.md
+    // e vunesp-2024-outras-provas-mapeamento.md.
     const item = (materia: string, artigo: string) =>
       itensDaMateria(materia).find((i) => i.artigo === artigo)!;
-    // Português (questão por questão): 39 em 6 Escrevente; + Analista.
-    expect(item("Língua Portuguesa", "Interpretação de Textos").questoes).toBe(45);
-    expect(item("Língua Portuguesa", "Interpretação de Textos").provas).toBe(7);
-    expect(item("Língua Portuguesa", "Sintaxe (concordância, regência e colocação)").questoes).toBe(39);
-    expect(item("Língua Portuguesa", "Sintaxe (concordância, regência e colocação)").provas).toBe(7);
-    expect(item("Língua Portuguesa", "Significação Contextual de Palavras e Expressões").questoes).toBe(22);
-    expect(item("Língua Portuguesa", "Morfologia (classes de palavras)").questoes).toBe(18);
-    expect(item("Língua Portuguesa", "Pontuação").questoes).toBe(7);
-    expect(item("Língua Portuguesa", "Concordância verbal e nominal").questoes).toBe(9);
-    expect(item("Língua Portuguesa", "Colocação pronominal").questoes).toBe(5);
-    expect(item("Língua Portuguesa", "Regência verbal e nominal").questoes).toBe(4);
-    // RL: dedução 18+3+2=23, sequências 12+2+1=15, negação 11+2+1=14, diagramas 8+0+1=9.
-    expect(item("Raciocínio Lógico", "Dedução e estruturas lógicas").questoes).toBe(23);
-    expect(item("Raciocínio Lógico", "Sequências numéricas e figurais").questoes).toBe(15);
-    expect(item("Raciocínio Lógico", "Negação e equivalência").questoes).toBe(14);
-    expect(item("Raciocínio Lógico", "Diagramas lógicos e conjuntos").questoes).toBe(9);
-    // Matemática: porcentagem 6+1=7, média 6+1=7, geometria 5+1=6, razão 4+1=5.
-    expect(item("Matemática", "Porcentagem e juros simples").questoes).toBe(7);
-    expect(item("Matemática", "Média aritmética simples e ponderada").questoes).toBe(7);
-    expect(item("Matemática", "Geometria (Pitágoras, área e volume)").questoes).toBe(6);
-    expect(item("Matemática", "Razão e proporção").questoes).toBe(5);
-    // Informática: Windows 16+1=17, Excel 12+2=14, Word 11+2=13, Internet 10+1=11, correio 9+1=10, Teams 8+1=9.
-    expect(item("Noções de Informática", "Windows e Explorador de Arquivos").questoes).toBe(17);
-    expect(item("Noções de Informática", "Excel (fórmulas, funções e planilhas)").questoes).toBe(14);
-    expect(item("Noções de Informática", "Word (edição e formatação de textos)").questoes).toBe(13);
-    expect(item("Noções de Informática", "Internet e URL").questoes).toBe(11);
-    expect(item("Noções de Informática", "Correio eletrônico (envio, anexos, Cc/Cco, spam)").questoes).toBe(10);
-    expect(item("Noções de Informática", "MS Teams (chats, reuniões e equipes)").questoes).toBe(9);
-    // Atualidades: política 9+1=10, internacional 8+2=10.
-    expect(item("Atualidades", "Política nacional e Judiciário").questoes).toBe(10);
-    expect(item("Atualidades", "Internacional").questoes).toBe(10);
+    // Português (questão por questão): 45 em 7 provas; + Oficial 2024 (12
+    // Interpretação, 5 Sintaxe, 6 Significação, 4 Morfologia, 5 Noções
+    // Gerais, 1 Pontuação, 1 Concordância, 2 Colocação, 1 Regência),
+    // Assistente 2024 (6, 4, 0, 2, 0, 0, 1, 0, 1) e Psicólogo 2024
+    // (6, 2, 1, 2, 0, 1, 1, 0, 1).
+    expect(item("Língua Portuguesa", "Interpretação de Textos").questoes).toBe(69);
+    expect(item("Língua Portuguesa", "Interpretação de Textos").provas).toBe(10);
+    expect(item("Língua Portuguesa", "Sintaxe (concordância, regência e colocação)").questoes).toBe(50);
+    expect(item("Língua Portuguesa", "Sintaxe (concordância, regência e colocação)").provas).toBe(10);
+    expect(item("Língua Portuguesa", "Significação Contextual de Palavras e Expressões").questoes).toBe(29);
+    expect(item("Língua Portuguesa", "Morfologia (classes de palavras)").questoes).toBe(26);
+    expect(item("Língua Portuguesa", "Pontuação").questoes).toBe(9);
+    expect(item("Língua Portuguesa", "Concordância verbal e nominal").questoes).toBe(12);
+    expect(item("Língua Portuguesa", "Colocação pronominal").questoes).toBe(7);
+    expect(item("Língua Portuguesa", "Regência verbal e nominal").questoes).toBe(7);
+    // RL: dedução 23+3+4+3=33, sequências 15+1+1+1=18, negação 14+1=15, diagramas 9+1=10.
+    expect(item("Raciocínio Lógico", "Dedução e estruturas lógicas").questoes).toBe(33);
+    expect(item("Raciocínio Lógico", "Sequências numéricas e figurais").questoes).toBe(18);
+    expect(item("Raciocínio Lógico", "Negação e equivalência").questoes).toBe(15);
+    expect(item("Raciocínio Lógico", "Diagramas lógicos e conjuntos").questoes).toBe(10);
+    // Matemática: porcentagem 7+2+2=11, média 7+1+1=9, geometria 6+1=7, razão 5+3=8.
+    expect(item("Matemática", "Porcentagem e juros simples").questoes).toBe(11);
+    expect(item("Matemática", "Média aritmética simples e ponderada").questoes).toBe(9);
+    expect(item("Matemática", "Geometria (Pitágoras, área e volume)").questoes).toBe(7);
+    expect(item("Matemática", "Razão e proporção").questoes).toBe(8);
+    // Informática: Windows 17+1+1=19, Excel 14+2+1+1=18, Word 13+1+1=15,
+    // Internet 11+2+1+1=15, correio 10+1=11, Teams 9+1=10, OneDrive 1+1+1=3.
+    expect(item("Noções de Informática", "Windows e Explorador de Arquivos").questoes).toBe(19);
+    expect(item("Noções de Informática", "Excel (fórmulas, funções e planilhas)").questoes).toBe(18);
+    expect(item("Noções de Informática", "Word (edição e formatação de textos)").questoes).toBe(15);
+    expect(item("Noções de Informática", "Internet e URL").questoes).toBe(15);
+    expect(item("Noções de Informática", "Correio eletrônico (envio, anexos, Cc/Cco, spam)").questoes).toBe(11);
+    expect(item("Noções de Informática", "MS Teams (chats, reuniões e equipes)").questoes).toBe(10);
+    expect(item("Noções de Informática", "OneDrive (armazenamento e compartilhamento)").questoes).toBe(3);
+    // Atualidades: política 10+1=11, internacional 10+1=11.
+    expect(item("Atualidades", "Política nacional e Judiciário").questoes).toBe(11);
+    expect(item("Atualidades", "Internacional").questoes).toBe(11);
+    // Direito: fé pública 4→5, funcionário 4→5, 311-A 2→4, 307/308 3→4,
+    // tutela 3→4, procedimento comum 3→4, recursos 3→4, JEC 4→5,
+    // Improbidade 9º/11 3→5, PcD 1º–13 3→5.
+    expect(item("Direito Penal", "Arts. 293 a 305 (fé pública)").provas).toBe(5);
+    expect(item("Direito Penal", "Arts. 312 a 317 (funcionário contra a Administração)").provas).toBe(5);
+    expect(item("Direito Penal", "Art. 311-A (fraude em certames)").provas).toBe(4);
+    expect(item("Direito Penal", "Arts. 307 e 308 (falsa identidade)").provas).toBe(4);
+    expect(item("Direito Processual Civil", "Arts. 294 a 311 (tutela provisória)").provas).toBe(4);
+    expect(item("Direito Processual Civil", "Arts. 318 a 538 (procedimento comum)").provas).toBe(4);
+    expect(item("Direito Processual Civil", "Arts. 994 a 1026 (recursos)").provas).toBe(4);
+    expect(item("Direito Processual Civil", "Arts. 3º a 19").provas).toBe(5);
+    expect(item("Direito Administrativo", "Arts. 9º e 11 (atos de improbidade)").provas).toBe(5);
+    expect(item("Estatuto da Pessoa com Deficiência", "Arts. 1º a 13 (atendimento prioritário)").provas).toBe(5);
   });
 
   it("Estatuto PcD tem os dois blocos de artigos do edital (1º–13 e 34–38)", () => {
@@ -171,7 +216,7 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
   });
 
   it("mantém todos os cobrados, ordenados do mais para o menos cobrado, com Top 5 por matéria", () => {
-    // Português: 10 cobrados, ordenados por questões (45, 39, 22, 18, 15, 9, 7, 7, 5, 4).
+    // Português: 10 cobrados, ordenados por questões (69, 50, 29, 26, 17, 12, 12, 9, 7, 7).
     const port = itensDaMateria("Língua Portuguesa");
     expect(port).toHaveLength(10);
     expect(port.map((i) => i.artigo)).toEqual([
@@ -180,11 +225,11 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
       "Significação Contextual de Palavras e Expressões",
       "Morfologia (classes de palavras)",
       "Crase",
+      "Noções Gerais de Compreensão e Interpretação de Texto",
       "Concordância verbal e nominal",
       "Pontuação",
-      "Noções Gerais de Compreensão e Interpretação de Texto",
-      "Colocação pronominal",
       "Regência verbal e nominal",
+      "Colocação pronominal",
     ]);
     expect(top5DaMateria("Língua Portuguesa").map((i) => i.artigo)).toEqual([
       "Interpretação de Textos",
