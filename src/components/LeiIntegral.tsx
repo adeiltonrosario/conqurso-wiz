@@ -599,6 +599,21 @@ export function LeiIntegralPainel({
     setSoTop5(false);
   }, [materia]);
 
+  /**
+   * Abrir a lei já seleciona o Top 5: o texto mostra primeiro só os
+   * artigos mais cobrados da matéria — isso é o principal ao abrir.
+   * Se a lei aberta não tem nenhum artigo do Top 5 (na lista já
+   * filtrada pelo capítulo), o filtro fica desligado e a lei abre
+   * inteira, como antes. Desmarcar vale só para aquela abertura:
+   * ao abrir outra lei, o Top 5 volta a vir selecionado.
+   */
+  useEffect(() => {
+    if (!leiPdfAtiva) return;
+    const temTop5 = brutos.some((a) => topsSumario.top5.has(numeroArtigo(a)));
+    setSoTop5(temTop5);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leiPdfAtiva]);
+
   /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
   const casadosAssuntos = useMemo(
     () =>
