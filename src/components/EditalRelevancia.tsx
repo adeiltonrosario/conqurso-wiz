@@ -505,6 +505,39 @@ function LinhaMateria({
 
       {aberta && (
         <div className="px-3 py-2">
+          {artigosCobrados.length > 0 && (
+            <div className="mt-3 rounded-lg border border-border p-3">
+              <p className="text-xs font-semibold">Só o artigo cobrado — leia só isto</p>
+              <p className="text-xs text-muted-foreground">
+                Todos os cobrados, do mais para o menos cobrado. Os 5 primeiros são o Top 5 da
+                matéria. Número exato do artigo, relevância contada e onde ele caiu.
+              </p>
+              <ul className="mt-2 space-y-2">
+                {artigosCobrados.map((item, indice) => (
+                  <li key={item.artigo} className="rounded-md border border-border/70 px-2 py-1.5 text-xs">
+                    <span className="font-semibold">
+                      {indice + 1}. {item.artigo}
+                      {ehTop5(item) && (
+                        <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-primary-foreground">
+                          TOP 5
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-muted-foreground">{item.resumo}</span>
+                    <span className="block font-semibold">
+                      Relevância:{" "}
+                      {item.questoes != null
+                        ? `${item.questoes} questões em ${item.provas} provas`
+                        : `em ${item.provas} provas`}
+                    </span>
+                    {item.exemplo && (
+                      <span className="block text-muted-foreground">{item.exemplo}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {topicos.length === 0 ? (
             <p className="py-2 text-xs text-muted-foreground">
               Nenhum tópico cadastrado para esta matéria.
@@ -557,39 +590,6 @@ function LinhaMateria({
                 })}
               </tbody>
             </table>
-          )}
-          {artigosCobrados.length > 0 && (
-            <div className="mt-3 rounded-lg border border-border p-3">
-              <p className="text-xs font-semibold">Só o artigo cobrado — leia só isto</p>
-              <p className="text-xs text-muted-foreground">
-                Todos os cobrados, do mais para o menos cobrado. Os 5 primeiros são o Top 5 da
-                matéria. Número exato do artigo, relevância contada e onde ele caiu.
-              </p>
-              <ul className="mt-2 space-y-2">
-                {artigosCobrados.map((item, indice) => (
-                  <li key={item.artigo} className="rounded-md border border-border/70 px-2 py-1.5 text-xs">
-                    <span className="font-semibold">
-                      {indice + 1}. {item.artigo}
-                      {ehTop5(item) && (
-                        <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-primary-foreground">
-                          TOP 5
-                        </span>
-                      )}
-                    </span>
-                    <span className="block text-muted-foreground">{item.resumo}</span>
-                    <span className="block font-semibold">
-                      Relevância:{" "}
-                      {item.questoes != null
-                        ? `${item.questoes} questões em ${item.provas} provas`
-                        : `em ${item.provas} provas`}
-                    </span>
-                    {item.exemplo && (
-                      <span className="block text-muted-foreground">{item.exemplo}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
           )}
           {nuncaCobrados.length > 0 && (
             <p className="mt-2 text-xs text-muted-foreground">

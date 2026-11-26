@@ -6,19 +6,15 @@ import {
   ChevronRight,
   FilePlus2,
   PenLine,
-  Plus,
-  Trash2,
   Target,
   PlayCircle,
-  CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { RelogioEstudo } from "@/components/RelogioEstudo";
 
-import { bancasComMaterias, cargosDaBanca, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
+import { bancasComMaterias, cargosDaBanca, useEdital } from "@/lib/edital";
 import {
-  DESTINOS,
   diasAte,
   formatarData,
   hojeIso,
@@ -52,14 +48,13 @@ export const Route = createFileRoute("/_authenticated/trilha")({
 const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
 
 function Pagina() {
-  const { trilha, aplicar, adicionarTarefa, alternarTarefa, removerTarefa, marcarPonto } = useTrilha();
+  const { trilha, aplicar } = useTrilha();
   const [mesBase, setMesBase] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selecionado, setSelecionado] = useState(hojeIso());
   const { edital, definirFiltro } = useEdital();
-  const MATERIAS = todasAsMaterias(edital);
   const BANCAS_EDITAL = bancasComMaterias(edital);
   const bancaSel = edital.bancaAtiva ?? "";
   const CARGOS = cargosDaBanca(edital, bancaSel);
@@ -68,14 +63,6 @@ function Pagina() {
       aplicar({ banca: bancaSel, cargo: edital.cargoAtivo ?? "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bancaSel, edital.cargoAtivo]);
-
-  const [materiaSel, setMateriaSel] = useState("");
-  const materia = MATERIAS.includes(materiaSel) ? materiaSel : MATERIAS[0]!;
-  const setMateria = setMateriaSel;
-  const topicosEdital = topicosDaMateria(edital, materia);
-  const [topico, setTopico] = useState("");
-  const [rota, setRota] = useState<string>(DESTINOS[0]!.rota);
-  const [minutos, setMinutos] = useState(45);
 
   const dias = useMemo(() => {
     const primeiro = new Date(mesBase.getFullYear(), mesBase.getMonth(), 1);
@@ -87,7 +74,6 @@ function Pagina() {
     return [...vazios, ...doMes];
   }, [mesBase]);
 
-  const doDia = tarefasDoDia(trilha, selecionado);
   const retomar = pontoDeRetomada(trilha);
   const restantes = diasAte(trilha.dataProva);
   const progresso = progressoGeral(trilha);
@@ -287,141 +273,8 @@ function Pagina() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-4 shadow-card">
-        <h2 className="font-display text-base font-bold">Plano de {formatarData(selecionado)}</h2>
-
-        {doDia.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Nenhuma tarefa neste dia. Adicione abaixo o que você vai estudar.
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {doDia.map((t) => {
-              const destino = DESTINOS.find((d) => d.rota === t.rota);
-              return (
-                <li
-                  key={t.id}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3"
-                >
-                  <button
-                    aria-label={t.concluida ? "Marcar como pendente" : "Marcar como concluída"}
-                    onClick={() => alternarTarefa(t.id)}
-                    className="mt-0.5"
-                  >
-                    <CheckCircle2
-                      className={`size-5 ${t.concluida ? "text-emerald-500" : "text-muted-foreground/50"}`}
-                    />
-                  </button>
-                  <div className="flex-1">
-                    <p className={`text-sm font-semibold ${t.concluida ? "line-through opacity-60" : ""}`}>
-                      {t.materia} — {t.topico}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {destino?.label ?? t.rota} · {t.minutos} min
-                    </p>
-                    <Link
-                      to={t.rota}
-                      onClick={() => marcarPonto(t)}
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary"
-                    >
-                      Estudar agora <ChevronRight className="size-3.5" />
-                    </Link>
-                  </div>
-                  <button
-                    aria-label="Remover tarefa"
-                    onClick={() => removerTarefa(t.id)}
-                    className="text-muted-foreground"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <form
-          className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!topico.trim()) return;
-            adicionarTarefa({ data: selecionado, materia, topico: topico.trim(), rota, minutos });
-            setTopico("");
-          }}
-        >
-          <label className="text-sm">
-            <span className="text-muted-foreground">Matéria</span>
-            <select
-              value={materia}
-              onChange={(e) => setMateria(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            >
-              {MATERIAS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                  {ehDoEdital(edital, m) ? " (edital)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="text-muted-foreground">Tópico / capítulo do edital</span>
-            <input
-              value={topico}
-              onChange={(e) => setTopico(e.target.value)}
-              placeholder="Ex.: Crimes contra a Administração Pública"
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
-            {topicosEdital.length > 0 && (
-              <span className="mt-1.5 flex flex-wrap gap-1.5">
-                {topicosEdital.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTopico(t)}
-                    className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </span>
-            )}
-          </label>
-          <label className="text-sm">
-            <span className="text-muted-foreground">Onde estudar</span>
-            <select
-              value={rota}
-              onChange={(e) => setRota(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            >
-              {DESTINOS.map((d) => (
-                <option key={d.rota} value={d.rota}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="text-muted-foreground">Minutos previstos</span>
-            <input
-              type="number"
-              min={10}
-              step={5}
-              value={minutos}
-              onChange={(e) => setMinutos(Number(e.target.value) || 45)}
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
-          </label>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground sm:col-span-2"
-          >
-            <Plus className="size-4" /> Adicionar ao dia
-          </button>
-        </form>
-      </section>
-
       <EditalRelevancia />
+
 
       <section className="rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Mais</h2>
