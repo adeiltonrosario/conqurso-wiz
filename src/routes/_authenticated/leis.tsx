@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Loader2,
   Plus,
+  Scale,
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -38,7 +39,17 @@ import {
   useEdital,
   type LinkLei,
 } from "@/lib/edital";
-import { ehTop5, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
+import {
+  ehTop5,
+  itensDaMateria,
+  nuncaCobradosDaMateria,
+  numerosDoArtigo,
+} from "@/lib/leis-resumidas";
+import {
+  julgamentosDeContraste,
+  julgamentosDoArtigo,
+  type JulgamentoSTF,
+} from "@/lib/jurisprudencia";
 import {
   contextoDaLeitura,
   definirFocos,
@@ -88,6 +99,46 @@ const SUGESTOES: Record<string, string[]> = {
   "Processo Penal": ["Inquérito policial", "Prisões e liberdade provisória", "Provas"],
 };
 
+/** Um julgamento do STF abaixo do artigo que ele interpreta, com a tese exata. */
+function JulgamentoSTFBloco({ julgamento }: { julgamento: JulgamentoSTF }) {
+  const pendente = julgamento.status === "pendente";
+  return (
+    <span className="mt-2 block rounded-lg border border-border bg-secondary px-3 py-2">
+      <span className="block text-xs font-semibold">
+        <Scale className="mr-1 inline size-3" />
+        STF — {julgamento.referencia}
+        {julgamento.tema ? ` · ${julgamento.tema}` : ""}
+        {` (${julgamento.data})`}
+        {pendente && (
+          <span className="ml-1 rounded bg-mark-red-soft px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+            PENDENTE — sem tese fixada
+          </span>
+        )}
+      </span>
+      <span className="mt-1 block text-xs italic">“{julgamento.tese}”</span>
+      {julgamento.contraste && (
+        <span className="mt-1 block text-xs text-muted-foreground">{julgamento.contraste}</span>
+      )}
+      <span className="mt-1 block text-xs text-muted-foreground">
+        Na prática: {julgamento.notaPratica}
+      </span>
+      {julgamento.observacao && (
+        <span className="block text-xs text-muted-foreground">{julgamento.observacao}</span>
+      )}
+      {julgamento.fonte && (
+        <a
+          className="mt-1 inline-flex items-center gap-1 text-xs text-primary underline"
+          href={julgamento.fonte}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <ExternalLink className="size-3" /> Fonte (STF)
+        </a>
+      )}
+    </span>
+  );
+}
+
 function LeisPage() {
   const { acervo, atualizar } = useAcervo();
   const { edital } = useEdital();
@@ -118,6 +169,10 @@ function LeisPage() {
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
   const artigosCobrados = itensDaMateria(materiaAtiva);
   const nuncaCobrados = nuncaCobradosDaMateria(materiaAtiva);
+  /** Julgamentos que não interpretam artigo da lei — entram por contraste. */
+  const contrastes = [...new Set(artigosCobrados.map((i) => i.lei))].flatMap((lei) =>
+    julgamentosDeContraste(lei),
+  );
   /** Nomes de leis salvas no acervo — o rótulo usa a realidade, não só `l.anexo`. */
   const nomesSalvos = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
 
@@ -455,9 +510,25 @@ function LeisPage() {
                       : ""}
                   </span>
                 )}
+                {julgamentosDoArtigo(item.lei, numerosDoArtigo(item.artigo)).map((j) => (
+                  <JulgamentoSTFBloco
+                    key={`${item.lei}|${item.artigo}|${j.referencia}`}
+                    julgamento={j}
+                  />
+                ))}
               </li>
             ))}
           </ol>
+          {contrastes.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-sm font-semibold">
+                Para não confundir — por contraste (art. 37, § 5º, CF)
+              </p>
+              {contrastes.map((j) => (
+                <JulgamentoSTFBloco key={`contraste|${j.referencia}`} julgamento={j} />
+              ))}
+            </div>
+          )}
           {nuncaCobrados.length > 0 && (
             <p className="text-xs text-muted-foreground">
               Estudar do zero — nunca caiu:{" "}
