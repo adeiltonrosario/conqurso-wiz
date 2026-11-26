@@ -35,6 +35,7 @@ import {
   topicosDaMateria,
   useEdital,
 } from "@/lib/edital";
+import { ehTop5, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
 import {
   contextoDaLeitura,
   definirFocos,
@@ -110,6 +111,8 @@ function LeisPage() {
     : (comLeis[0]?.nome ?? MATERIAS[0] ?? "");
   const doEdital = topicosDaMateria(edital, materiaAtiva);
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
+  const artigosCobrados = itensDaMateria(materiaAtiva);
+  const nuncaCobrados = nuncaCobradosDaMateria(materiaAtiva);
 
   const alternarFoco = (trecho: string) =>
     setSelecionados((atual) =>
@@ -381,6 +384,64 @@ function LeisPage() {
           )}
         </Button>
       </section>
+
+      {artigosCobrados.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-card">
+          <h2 className="font-display text-base font-bold">
+            Artigos cobrados desta lei — leia só isto
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Só o que caiu em prova, do mais para o menos cobrado. Os 5 primeiros são o Top 5.
+          </p>
+          <ol className="space-y-1.5 text-sm">
+            {artigosCobrados.map((item, indice) => (
+              <li
+                key={`${item.materia}|${item.artigo}`}
+                className="rounded-lg border border-border px-3 py-2"
+              >
+                <span className="font-medium">
+                  {indice + 1}. <span className="font-bold">{item.artigo}</span>
+                  {ehTop5(item) && (
+                    <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-primary-foreground">
+                      TOP 5
+                    </span>
+                  )}
+                  {" — "}
+                  {item.questoes
+                    ? `${item.questoes} questão(ões) em ${item.provas} prova(s)`
+                    : `em ${item.provas} prova(s)`}
+                </span>
+                <span className="block text-xs text-muted-foreground">{item.resumo}</span>
+                {item.exemplo && (
+                  <span className="block text-xs text-muted-foreground">
+                    Como cobrou: {item.exemplo}
+                  </span>
+                )}
+                {item.separacaoCraseRegencia && (
+                  <span className="block text-xs">
+                    Separado por comando — Crase pedida: {item.separacaoCraseRegencia.craseDireta} ·
+                    Regência (crase mascarada): {item.separacaoCraseRegencia.regenciaMascarada}
+                    {item.separacaoCraseRegencia.outroAssuntoMascarada
+                      ? ` · Outro assunto (crase como distrator): ${item.separacaoCraseRegencia.outroAssuntoMascarada}`
+                      : ""}
+                    {item.separacaoCraseRegencia.lacunas
+                      ? ` · Lacunas: ${item.separacaoCraseRegencia.lacunas}`
+                      : ""}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+          {nuncaCobrados.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Estudar do zero — nunca caiu:{" "}
+              <span className="font-semibold text-foreground">
+                {nuncaCobrados.map((n) => n.artigo).join("; ")}.
+              </span>
+            </p>
+          )}
+        </section>
+      )}
 
       <LeiIntegralPainel
         materia={materiaAtiva}

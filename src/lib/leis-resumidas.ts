@@ -1012,6 +1012,63 @@ export function ehTop5(item: ItemLeitura): boolean {
   return top5DaMateria(item.materia).some((t) => t.artigo === item.artigo);
 }
 
+/* ------------------------------------------------------------------ */
+/* Números de artigos cobrados — para marcar o sumário do Vade Mecum  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Números dos artigos cobertos pelo texto de um item da leitura resumida.
+ * Formatos reais no arquivo: "Art. 320", "Art. 311-A", "Art. 382, §2º",
+ * "Arts. 293 a 305", "Arts. 307 e 308", "Arts. 328 a 333 e 335 a 337",
+ * "Arts. 60 a 83, 88 e 89", "Arts. 1º a 13". Textos sem "Art." (tópicos
+ * de Português, leis inteiras, "Res. TJSP 963/2025" etc.) devolvem vazio.
+ * O número devolvido é o mesmo de `numeroArtigo` (vademecum.ts): só os
+ * dígitos iniciais — "311-A" vira 311 e o "§2º" de "382, §2º" é ignorado.
+ */
+export function numerosDoArtigo(texto: string): Set<number> {
+  const numeros = new Set<number>();
+  const m = /^\s*Arts?\.\s*(.+)$/.exec(texto);
+  if (!m) return numeros;
+  let corpo = m[1] ?? "";
+  const paren = corpo.indexOf(" (");
+  if (paren >= 0) corpo = corpo.slice(0, paren);
+  corpo = corpo.replace(/º/g, "");
+  for (const segmento of corpo.split(/,|\s+e\s+/)) {
+    const seg = segmento.trim();
+    if (!seg || seg.startsWith("§")) continue;
+    const faixa = /^(\d+)\s*(?:a|-|–)\s*(\d+)/.exec(seg);
+    if (faixa) {
+      const de = Number(faixa[1]);
+      const ate = Number(faixa[2]);
+      for (let n = Math.min(de, ate); n <= Math.max(de, ate); n++) numeros.add(n);
+      continue;
+    }
+    const unico = /^(\d+)/.exec(seg);
+    if (unico) numeros.add(Number(unico[1]));
+  }
+  return numeros;
+}
+
+/**
+ * Artigos cobrados de uma matéria, como conjuntos de números — para marcar
+ * os chips do sumário do Vade Mecum. `top5` são os 5 primeiros de
+ * `itensDaMateria` (o Top 5); `cobrados` são todos os itens da matéria.
+ */
+export function artigosCobradosDaMateria(materia: string): {
+  top5: Set<number>;
+  cobrados: Set<number>;
+} {
+  const cobrados = new Set<number>();
+  for (const item of itensDaMateria(materia)) {
+    for (const n of numerosDoArtigo(item.artigo)) cobrados.add(n);
+  }
+  const top5 = new Set<number>();
+  for (const item of top5DaMateria(materia)) {
+    for (const n of numerosDoArtigo(item.artigo)) top5.add(n);
+  }
+  return { top5, cobrados };
+}
+
 /** Bloco de uma matéria da leitura resumida. */
 export function blocoDaMateria(materia: string): BlocoEdital | null {
   return itensDaMateria(materia)[0]?.bloco ?? null;

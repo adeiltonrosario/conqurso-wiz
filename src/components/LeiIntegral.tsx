@@ -58,6 +58,7 @@ import {
   topicosDaMateria,
   useEdital,
 } from "@/lib/edital";
+import { artigosCobradosDaMateria } from "@/lib/leis-resumidas";
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
 function Realce({ texto, termo }: { texto: string; termo: string }) {
@@ -228,10 +229,16 @@ function Sumario({
   arvore,
   marcados,
   onIr,
+  top5,
+  cobrados,
 }: {
   arvore: NoTitulo[];
   marcados: string[];
   onIr: (id: string) => void;
+  /** Artigos do Top 5 da matéria (contados) — ★ cheia no chip. */
+  top5: Set<number>;
+  /** Todos os artigos cobrados da matéria — ★ vazia no chip. */
+  cobrados: Set<number>;
 }) {
   const [fechados, setFechados] = useState<string[]>([]);
   const alternar = (chave: string) =>
@@ -247,6 +254,17 @@ function Sumario({
       <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
         <List className="size-3.5" /> Sumário
       </p>
+      {(top5.size > 0 || cobrados.size > 0) && (
+        <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Star className="size-3 fill-mark-yellow text-mark-yellow" aria-hidden /> Top 5
+            cobrado
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Star className="size-3 text-muted-foreground/60" aria-hidden /> Cobrado em prova
+          </span>
+        </p>
+      )}
       <ul className="space-y-1.5 text-sm">
         {arvore.map((titulo) => {
           const chaveT = `t:${titulo.nome}`;
@@ -302,17 +320,40 @@ function Sumario({
                                     const marcado = marcados.includes(
                                       `${artigo.referencia} — ${artigo.texto}`,
                                     );
+                                    const n = numeroArtigo(artigo);
+                                    const ehTop5 = top5.has(n);
+                                    const ehCobrado = cobrados.has(n);
                                     return (
                                       <li key={idArtigo(artigo, indice)}>
                                         <button
                                           type="button"
                                           onClick={() => onIr(idArtigo(artigo, indice))}
-                                          className={`rounded-full border px-2.5 py-1 text-[11px] ${
-                                            marcado
+                                          title={
+                                            ehTop5
+                                              ? "Top 5 cobrado em prova"
+                                              : ehCobrado
+                                                ? "Cobrado em prova"
+                                                : undefined
+                                          }
+                                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] ${
+                                            marcado || ehTop5
                                               ? "border-primary bg-primary/10 font-semibold text-primary"
-                                              : "border-border bg-background text-muted-foreground"
+                                              : ehCobrado
+                                                ? "border-border bg-background font-medium text-foreground"
+                                                : "border-border bg-background text-muted-foreground"
                                           }`}
                                         >
+                                          {ehTop5 ? (
+                                            <Star
+                                              className="size-3 fill-mark-yellow text-mark-yellow"
+                                              aria-hidden
+                                            />
+                                          ) : ehCobrado ? (
+                                            <Star
+                                              className="size-3 text-muted-foreground/60"
+                                              aria-hidden
+                                            />
+                                          ) : null}
                                           {artigo.referencia}
                                         </button>
                                       </li>
@@ -357,6 +398,7 @@ export function LeiIntegralPainel({
   const [faixa, setFaixa] = useState("");
   const [soMarcados, setSoMarcados] = useState(false);
   const [soFavoritos, setSoFavoritos] = useState(false);
+  const [soTop5, setSoTop5] = useState(false);
   const [soAssuntos, setSoAssuntos] = useState(false);
   const [modoLeitura, setModoLeitura] = useState<"todos" | "alta" | "incidencia" | "anotados">("todos");
   const anotacoes = useAnotacoes();
@@ -544,6 +586,19 @@ export function LeiIntegralPainel({
   /** Assuntos (tópicos) da matéria selecionada, vindos do Detalhamento do edital. */
   const topicos = useMemo(() => topicosDaMateria(edital, materia), [edital, materia]);
 
+  /**
+   * Artigos cobrados (contados) da matéria — para marcar o sumário.
+   * Fonte: a leitura resumida contada (leis-resumidas.ts), não a incidência
+   * das questões importadas. Trocar a matéria recalcula os conjuntos.
+   */
+  const topsSumario = useMemo(() => artigosCobradosDaMateria(materia), [materia]);
+
+  /** Trocar de matéria desliga o filtro Top 5: sem ele, uma matéria sem
+      Top 5 contado ficaria com a lista vazia e o seletor escondido. */
+  useEffect(() => {
+    setSoTop5(false);
+  }, [materia]);
+
   /** Artigos ligados a esses assuntos, casados localmente (sem IA). */
   const casadosAssuntos = useMemo(
     () =>
@@ -567,6 +622,7 @@ export function LeiIntegralPainel({
         if (soMarcados && !marcados.includes(`${artigo.referencia} — ${artigo.texto}`))
           return false;
         if (soFavoritos && !chavesFavoritas.has(chaveFavorito(baseLegal, artigo))) return false;
+        if (soTop5 && !topsSumario.top5.has(numeroArtigo(artigo))) return false;
         if (soAssuntos && !chavesAssuntos.has(chaveArtigo(baseLegal, artigo))) return false;
         if (modoLeitura !== "todos") {
           const inc = incidencia.mapa.get(numeroArtigo(artigo));
@@ -589,6 +645,8 @@ export function LeiIntegralPainel({
     marcados,
     soFavoritos,
     chavesFavoritas,
+    soTop5,
+    topsSumario,
     soAssuntos,
     chavesAssuntos,
     modoLeitura,
@@ -862,6 +920,17 @@ export function LeiIntegralPainel({
                   />
                   Ver só os favoritos (★)
                 </label>
+                {topsSumario.top5.size > 0 && (
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={soTop5}
+                      onChange={(e) => setSoTop5(e.target.checked)}
+                      className="size-3.5 accent-primary"
+                    />
+                    Ver só o Top 5 (★)
+                  </label>
+                )}
               </span>
             </div>
             {totalOcultosDaLei.total > 0 && (
@@ -897,7 +966,15 @@ export function LeiIntegralPainel({
             )}
           </div>
 
-          {artigos.length > 0 && <Sumario arvore={arvore} marcados={marcados} onIr={irPara} />}
+          {artigos.length > 0 && (
+            <Sumario
+              arvore={arvore}
+              marcados={marcados}
+              onIr={irPara}
+              top5={topsSumario.top5}
+              cobrados={topsSumario.cobrados}
+            />
+          )}
 
           <div className="space-y-4">
             {arvore.map((titulo) => (

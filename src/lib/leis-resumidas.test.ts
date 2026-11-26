@@ -4,13 +4,17 @@ import {
   MATERIAS_LEITURA_RESUMIDA,
   MATERIAS_POR_BLOCO,
   NUNCA_COBRADOS,
+  artigosCobradosDaMateria,
   blocoDaMateria,
   ehTop5,
   itensDaMateria,
   materiasComNuncaCobrados,
   nuncaCobradosDaMateria,
+  numerosDoArtigo,
   top5DaMateria,
 } from "./leis-resumidas";
+import { numeroArtigo } from "./vademecum";
+import type { ArtigoIntegral } from "./ai.functions";
 
 /** Todas as matérias do edital do Escrevente (Anexo VIII, Edital nº 02/2026). */
 const MATERIAS_EDTAL = [
@@ -247,6 +251,34 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
     expect(ehTop5(consti.find((i) => i.artigo.includes("Art. 92"))!)).toBe(false);
   });
 
+  it("seção 'Artigos cobrados desta lei' na tela Leis: Direito Penal traz os 10 itens em ordem, com Top 5 certo", () => {
+    // Ordem da prévia mostrada ao usuário (26/11/2026): ordenado por questões
+    // e depois por provas — os 3 artigos de 1 questão primeiro, depois os de
+    // 5, 4, 3 e 1 provas.
+    const penal = itensDaMateria("Direito Penal");
+    expect(penal.map((i) => i.artigo)).toEqual([
+      "Art. 320 (condescendência criminosa)",
+      "Art. 319 (prevaricação)",
+      "Art. 344 (coação no curso do processo)",
+      "Arts. 293 a 305 (fé pública)",
+      "Arts. 312 a 317 (funcionário contra a Administração)",
+      "Art. 311-A (fraude em certames)",
+      "Arts. 307 e 308 (falsa identidade)",
+      "Arts. 339 a 347 (contra a Administração da Justiça)",
+      "Art. 357 (exploração de prestígio)",
+      "Arts. 328 a 333 e 335 a 337 (particular contra a Administração)",
+    ]);
+    expect(top5DaMateria("Direito Penal").map((i) => i.artigo)).toEqual(
+      penal.slice(0, 5).map((i) => i.artigo),
+    );
+    for (const item of penal.slice(0, 5)) expect(ehTop5(item)).toBe(true);
+    for (const item of penal.slice(5)) expect(ehTop5(item)).toBe(false);
+    expect(nuncaCobradosDaMateria("Direito Penal").map((n) => n.artigo)).toEqual([
+      "Art. 359",
+      "Arts. 322 a 327",
+    ]);
+  });
+
   it("6 matérias têm lista de nunca cobrados; Português, Proc. Civil, PcD, RL, Atualidades e Legislação Interna não têm", () => {
     expect(materiasComNuncaCobrados().sort()).toEqual(
       [
@@ -261,5 +293,91 @@ describe("leitura resumida — só o que foi cobrado (Escrevente TJ-SP)", () => 
     for (const m of ["Língua Portuguesa", "Direito Processual Civil", "Estatuto da Pessoa com Deficiência", "Raciocínio Lógico", "Atualidades", "Legislação Interna"]) {
       expect(nuncaCobradosDaMateria(m)).toHaveLength(0);
     }
+  });
+});
+
+describe("números dos artigos cobrados — sumário do Vade Mecum", () => {
+  it("parser expande os formatos reais do arquivo", () => {
+    expect([...numerosDoArtigo("Art. 320")]).toEqual([320]);
+    expect([...numerosDoArtigo("Art. 311-A (fraude em certames)")]).toEqual([311]);
+    expect([...numerosDoArtigo("Art. 382, §2º (produção antecipada de provas)")]).toEqual([382]);
+    expect([...numerosDoArtigo("Arts. 307 e 308 (falsa identidade)")].sort((a, b) => a - b)).toEqual([
+      307, 308,
+    ]);
+    const faixa = numerosDoArtigo("Arts. 293 a 305 (fé pública)");
+    expect(faixa.size).toBe(13);
+    expect(faixa.has(293)).toBe(true);
+    expect(faixa.has(299)).toBe(true);
+    expect(faixa.has(305)).toBe(true);
+    expect(faixa.has(306)).toBe(false);
+    expect(
+      [...numerosDoArtigo("Arts. 328 a 333 e 335 a 337 (particular contra a Administração)")].sort(
+        (a, b) => a - b,
+      ),
+    ).toEqual([328, 329, 330, 331, 332, 333, 335, 336, 337]);
+    const mista = numerosDoArtigo("Arts. 60 a 83, 88 e 89");
+    expect(mista.size).toBe(26);
+    expect(mista.has(60)).toBe(true);
+    expect(mista.has(83)).toBe(true);
+    expect(mista.has(84)).toBe(false);
+    expect(mista.has(88)).toBe(true);
+    expect(mista.has(89)).toBe(true);
+    expect(mista.has(90)).toBe(false);
+    const ordinal = numerosDoArtigo("Arts. 1º a 13 (atendimento prioritário)");
+    expect(ordinal.size).toBe(13);
+    expect(ordinal.has(1)).toBe(true);
+    expect(ordinal.has(13)).toBe(true);
+    expect(numerosDoArtigo("Lei nº 12.153/2009").size).toBe(0);
+    expect(numerosDoArtigo("Interpretação de Textos").size).toBe(0);
+    expect(numerosDoArtigo("Res. TJSP 963/2025 (eproc)").size).toBe(0);
+    expect(numerosDoArtigo("Penas disciplinares (demissão; suspensão de até 90 dias)").size).toBe(0);
+  });
+
+  it("Direito Penal: Top 5 cobre 320, 319, 344, 293–305 e 312–317; 359 e 322–327 fora", () => {
+    const { top5, cobrados } = artigosCobradosDaMateria("Direito Penal");
+    for (const n of [320, 319, 344]) expect(top5.has(n)).toBe(true);
+    for (let n = 293; n <= 305; n++) expect(top5.has(n)).toBe(true);
+    for (let n = 312; n <= 317; n++) expect(top5.has(n)).toBe(true);
+    expect(top5.has(311)).toBe(false);
+    expect(top5.has(307)).toBe(false);
+    expect(top5.has(339)).toBe(false);
+    for (const n of [311, 307, 308, 357]) expect(cobrados.has(n)).toBe(true);
+    for (let n = 339; n <= 347; n++) expect(cobrados.has(n)).toBe(true);
+    for (let n = 328; n <= 333; n++) expect(cobrados.has(n)).toBe(true);
+    for (let n = 335; n <= 337; n++) expect(cobrados.has(n)).toBe(true);
+    for (let n = 322; n <= 327; n++) {
+      expect(cobrados.has(n)).toBe(false);
+      expect(top5.has(n)).toBe(false);
+    }
+    expect(cobrados.has(359)).toBe(false);
+    expect(cobrados.has(321)).toBe(false);
+  });
+
+  it("Constitucional: Top 5 sem o art. 92 (raro); Língua Portuguesa não tem números", () => {
+    const { top5, cobrados } = artigosCobradosDaMateria("Direito Constitucional");
+    expect(top5.has(5)).toBe(true);
+    for (let n = 37; n <= 41; n++) expect(top5.has(n)).toBe(true);
+    expect(top5.has(12)).toBe(true);
+    expect(top5.has(7)).toBe(true);
+    expect(top5.has(8)).toBe(true);
+    expect(top5.has(92)).toBe(false);
+    expect(cobrados.has(92)).toBe(true);
+    const port = artigosCobradosDaMateria("Língua Portuguesa");
+    expect(port.top5.size).toBe(0);
+    expect(port.cobrados.size).toBe(0);
+  });
+
+  it("seletor 'Ver só o Top 5': o filtro deixa passar só os artigos do Top 5 (mesma regra do painel)", () => {
+    // A regra do painel é: soTop5 && !top5.has(numeroArtigo(artigo)) → fora.
+    const { top5 } = artigosCobradosDaMateria("Direito Penal");
+    const passa = (referencia: string) =>
+      top5.has(numeroArtigo({ referencia, texto: "" } as ArtigoIntegral));
+    expect(passa("Art. 320")).toBe(true);
+    expect(passa("Art. 299")).toBe(true); // dentro da faixa 293–305
+    expect(passa("Art. 312")).toBe(true);
+    expect(passa("Art. 311-A")).toBe(false); // cobrado, mas fora do Top 5
+    expect(passa("Art. 357")).toBe(false);
+    expect(passa("Art. 359")).toBe(false); // nunca cobrado
+    expect(passa("Art. 1º")).toBe(false);
   });
 });
