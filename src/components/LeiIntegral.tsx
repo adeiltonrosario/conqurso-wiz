@@ -53,11 +53,14 @@ import {
 import {
   leiDoConcurso,
   editalRestrito,
+  ehLinkReal,
   leisDaMateria,
   materiasAtivas,
   topicosDaMateria,
   useEdital,
+  type LinkLei,
 } from "@/lib/edital";
+import { buscarLeiPorUrl } from "@/lib/leis-url.functions";
 import { artigosCobradosDaMateria } from "@/lib/leis-resumidas";
 
 /** Realça as ocorrências da palavra-chave dentro do texto legal. */
@@ -382,6 +385,7 @@ export function LeiIntegralPainel({
   capitulo,
   marcados,
   pdfsLei = [],
+  leiAberta,
   onAlternarMarcado,
   onCarregado,
 }: {
@@ -391,6 +395,8 @@ export function LeiIntegralPainel({
   marcados: string[];
   /** PDFs de lei anexados (nome já sem o prefixo interno). */
   pdfsLei?: { nome: string; chars: number }[];
+  /** Lei tocada na lista da tela Leis: abre-se primeiro pelo link dela. */
+  leiAberta?: LinkLei | null;
   onAlternarMarcado: (trecho: string) => void;
   onCarregado?: (lei: LeiIntegralTipo) => void;
 }) {
@@ -414,6 +420,10 @@ export function LeiIntegralPainel({
   const [soDoEdital, setSoDoEdital] = useState(true);
   const [limparPdf, setLimparPdf] = useState(true);
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
+  /** De onde veio o texto exibido: do link da lei ou do PDF/texto salvo. */
+  const [fonte, setFonte] = useState<"link" | "pdf" | null>(null);
+  /** Aviso curto quando o link falha e a leitura cai para o PDF salvo. */
+  const [avisoLink, setAvisoLink] = useState<string | null>(null);
   const { ocultos } = useOcultos();
 
   /** Normas do Vade Mecum cobradas pelo edital/banca/cargo em estudo. */
@@ -496,6 +506,7 @@ export function LeiIntegralPainel({
     onSuccess: (leis, { nome }) => {
       setLeisPdf(leis);
       setLeiPdfSel(leis[0]?.nome ?? "");
+      setFonte("pdf");
 
       if (!leis.length) {
         toast.error("Não foi possível localizar artigos neste PDF.");
@@ -535,6 +546,76 @@ export function LeiIntegralPainel({
     mutPdf.mutate({ nome: alvo, item: itemAtivo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arquivoAtivo]);
+
+  /**
+   * Abrir uma lei da lista lê primeiro o LINK dela; se o link não
+   * funcionar (não abre, não responde ou não dá para extrair artigos),
+   * cai para o PDF/texto salvo da matéria. O texto lido do link nunca é
+   * salvo automaticamente — "Buscar texto" continua sendo o caminho que
+   * salva. Os artigos do link passam pelo mesmo `leisPdf`, então o Top 5
+   * selecionado ao abrir continua valendo para eles.
+   */
+  const leiAbertaId = leiAberta?.id ?? "";
+  useEffect(() => {
+    if (!leiAberta) return;
+    let cancelado = false;
+    setAvisoLink(null);
+    void (async () => {
+      const url = leiAberta.url ?? "";
+      if (ehLinkReal(url)) {
+        try {
+          const r = await buscarLeiPorUrl({ data: { url } });
+          if (!cancelado && r.ok) {
+            const leis = lerVadeMecum(r.texto);
+            if (leis.some((l) => l.artigos.length > 0)) {
+              setLeisPdf(leis);
+              setLeiPdfSel(leis[0]?.nome ?? "");
+              setFonte("link");
+              const total = leis.reduce((s, l) => s + l.artigos.length, 0);
+              toast.success(`${total} artigo(s) lidos do link.`);
+              onCarregado?.({
+                materia,
+                capitulo,
+                base_legal: leis.map((l) => l.nome).join(" · "),
+                artigos: leis.flatMap((l) => l.artigos),
+              });
+              return;
+            }
+          }
+        } catch {
+          // cai para o PDF abaixo
+        }
+        if (!cancelado) setAvisoLink("O link não abriu — mostrando o PDF salvo.");
+      }
+      if (cancelado) return;
+      // Fallback: PDF/texto salvo — o anexo da lei, ou a lei salva da matéria.
+      const nomePdf =
+        (leiAberta.anexo && pdfsPermitidos.some((p) => p.nome === leiAberta.anexo)
+          ? leiAberta.anexo
+          : "") ||
+        leisDaMinhaMateria.nomes[0] ||
+        "";
+      setFonte("pdf");
+      if (!nomePdf) {
+        setLeisPdf([]);
+        setLeiPdfSel("");
+        toast.error("O link não abriu e esta lei não tem PDF salvo.");
+        return;
+      }
+      // Marca como já lido para o efeito do arquivo não recarregar o mesmo PDF.
+      lidoRef.current = nomePdf;
+      setArquivo(nomePdf);
+      try {
+        await mutPdf.mutateAsync({ nome: nomePdf, item: itemAtivo });
+      } catch {
+        // o erro já é avisado pela leitura do arquivo
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leiAbertaId]);
 
   const leiPdfAtiva = leisPdf.find((l) => l.nome === leiPdfSel) ?? leisPdf[0];
   const baseLegal = leiPdfAtiva?.nome ?? "";
@@ -777,24 +858,31 @@ export function LeiIntegralPainel({
         )}
       </div>
 
-      {leisDaMinhaMateria.links.length > 0 && leisDaMinhaMateria.nomes.length === 0 && (
-        <p className="rounded-lg bg-secondary p-3 text-[11px] text-muted-foreground">
-          Esta matéria já tem lei cadastrada, mas o texto ainda não foi baixado. Abra o Detalhamento
-          do edital e toque em “Buscar texto” no link da lei.
-        </p>
-      )}
+      {leisDaMinhaMateria.links.length > 0 &&
+        leisDaMinhaMateria.nomes.length === 0 &&
+        !leisDaMinhaMateria.links.some((l) => ehLinkReal(l.url)) && (
+          <p className="rounded-lg bg-secondary p-3 text-[11px] text-muted-foreground">
+            Esta matéria já tem lei cadastrada, mas o texto ainda não foi baixado. Abra o
+            Detalhamento do edital e toque em “Buscar texto” no link da lei.
+          </p>
+        )}
 
       {pdfsPermitidos.length === 0 ? (
-        <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-          {editalRestrito(edital) && pdfsLei.length > 0
-            ? "Nenhuma lei deste concurso (banca/cargo) está salva ainda. Volte o filtro para “Todas/Todos” para ver as demais, ou vincule as leis às matérias no Detalhamento do edital."
-            : "Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão → Texto de leis (Vade Mecum)”."}
-        </p>
+        carregado ? null : (
+          <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+            {editalRestrito(edital) && pdfsLei.length > 0
+              ? "Nenhuma lei deste concurso (banca/cargo) está salva ainda. Volte o filtro para “Todas/Todos” para ver as demais, ou vincule as leis às matérias no Detalhamento do edital."
+              : "Nenhuma lei salva. Envie o PDF ou cole o texto e use “Extrair e limpar” em “Inclusão → Texto de leis (Vade Mecum)”."}
+          </p>
+        )
       ) : (
         <div className="space-y-2">
           <select
             value={arquivoAtivo}
-            onChange={(e) => setArquivo(e.target.value)}
+            onChange={(e) => {
+              setAvisoLink(null);
+              setArquivo(e.target.value);
+            }}
             aria-label="Lei salva (PDF ou texto colado)"
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
@@ -811,7 +899,10 @@ export function LeiIntegralPainel({
             variant={leisPdf.length ? "outline" : "default"}
             className="w-full"
             disabled={mutPdf.isPending || !arquivoAtivo}
-            onClick={() => mutPdf.mutate({ nome: arquivoAtivo, item: "" })}
+            onClick={() => {
+              setAvisoLink(null);
+              mutPdf.mutate({ nome: arquivoAtivo, item: "" });
+            }}
           >
             {mutPdf.isPending ? (
               <>
@@ -868,6 +959,19 @@ export function LeiIntegralPainel({
             </div>
             {baseLegal && (
               <p className="text-xs font-semibold text-muted-foreground">{baseLegal}</p>
+            )}
+            {fonte && (
+              <p className="text-xs text-muted-foreground">
+                Fonte: {fonte === "link" ? "link da lei" : "PDF salvo"}
+              </p>
+            )}
+            {avisoLink && (
+              <p
+                role="alert"
+                className="rounded-lg bg-mark-yellow/20 p-2 text-xs text-muted-foreground"
+              >
+                {avisoLink}
+              </p>
             )}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

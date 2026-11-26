@@ -460,6 +460,29 @@ export function leisDaMateria(materia: MateriaEdital): LinkLei[] {
   return materia.leis ?? [];
 }
 
+/** O endereço é um link real (http/https) — `acervo:<nome>` não é link. */
+export function ehLinkReal(url: string): boolean {
+  return /^https?:\/\//i.test(url.trim());
+}
+
+/**
+ * A lei tem texto salvo que realmente abre? Compara o anexo, o título e o
+ * número da lei com os nomes salvos no acervo — não basta olhar `l.anexo`,
+ * que pode apontar para um arquivo que não existe mais, ou faltar quando o
+ * texto já foi salvo por outro caminho (ex.: Lei 9.099/95 e Lei 12.153/2009
+ * têm texto salvo mas o link não marca `anexo`). Mesma regra nas telas Leis
+ * e Detalhamento do edital: passe a lista de nomes salvos que a tela enxerga.
+ */
+export function leiTemTextoSalvo(l: LinkLei, salvosNoSistema: string[]): boolean {
+  const anexo = (l.anexo ?? "").trim().toLowerCase();
+  if (anexo && salvosNoSistema.includes(anexo)) return true;
+  const alvo = l.titulo.trim().toLowerCase();
+  const numero = l.titulo.replace(/\D/g, "").slice(0, 6);
+  return salvosNoSistema.some(
+    (n) => (alvo.length > 4 && n.includes(alvo)) || (numero.length >= 4 && n.includes(numero)),
+  );
+}
+
 /** Matérias visíveis no filtro atual que têm pelo menos uma lei cadastrada. */
 export function materiasComLeis(edital: EditalEstado) {
   return materiasAtivas(edital).filter((m) => leisDaMateria(m).length > 0);

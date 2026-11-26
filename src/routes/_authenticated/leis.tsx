@@ -26,14 +26,17 @@ import { BANCAS, contextoDoAcervo, ehAnexoDeLei, nomeLimpo, useAcervo } from "@/
 import { useBancaPrevista } from "@/lib/trilha";
 import {
   contextoDoEdital,
+  ehLinkReal,
   grupoDaMateria,
   leisDaMateria,
+  leiTemTextoSalvo,
   materiaPermitida,
   materiasComLeis,
   topicoPermitido,
   todasAsMaterias,
   topicosDaMateria,
   useEdital,
+  type LinkLei,
 } from "@/lib/edital";
 import { ehTop5, itensDaMateria, nuncaCobradosDaMateria } from "@/lib/leis-resumidas";
 import {
@@ -103,6 +106,8 @@ function LeisPage() {
   const [auto, setAuto] = useState(true);
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [abertaId, setAbertaId] = useState<string | null>(null);
+  /** Lei tocada na lista: o painel abre primeiro pelo link dela. */
+  const [leiAberta, setLeiAberta] = useState<LinkLei | null>(null);
 
   const MATERIAS = todasAsMaterias(edital);
   const comLeis = materiasComLeis(edital);
@@ -113,6 +118,8 @@ function LeisPage() {
   const sugestoes = doEdital.length ? doEdital : (SUGESTOES[materiaAtiva] ?? []);
   const artigosCobrados = itensDaMateria(materiaAtiva);
   const nuncaCobrados = nuncaCobradosDaMateria(materiaAtiva);
+  /** Nomes de leis salvas no acervo — o rótulo usa a realidade, não só `l.anexo`. */
+  const nomesSalvos = acervo.provas.filter(ehAnexoDeLei).map((a) => nomeLimpo(a).toLowerCase());
 
   const alternarFoco = (trecho: string) =>
     setSelecionados((atual) =>
@@ -254,6 +261,8 @@ function LeisPage() {
                       onClick={() => {
                         setMateria(m.nome);
                         setAbertaId(abertaMateria ? null : m.id);
+                        // Expandir a matéria já abre a primeira lei dela no painel.
+                        if (!abertaMateria && leis.length > 0) setLeiAberta(leis[0]!);
                       }}
                       className={`flex w-full items-center gap-x-3 px-3 py-2.5 text-left ${
                         selecionada ? "bg-secondary/80" : "bg-secondary/40"
@@ -271,30 +280,47 @@ function LeisPage() {
                     </button>
                     {abertaMateria && (
                       <ul id={`leis-materia-${m.id}`} className="space-y-2 px-3 py-2">
-                        {leis.map((l) => (
-                          <li
-                            key={l.id}
-                            className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-xs"
-                          >
-                            <span className="flex-1 [overflow-wrap:anywhere]">{l.titulo}</span>
-                            {l.anexo ? (
-                              <span className="flex items-center gap-1 font-medium text-primary">
-                                <CheckCircle2 className="size-3.5" /> texto salvo
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">só o link</span>
-                            )}
-                            <a
-                              href={l.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`Abrir ${l.titulo} em outra aba`}
-                              className="text-primary"
+                        {leis.map((l) => {
+                          const aberta = leiAberta?.id === l.id;
+                          return (
+                            <li
+                              key={l.id}
+                              className={`flex items-center gap-2 rounded-md border p-2 text-xs ${
+                                aberta ? "border-primary bg-primary/5" : "border-border/70"
+                              }`}
                             >
-                              <ExternalLink className="size-4" />
-                            </a>
-                          </li>
-                        ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMateria(m.nome);
+                                  setLeiAberta(l);
+                                }}
+                                aria-pressed={aberta}
+                                className="flex-1 text-left [overflow-wrap:anywhere]"
+                              >
+                                {l.titulo}
+                              </button>
+                              {leiTemTextoSalvo(l, nomesSalvos) ? (
+                                <span className="flex items-center gap-1 font-medium text-primary">
+                                  <CheckCircle2 className="size-3.5" /> texto salvo
+                                </span>
+                              ) : ehLinkReal(l.url) ? (
+                                <span className="text-muted-foreground">lê do link</span>
+                              ) : (
+                                <span className="text-destructive">sem texto</span>
+                              )}
+                              <a
+                                href={l.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={`Abrir ${l.titulo} em outra aba`}
+                                className="text-primary"
+                              >
+                                <ExternalLink className="size-4" />
+                              </a>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </li>
@@ -446,6 +472,7 @@ function LeisPage() {
       <LeiIntegralPainel
         materia={materiaAtiva}
         capitulo={capitulo}
+        leiAberta={leiAberta}
         pdfsLei={acervo.provas
           .filter(ehAnexoDeLei)
           .map((a) => ({ nome: nomeLimpo(a), chars: a.chars }))}
