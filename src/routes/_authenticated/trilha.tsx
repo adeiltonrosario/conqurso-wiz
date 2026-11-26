@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { EditalRelevancia } from "@/components/EditalRelevancia";
 import { RelogioEstudo } from "@/components/RelogioEstudo";
 
 import { bancasComMaterias, cargosDaBanca, ehDoEdital, todasAsMaterias, topicosDaMateria, useEdital } from "@/lib/edital";
@@ -419,6 +420,8 @@ function Pagina() {
           </button>
         </form>
       </section>
+
+      <EditalRelevancia />
 
       <section className="rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="font-display text-base font-bold">Mais</h2>
