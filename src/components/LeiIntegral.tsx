@@ -243,9 +243,9 @@ function Sumario({
   /** Todos os artigos cobrados da matéria — ★ vazia no chip. */
   cobrados: Set<number>;
 }) {
-  const [fechados, setFechados] = useState<string[]>([]);
+  const [abertos, setAbertos] = useState<string[]>([]);
   const alternar = (chave: string) =>
-    setFechados((atual) =>
+    setAbertos((atual) =>
       atual.includes(chave) ? atual.filter((c) => c !== chave) : [...atual, chave],
     );
 
@@ -271,7 +271,7 @@ function Sumario({
       <ul className="space-y-1.5 text-sm">
         {arvore.map((titulo) => {
           const chaveT = `t:${titulo.nome}`;
-          const abertoT = !fechados.includes(chaveT);
+          const abertoT = abertos.includes(chaveT);
           return (
             <li key={chaveT}>
               <button
@@ -291,7 +291,7 @@ function Sumario({
                 <ul className="ml-4 mt-1 space-y-1">
                   {titulo.capitulos.map((capitulo) => {
                     const chaveC = `${chaveT}|c:${capitulo.nome}`;
-                    const abertoC = !fechados.includes(chaveC);
+                    const abertoC = abertos.includes(chaveC);
                     return (
                       <li key={chaveC}>
                         {capitulo.nome && (
