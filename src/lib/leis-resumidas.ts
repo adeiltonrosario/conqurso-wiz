@@ -43,6 +43,8 @@
  * são Assistente 2024 Q12 e Psicólogo 2024 Q12 (regência mascarada).
  */
 
+import { chaveMateria } from "./incidencia-provas";
+
 export type BlocoEdital = "BLOCO I" | "BLOCO II" | "BLOCO III";
 
 /**
@@ -999,7 +1001,8 @@ export function ordenarPorCobranca(itens: ItemLeitura[]): ItemLeitura[] {
 
 /** Itens da leitura resumida de uma matéria, na ordem do mais para o menos cobrado. */
 export function itensDaMateria(materia: string): ItemLeitura[] {
-  return ordenarPorCobranca(LEITURA_RESUMIDA.filter((i) => i.materia === materia));
+  const chave = chaveMateria(materia);
+  return ordenarPorCobranca(LEITURA_RESUMIDA.filter((i) => chaveMateria(i.materia) === chave));
 }
 
 /** Os 5 mais cobrados de uma matéria — destaque, sem cortar o resto. */
@@ -1190,7 +1193,8 @@ export const NUNCA_COBRADOS: ItemNuncaCobrado[] = [
 
 /** Itens do edital sem contagem verificada, de uma matéria. */
 export function nuncaCobradosDaMateria(materia: string): ItemNuncaCobrado[] {
-  return NUNCA_COBRADOS.filter((i) => i.materia === materia);
+  const chave = chaveMateria(materia);
+  return NUNCA_COBRADOS.filter((i) => chaveMateria(i.materia) === chave);
 }
 
 /** Matérias que têm lista de nunca cobrados. */

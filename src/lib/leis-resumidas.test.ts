@@ -381,3 +381,33 @@ describe("números dos artigos cobrados — sumário do Vade Mecum", () => {
     expect(passa("Art. 1º")).toBe(false);
   });
 });
+
+describe("casamento de matéria ignora caixa e apelidos (chaveMateria)", () => {
+  it("\"DIREITO PENAL\" devolve o mesmo Top 5 que \"Direito Penal\" (22 números, inclui 320)", () => {
+    const canonico = artigosCobradosDaMateria("Direito Penal");
+    const caixaAlta = artigosCobradosDaMateria("DIREITO PENAL");
+    expect([...caixaAlta.top5].sort((a, b) => a - b)).toEqual(
+      [...canonico.top5].sort((a, b) => a - b),
+    );
+    expect(caixaAlta.top5.size).toBe(22);
+    expect(caixaAlta.top5.has(320)).toBe(true);
+    expect([...caixaAlta.cobrados].sort((a, b) => a - b)).toEqual(
+      [...canonico.cobrados].sort((a, b) => a - b),
+    );
+    expect(caixaAlta.cobrados.size).toBe(43);
+  });
+
+  it("\"DIREITO PENAL\" devolve os mesmos itens e nunca cobrados que \"Direito Penal\"", () => {
+    expect(itensDaMateria("DIREITO PENAL")).toEqual(itensDaMateria("Direito Penal"));
+    expect(itensDaMateria("DIREITO PENAL")).toHaveLength(10);
+    expect(nuncaCobradosDaMateria("DIREITO PENAL")).toEqual(
+      nuncaCobradosDaMateria("Direito Penal"),
+    );
+    expect(nuncaCobradosDaMateria("Direito Penal")).toHaveLength(2);
+  });
+
+  it("apelido: \"Português\" casa com \"Língua Portuguesa\"", () => {
+    expect(itensDaMateria("Português")).toEqual(itensDaMateria("Língua Portuguesa"));
+    expect(itensDaMateria("Português")).toHaveLength(10);
+  });
+});
