@@ -13,7 +13,7 @@ import { Marcado, LegendaCores } from "@/components/Marcado";
 import { Relevancia, ResumoRelevancia, agruparAssuntos } from "@/components/Relevancia";
 import { Button } from "@/components/ui/button";
 import { CampoFormatado } from "@/components/CampoFormatado";
-import { lerAcervo, useAcervo } from "@/lib/acervo";
+import { lerAcervo, salvarAcervo, useAcervo } from "@/lib/acervo";
 import {
   assuntosComQuestoes,
   provasExtraidas,
@@ -22,10 +22,17 @@ import {
   reclassificar,
 } from "@/lib/questoes-pdf";
 import {
+  contarExtraidasDoPdf,
+  ehExtraidaDoPdf,
+  limparExtraidasDoPdf,
+} from "@/lib/limpeza-pdf";
+import {
   listarQuestoesExtraidas,
+  removerExtraidasDoPdf,
   removerQuestao,
   salvarQuestoesExtraidas,
 } from "@/lib/questoes-banco.functions";
+import { salvarEstado } from "@/lib/sync.functions";
 import {
   ehDoEdital,
   grupoDaMateria,
@@ -541,6 +548,41 @@ function QuestoesPage() {
   const assuntos = agruparAssuntos(lista);
   const provas = provasExtraidas(extraidas.filter((q) => q.id.startsWith("pdf:")));
 
+  // Limpeza seletiva das extraídas de PDF (só ids `pdf:`; Quest API,
+  // cadastradas, simulado e leis ficam). Nunca executa sozinha ao abrir a tela.
+  const pdfLocal = contarExtraidasDoPdf(acervo);
+  const pdfNuvem = banco.data ? banco.data.filter(ehExtraidaDoPdf).length : null;
+  const temPdf = pdfLocal > 0 || (pdfNuvem ?? 0) > 0;
+  const removerPdf = useServerFn(removerExtraidasDoPdf);
+  const salvarEstadoFn = useServerFn(salvarEstado);
+  const [confirmandoLimpeza, setConfirmandoLimpeza] = useState(false);
+  const [limpandoPdf, setLimpandoPdf] = useState(false);
+  const [resultadoLimpeza, setResultadoLimpeza] = useState<string | null>(null);
+
+  const executarLimpezaPdf = async () => {
+    setLimpandoPdf(true);
+    try {
+      const resultado = await limparExtraidasDoPdf({
+        ler: lerAcervo,
+        salvarLocal: salvarAcervo,
+        salvarNuvem: async (limpo) => {
+          await salvarEstadoFn({ data: { chave: "acervo", json: JSON.stringify(limpo) } });
+        },
+        removerDaNuvem: () => removerPdf({}),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["questoes-extraidas"] });
+      setResultadoLimpeza(
+        `Removidas ${resultado.removidasNuvem} da nuvem e ${resultado.removidasLocal} do aparelho. Cadastradas, Quest API, simulado e leis não foram tocadas.`,
+      );
+      toast.success("Extraídas do PDF removidas.");
+    } catch {
+      toast.error("Não foi possível concluir a remoção. Confira as contagens antes de tentar de novo.");
+    } finally {
+      setConfirmandoLimpeza(false);
+      setLimpandoPdf(false);
+    }
+  };
+
 
   return (
     <AppShell
@@ -577,6 +619,40 @@ function QuestoesPage() {
             ? `${extraidas.length} questões no banco — das suas provas, cadastradas e do Caderno Muse${provas.length ? ` · provas: ${provas.join(", ")}` : ""}.`
             : "Nenhuma questão no banco ainda. Anexe o PDF da prova em “Incluir → Provas anteriores” ou importe por link."}
         </p>
+        {(temPdf || resultadoLimpeza) && (
+          <div className="space-y-2 border-t border-border pt-2">
+            <p className="text-xs text-muted-foreground">
+              {resultadoLimpeza ??
+                `Há ${pdfLocal} extraída(s) do PDF no aparelho e ${pdfNuvem === null ? "…" : pdfNuvem} na nuvem. Só as extraídas dos PDFs saem — cadastradas, Quest API, simulado e leis ficam.`}
+            </p>
+            {temPdf && !resultadoLimpeza && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs text-destructive"
+                  disabled={limpandoPdf}
+                  onClick={() => {
+                    if (confirmandoLimpeza) void executarLimpezaPdf();
+                    else setConfirmandoLimpeza(true);
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                  {limpandoPdf
+                    ? "Removendo…"
+                    : confirmandoLimpeza
+                      ? `Confirmar: apagar ${pdfNuvem === null ? "…" : pdfNuvem} da nuvem e ${pdfLocal} do aparelho`
+                      : "Remover todas as extraídas do PDF"}
+                </Button>
+                {confirmandoLimpeza && !limpandoPdf && (
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmandoLimpeza(false)}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
       <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card">
         <div className="flex gap-2">

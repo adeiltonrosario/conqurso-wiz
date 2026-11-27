@@ -131,3 +131,31 @@ export const removerQuestao = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * Remove todas as questões extraídas de PDF (ids `pdf:...`) da conta do
+ * usuário, em uma única chamada. Uma chamada só é mais simples e segura do
+ * que apagar prova por prova com `removerQuestoesDaProva`: não depende de
+ * listar as provas distintas e não deixa para trás linhas sem prova.
+ */
+export const removerExtraidasDoPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: linhas, error: erroLista } = await context.supabase
+      .from("questoes_extraidas")
+      .select("id")
+      .eq("user_id", context.userId)
+      .like("id", "pdf:%")
+      .limit(5000);
+    if (erroLista) throw new Error(erroLista.message);
+    const total = linhas?.length ?? 0;
+    if (total > 0) {
+      const { error } = await context.supabase
+        .from("questoes_extraidas")
+        .delete()
+        .eq("user_id", context.userId)
+        .like("id", "pdf:%");
+      if (error) throw new Error(error.message);
+    }
+    return { removidas: total };
+  });
